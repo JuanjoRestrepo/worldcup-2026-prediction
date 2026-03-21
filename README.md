@@ -140,3 +140,34 @@ El sistema debe ser:
 
 
 ---
+
+
+Estructura técnica sugerida del repositorio
+
+```
+worldcup-2026-prediction/
+│
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── curated/
+│
+├── notebooks/
+│   ├── 01_eda.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   ├── 03_modeling.ipynb
+│   └── 04_simulation.ipynb
+│
+├── src/
+│   ├── ingestion/
+│   ├── cleaning/
+│   ├── features/
+│   ├── modeling/
+│   ├── simulation/
+│   └── utils/
+│
+├── reports/
+├── tests/
+├── README.md
+└── requirements.txt
+```
