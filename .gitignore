@@ -1,0 +1,141 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints
+*/.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDEs
+.vscode/
+.vscode-server/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS-specific
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+postgres_data/
+db/
+
+# Data
+data/processed/
+data/interim/
+data/raw/*.csv
+!data/raw/international_results.csv
+models/
+*.pkl
+*.pickle
+*.joblib
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Docker
+.dockerignore
+docker-compose.local.yml
+
+# Node (if any)
+node_modules/
+npm-debug.log
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+*.lnk
+$RECYCLE.BIN/
+
+# IDE settings files (but keep .gitignore and core configs)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Temporary notebook outputs
+.ipynb_checkpoints/
+__MACOSX/
+
+# Secrets and credentials
+secrets.json
+credentials.json
+*.pem
+*.key
+
+# ML models
+*.h5
+*.pkl
+*.joblib
+.weights/
+checkpoints/
+
+# Miscellaneous
+.cache/
+dist/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
