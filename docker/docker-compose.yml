@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: wc_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: wc_user
+      POSTGRES_PASSWORD: wc_pass
+      POSTGRES_DB: wc_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - wc_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: wc_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@wc.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+
+volumes:
+  wc_data:
