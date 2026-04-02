@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: silver_matches_cleaned_curated
+    description: "Canonical silver-layer match view with stable keys and label text."
+    columns:
+      - name: match_key
+        tests:
+          - not_null
+          - unique
+      - name: match_date
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: target_multiclass
+        tests:
+          - accepted_values:
+              arguments:
+                values: [-1, 0, 1]
+      - name: target_label
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['away_win', 'draw', 'home_win']

@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Persisted bronze-layer snapshots written by the Python ingestion pipeline."
+    schema: bronze
+    tables:
+      - name: historical_matches
+        description: "Standardized historical matches ingested from CSV."
+      - name: api_matches
+        description: "Standardized incremental match snapshots ingested from the football API."
+
+  - name: silver
+    description: "Persisted silver-layer canonical match table written by the processing pipeline."
+    schema: silver
+    tables:
+      - name: matches_cleaned
+        description: "Cleaned international matches with canonical schema and targets."
+
+  - name: gold
+    description: "Persisted gold-layer training and serving datasets written by the ML pipeline."
+    schema: gold
+    tables:
+      - name: features_dataset
+        description: "Model-ready match features used for training and inference."
+      - name: training_runs
+        description: "Training metadata persisted for each production model build."

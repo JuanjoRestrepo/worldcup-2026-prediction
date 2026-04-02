@@ -1,0 +1,12 @@
+worldcup_2026:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'wc_user') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'wc_password') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'wc_db') }}"
+      schema: analytics
+      threads: "{{ env_var('DBT_THREADS', '1') | int }}"

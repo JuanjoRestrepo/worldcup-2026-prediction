@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: gold_feature_dataset_curated
+    description: "Normalized gold feature dataset with snake_case columns for analytics and serving support."
+    columns:
+      - name: match_date
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: target_multiclass
+        tests:
+          - accepted_values:
+              arguments:
+                values: [-1, 0, 1]
+      - name: elo_home
+        tests:
+          - not_null
+      - name: elo_away
+        tests:
+          - not_null
+
+  - name: gold_training_runs_curated
+    description: "Typed training metadata curated from persisted production training runs."
+    columns:
+      - name: artifact_path
+        tests:
+          - not_null
+      - name: trained_at_utc
+        tests:
+          - not_null
+      - name: accuracy
+        tests:
+          - not_null
+      - name: macro_f1
+        tests:
+          - not_null
+      - name: weighted_f1
+        tests:
+          - not_null
+
+  - name: gold_team_feature_snapshots
+    description: "Long-form team snapshots derived from the gold feature dataset for downstream serving and analytics."
+    columns:
+      - name: snapshot_date
+        tests:
+          - not_null
+      - name: team
+        tests:
+          - not_null
+      - name: team_role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['home', 'away']
+
+  - name: gold_latest_team_snapshots
+    description: "Latest team snapshots by role plus an overall latest snapshot per team."
+    columns:
+      - name: snapshot_date
+        tests:
+          - not_null
+      - name: team
+        tests:
+          - not_null
+      - name: team_role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['home', 'away', 'overall']
+
+  - name: gold_latest_training_run
+    description: "Latest production training run with the most recent metrics and artifact metadata."
+    columns:
+      - name: artifact_path
+        tests:
+          - not_null
+      - name: trained_at_utc
+        tests:
+          - not_null

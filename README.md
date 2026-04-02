@@ -6,6 +6,7 @@ End-to-end pipeline for ingesting, processing, and serving international footbal
 
 - Python for ingestion, processing, and modeling
 - PostgreSQL in Docker for infrastructure
+- dbt for SQL curation and data quality over persisted medallion tables
 - FastAPI scaffold for the serving layer
 
 ## Project Setup
@@ -67,6 +68,9 @@ PostgreSQL:
 - `gold.features_dataset`
 - `gold.training_runs`
 
+These persisted tables are the source layer for the `dbt` project documented in
+[`dbt/README.md`](dbt/README.md).
+
 ## Run Training
 
 ```bash
@@ -114,4 +118,19 @@ Run only the API after generating `data/gold/features_dataset.csv` and
 
 ```bash
 docker compose up --build api
+```
+
+## dbt
+
+The repo now includes a `dbt` project under [`dbt/README.md`](dbt/README.md)
+that starts on top of the persisted PostgreSQL layers instead of replacing the
+Python pipeline.
+
+Recommended flow:
+
+```bash
+.venv\Scripts\python run_pipeline.py --persist-to-db
+.venv\Scripts\python run_dbt.py debug
+.venv\Scripts\python run_dbt.py run
+.venv\Scripts\python run_dbt.py test
 ```

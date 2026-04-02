@@ -90,6 +90,8 @@ data/gold/*
 !data/gold/.gitkeep
 models/
 !models/.gitkeep
+!dbt/models/
+!dbt/models/**
 *.pkl
 *.pickle
 *.joblib
@@ -108,6 +110,13 @@ temp/
 # Docker
 .dockerignore
 docker-compose.local.yml
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt_packages/
+dbt/.user.yml
+profiles.yml
 
 # Node (if any)
 node_modules/
