@@ -38,6 +38,7 @@ python -m venv .venv
 3. Processing writes `data/gold/features_dataset.csv`
 4. Training exports `models/match_predictor.joblib`
 5. FastAPI serves predictions from `src.api.main:app`
+6. FastAPI prefers `gold.features_dataset` from PostgreSQL and falls back to CSV
 
 ## Run End-to-End Pipeline
 
@@ -51,10 +52,20 @@ Useful variants:
 .venv\Scripts\python run_pipeline.py --skip-ingestion
 .venv\Scripts\python run_pipeline.py --skip-ingestion --skip-processing
 .venv\Scripts\python run_pipeline.py --no-api-data
+.venv\Scripts\python run_pipeline.py --persist-to-db
 ```
 
 This orchestrates ingestion, processing, and training, and prints a JSON
 summary with stage timings, artifact paths, and evaluation metrics.
+
+When `--persist-to-db` is enabled, the pipeline also writes snapshots to
+PostgreSQL:
+
+- `bronze.historical_matches`
+- `bronze.api_matches`
+- `silver.matches_cleaned`
+- `gold.features_dataset`
+- `gold.training_runs`
 
 ## Run Training
 
@@ -70,6 +81,14 @@ using a temporal holdout split and exports `models/match_predictor.joblib`.
 ```bash
 .venv\Scripts\uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
+
+Prediction serving uses `PREDICTION_FEATURE_SOURCE=auto` by default, which:
+
+- loads team feature snapshots from `gold.features_dataset` in PostgreSQL when available
+- falls back to `data/gold/features_dataset.csv` if PostgreSQL is unavailable
+
+Use `PREDICTION_FEATURE_SOURCE=postgres` to require DB-backed serving, or
+`PREDICTION_FEATURE_SOURCE=csv` to force local CSV inference.
 
 Example prediction request:
 

@@ -27,6 +27,7 @@ class PredictionResponse(BaseModel):
     neutral: bool
     tournament: str | None = None
     feature_snapshot_dates: dict[str, str]
+    feature_source: str
     model_artifact_path: str
 
 
@@ -42,6 +43,7 @@ def runtime_config() -> dict[str, str]:
     return {
         "data_dir": str(settings.DATA_DIR),
         "gold_dir": str(settings.GOLD_DIR),
+        "prediction_feature_source": settings.PREDICTION_FEATURE_SOURCE,
         "model_artifact_path": str(settings.MODEL_ARTIFACT_PATH),
         "model_artifact_exists": str(settings.MODEL_ARTIFACT_PATH.exists()).lower(),
     }

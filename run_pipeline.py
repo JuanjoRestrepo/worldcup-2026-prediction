@@ -46,6 +46,12 @@ def _parse_args() -> argparse.Namespace:
         help="Process historical CSV data only, without loading API snapshots.",
     )
     parser.add_argument(
+        "--persist-to-db",
+        action="store_true",
+        default=settings.PERSIST_TO_DB,
+        help="Persist bronze/silver/gold outputs and training metadata to PostgreSQL.",
+    )
+    parser.add_argument(
         "--artifact-path",
         type=Path,
         default=settings.MODEL_ARTIFACT_PATH,
@@ -78,6 +84,7 @@ def run_full_pipeline(
     run_processing: bool = True,
     run_training: bool = True,
     use_api_data: bool = True,
+    persist_to_db: bool = False,
     artifact_path: Path | None = None,
     gold_data_path: Path | None = None,
     test_size: float = 0.2,
@@ -89,8 +96,10 @@ def run_full_pipeline(
         Dictionary summarizing executed stages, output paths, and timings.
     """
     settings.ensure_project_dirs()
+    pipeline_run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     summary: dict[str, object] = {
+        "pipeline_run_id": pipeline_run_id,
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "stages": {},
         "artifacts": {
@@ -112,14 +121,19 @@ def run_full_pipeline(
         run_training,
         use_api_data,
     )
+    logger.info("Database persistence enabled: %s", persist_to_db)
 
     if run_ingestion:
         start = perf_counter()
         logger.info("[Stage 1/3] Running ingestion pipeline...")
-        run_ingestion_pipeline()
+        run_ingestion_pipeline(
+            persist_to_db=persist_to_db,
+            pipeline_run_id=pipeline_run_id,
+        )
         summary["stages"]["ingestion"] = {
             "status": "completed",
             "duration_seconds": round(perf_counter() - start, 2),
+            "persisted_to_db": persist_to_db,
         }
     else:
         logger.info("[Stage 1/3] Skipping ingestion pipeline")
@@ -128,12 +142,17 @@ def run_full_pipeline(
     if run_processing:
         start = perf_counter()
         logger.info("[Stage 2/3] Running processing pipeline...")
-        processed_df = run_processing_pipeline(use_api_data=use_api_data)
+        processed_df = run_processing_pipeline(
+            use_api_data=use_api_data,
+            persist_to_db=persist_to_db,
+            pipeline_run_id=pipeline_run_id,
+        )
         summary["stages"]["processing"] = {
             "status": "completed",
             "duration_seconds": round(perf_counter() - start, 2),
             "rows": int(len(processed_df)),
             "columns": int(len(processed_df.columns)),
+            "persisted_to_db": persist_to_db,
         }
     else:
         logger.info("[Stage 2/3] Skipping processing pipeline")
@@ -146,6 +165,8 @@ def run_full_pipeline(
             data_path=gold_data_path,
             artifact_path=artifact_path,
             test_size=test_size,
+            persist_to_db=persist_to_db,
+            pipeline_run_id=pipeline_run_id,
         )
         summary["stages"]["training"] = {
             "status": "completed",
@@ -159,6 +180,7 @@ def run_full_pipeline(
             "training_rows": training_summary["training_rows"],
             "test_rows": training_summary["test_rows"],
             "feature_count": training_summary["feature_count"],
+            "persisted_to_db": persist_to_db,
         }
     else:
         logger.info("[Stage 3/3] Skipping training pipeline")
@@ -182,6 +204,7 @@ if __name__ == "__main__":
         run_processing=not args.skip_processing,
         run_training=not args.skip_training,
         use_api_data=not args.no_api_data,
+        persist_to_db=args.persist_to_db,
         artifact_path=args.artifact_path,
         gold_data_path=args.gold_data_path,
         test_size=args.test_size,

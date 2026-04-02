@@ -16,6 +16,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
 from src.config.settings import settings
+from src.database.persistence import persist_training_run
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
 
@@ -105,6 +106,8 @@ def train_and_export_model(
     data_path: Path | None = None,
     artifact_path: Path | None = None,
     test_size: float = DEFAULT_TEST_SIZE,
+    persist_to_db: bool = False,
+    pipeline_run_id: str | None = None,
 ) -> dict[str, object]:
     """
     Train the production model from the gold feature dataset and export it.
@@ -113,6 +116,8 @@ def train_and_export_model(
         data_path: Optional alternate path to the gold feature dataset
         artifact_path: Optional target path for the exported joblib artifact
         test_size: Fraction of the most recent data reserved for evaluation
+        persist_to_db: Whether to persist training metadata to PostgreSQL
+        pipeline_run_id: Optional orchestrator run identifier for lineage
 
     Returns:
         Dictionary with training metadata and evaluation metrics
@@ -195,6 +200,12 @@ def train_and_export_model(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, output_path)
     logger.info("Model artifact exported to %s", output_path)
+    if persist_to_db:
+        persist_training_run(
+            training_summary,
+            pipeline_run_id=pipeline_run_id,
+        )
+        logger.info("Training metadata appended to gold.training_runs")
     logger.info(
         "Evaluation metrics | accuracy=%.4f macro_f1=%.4f weighted_f1=%.4f",
         metrics["accuracy"],

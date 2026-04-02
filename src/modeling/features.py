@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.settings import settings
+from src.database.connection import get_sqlalchemy_engine
 
 TARGET_COLUMN = "target_multiclass"
 BINARY_TARGET_COLUMN = "target"
 LEAKAGE_COLUMNS = {"goal_diff", TARGET_COLUMN, BINARY_TARGET_COLUMN}
+LINEAGE_COLUMNS = {"pipeline_run_id", "persisted_at_utc"}
 NON_FEATURE_COLUMNS = {
     "date",
     "homeTeam",
@@ -22,6 +27,7 @@ NON_FEATURE_COLUMNS = {
     "tournament",
     "city",
     "country",
+    *LINEAGE_COLUMNS,
     *LEAKAGE_COLUMNS,
 }
 OUTCOME_LABELS = {
@@ -29,19 +35,113 @@ OUTCOME_LABELS = {
     0: "draw",
     1: "home_win",
 }
+FEATURE_SOURCE_OPTIONS = {"csv", "postgres", "auto"}
+FEATURE_DB_SCHEMA = "gold"
+FEATURE_DB_TABLE = "features_dataset"
+
+logger = logging.getLogger(__name__)
+
+FeatureDatasetSource = Literal["csv", "postgres", "auto"]
 
 
 @lru_cache(maxsize=2)
-def _load_feature_dataset_cached(dataset_path: str) -> pd.DataFrame:
+def _load_feature_dataset_from_csv_cached(dataset_path: str) -> pd.DataFrame:
     df = pd.read_csv(dataset_path)
     df["date"] = pd.to_datetime(df["date"])
     return df.sort_values("date").reset_index(drop=True)
 
 
-def load_feature_dataset(dataset_path: Path | None = None) -> pd.DataFrame:
-    """Load the model-ready gold dataset."""
+@lru_cache(maxsize=1)
+def _load_feature_dataset_from_postgres_cached(
+    db_host: str,
+    db_port: int,
+    db_name: str,
+    db_user: str,
+) -> pd.DataFrame:
+    engine = get_sqlalchemy_engine()
+    try:
+        df = pd.read_sql_query(
+            f'SELECT * FROM "{FEATURE_DB_SCHEMA}"."{FEATURE_DB_TABLE}"',
+            con=engine,
+        )
+    finally:
+        engine.dispose()
+
+    if df.empty:
+        raise RuntimeError(
+            f"PostgreSQL table {FEATURE_DB_SCHEMA}.{FEATURE_DB_TABLE} is empty."
+        )
+    df["date"] = pd.to_datetime(df["date"])
+    return df.sort_values("date").reset_index(drop=True)
+
+
+def clear_feature_dataset_cache() -> None:
+    """Clear cached CSV and PostgreSQL feature snapshots."""
+    _load_feature_dataset_from_csv_cached.cache_clear()
+    _load_feature_dataset_from_postgres_cached.cache_clear()
+
+
+def _normalize_feature_source(source: str) -> FeatureDatasetSource:
+    normalized_source = source.strip().lower()
+    if normalized_source not in FEATURE_SOURCE_OPTIONS:
+        raise ValueError("feature source must be one of: auto, postgres, csv.")
+    return cast(FeatureDatasetSource, normalized_source)
+
+
+def _load_feature_dataset_from_csv(dataset_path: Path) -> pd.DataFrame:
+    resolved_path = dataset_path.resolve()
+    if not resolved_path.exists():
+        raise FileNotFoundError(
+            f"Gold feature dataset not found at '{resolved_path}'."
+        )
+    return _load_feature_dataset_from_csv_cached(str(resolved_path))
+
+
+def _load_feature_dataset_from_postgres() -> pd.DataFrame:
+    return _load_feature_dataset_from_postgres_cached(
+        settings.DB_HOST,
+        settings.DB_PORT,
+        settings.DB_NAME,
+        settings.DB_USER,
+    )
+
+
+def load_feature_dataset_with_source(
+    dataset_path: Path | None = None,
+    source: str = "csv",
+) -> tuple[pd.DataFrame, str]:
+    """Load the gold feature dataset and return the resolved source."""
     resolved_path = Path(dataset_path or settings.GOLD_DIR / "features_dataset.csv")
-    return _load_feature_dataset_cached(str(resolved_path))
+    normalized_source = _normalize_feature_source(source)
+
+    if normalized_source == "csv":
+        return _load_feature_dataset_from_csv(resolved_path), "csv"
+
+    if normalized_source == "postgres":
+        try:
+            return _load_feature_dataset_from_postgres(), "postgres"
+        except (RuntimeError, SQLAlchemyError, ValueError) as exc:
+            raise RuntimeError(
+                "Failed to load gold.features_dataset from PostgreSQL."
+            ) from exc
+
+    try:
+        return _load_feature_dataset_from_postgres(), "postgres"
+    except (RuntimeError, SQLAlchemyError, ValueError) as exc:
+        logger.warning(
+            "Falling back to CSV gold dataset after PostgreSQL feature load failed: %s",
+            exc,
+        )
+        return _load_feature_dataset_from_csv(resolved_path), "csv"
+
+
+def load_feature_dataset(
+    dataset_path: Path | None = None,
+    source: str = "csv",
+) -> pd.DataFrame:
+    """Load the model-ready gold dataset."""
+    df, _ = load_feature_dataset_with_source(dataset_path=dataset_path, source=source)
+    return df
 
 
 def select_model_feature_columns(df: pd.DataFrame) -> list[str]:

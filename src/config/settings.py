@@ -24,6 +24,20 @@ class Settings:
         self.DB_NAME: str = os.getenv("POSTGRES_DB", "wc_db")
         self.DB_USER: str = os.getenv("POSTGRES_USER", "wc_user")
         self.DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "wc_password")
+        self.PERSIST_TO_DB: bool = os.getenv("PERSIST_TO_DB", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        self.PREDICTION_FEATURE_SOURCE: str = os.getenv(
+            "PREDICTION_FEATURE_SOURCE",
+            "auto",
+        ).strip().lower()
+        if self.PREDICTION_FEATURE_SOURCE not in {"auto", "postgres", "csv"}:
+            raise ValueError(
+                "PREDICTION_FEATURE_SOURCE must be one of: auto, postgres, csv."
+            )
 
         self.FOOTBALL_API_KEY: str | None = os.getenv("FOOTBALL_API_KEY")
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")

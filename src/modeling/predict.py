@@ -8,7 +8,10 @@ from pathlib import Path
 import joblib
 
 from src.config.settings import settings
-from src.modeling.features import build_match_feature_frame, load_feature_dataset
+from src.modeling.features import (
+    build_match_feature_frame,
+    load_feature_dataset_with_source,
+)
 
 
 @lru_cache(maxsize=2)
@@ -33,6 +36,7 @@ def predict_match_outcome(
     neutral: bool = False,
     artifact_path: Path | None = None,
     feature_data_path: Path | None = None,
+    feature_source: str | None = None,
 ) -> dict[str, object]:
     """
     Predict the outcome of a fixture using the exported model artifact.
@@ -44,6 +48,7 @@ def predict_match_outcome(
         neutral: Whether the fixture is on neutral ground
         artifact_path: Optional alternate model artifact path
         feature_data_path: Optional alternate gold dataset path for snapshots
+        feature_source: Optional feature source override: auto, postgres, or csv
 
     Returns:
         Dictionary with the predicted class, probabilities, and snapshot metadata
@@ -54,7 +59,11 @@ def predict_match_outcome(
     encoded_to_outcome = bundle["encoded_to_outcome"]
     outcome_labels = bundle["outcome_labels"]
 
-    feature_history = load_feature_dataset(feature_data_path)
+    resolved_feature_source = feature_source or settings.PREDICTION_FEATURE_SOURCE
+    feature_history, active_feature_source = load_feature_dataset_with_source(
+        dataset_path=feature_data_path,
+        source=resolved_feature_source,
+    )
     feature_frame, snapshot_dates = build_match_feature_frame(
         home_team=home_team,
         away_team=away_team,
@@ -86,5 +95,6 @@ def predict_match_outcome(
             "home_team": snapshot_dates["home_snapshot_date"],
             "away_team": snapshot_dates["away_snapshot_date"],
         },
+        "feature_source": active_feature_source,
         "model_artifact_path": str(Path(artifact_path or settings.MODEL_ARTIFACT_PATH)),
     }

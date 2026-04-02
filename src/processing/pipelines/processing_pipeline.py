@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 
 from src.config.settings import settings
+from src.database.persistence import persist_dataframe
 from src.ingestion.clients.csv_client import load_historical_data
 from src.ingestion.clients.api_data_loader import load_api_data
 from src.processing.transformers.match_standardizer import standardize_csv
@@ -96,7 +97,11 @@ def _create_multiclass_target(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def run_processing_pipeline(use_api_data: bool = True):
+def run_processing_pipeline(
+    use_api_data: bool = True,
+    persist_to_db: bool = False,
+    pipeline_run_id: str | None = None,
+):
     """
     Run the complete data processing pipeline with leakage fixes.
     
@@ -173,6 +178,15 @@ def run_processing_pipeline(use_api_data: bool = True):
     silver_output_path = settings.SILVER_DIR / "matches_cleaned.csv"
     df.to_csv(silver_output_path, index=False)
     logger.info(f"✅ Saved silver layer dataset → {silver_output_path}")
+    if persist_to_db:
+        persist_dataframe(
+            df,
+            schema_name="silver",
+            table_name="matches_cleaned",
+            if_exists="replace",
+            pipeline_run_id=pipeline_run_id,
+        )
+        logger.info("✅ Persisted silver.matches_cleaned to PostgreSQL")
 
 
     # PHASE 2: Compute ELO ratings
@@ -224,6 +238,15 @@ def run_processing_pipeline(use_api_data: bool = True):
     logger.info(f"✅ Saved → {output_path}")
     logger.info(f"   - Rows: {len(df)}")
     logger.info(f"   - Columns: {len(df.columns)}")
+    if persist_to_db:
+        persist_dataframe(
+            df,
+            schema_name="gold",
+            table_name="features_dataset",
+            if_exists="replace",
+            pipeline_run_id=pipeline_run_id,
+        )
+        logger.info("✅ Persisted gold.features_dataset to PostgreSQL")
 
     # PHASE 7: Summary and quality checks
     logger.info("\n" + "=" * 70)

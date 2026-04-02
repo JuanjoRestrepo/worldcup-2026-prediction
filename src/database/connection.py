@@ -1,28 +1,47 @@
-import psycopg2
 from psycopg2.extensions import connection as _connection
+import psycopg2
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine, URL
+
 from src.config.settings import settings
 
 
 def get_connection() -> _connection:
     """
-    Establish a connection to PostgreSQL database.
+    Establish a psycopg2 connection to PostgreSQL.
 
     Returns:
         psycopg2 connection object
 
     Raises:
-        Exception: if connection fails
+        RuntimeError: if connection fails
     """
     try:
-        conn = psycopg2.connect(
+        return psycopg2.connect(
             host=settings.DB_HOST,
             port=settings.DB_PORT,
             database=settings.DB_NAME,
             user=settings.DB_USER,
             password=settings.DB_PASSWORD,
-            connect_timeout=5  # Set a timeout for the connection attempt
+            connect_timeout=5,
         )
-        return conn
+    except psycopg2.OperationalError as exc:
+        raise RuntimeError(f"[DB ERROR] Connection failed: {exc}")
 
-    except psycopg2.OperationalError as e:
-        raise RuntimeError(f"[DB ERROR] Connection failed: {e}")
+
+def get_sqlalchemy_engine() -> Engine:
+    """
+    Build a SQLAlchemy engine for pandas-based persistence.
+
+    Returns:
+        SQLAlchemy Engine targeting the configured PostgreSQL database
+    """
+    database_url = URL.create(
+        "postgresql+psycopg2",
+        username=settings.DB_USER,
+        password=settings.DB_PASSWORD,
+        host=settings.DB_HOST,
+        port=settings.DB_PORT,
+        database=settings.DB_NAME,
+    )
+    return create_engine(database_url, future=True, pool_pre_ping=True)
