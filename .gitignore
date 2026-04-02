@@ -101,6 +101,7 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+.tmp/
 tmp/
 temp/
 
