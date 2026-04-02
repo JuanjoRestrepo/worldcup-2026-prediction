@@ -39,6 +39,23 @@ python -m venv .venv
 4. Training exports `models/match_predictor.joblib`
 5. FastAPI serves predictions from `src.api.main:app`
 
+## Run End-to-End Pipeline
+
+```bash
+.venv\Scripts\python run_pipeline.py
+```
+
+Useful variants:
+
+```bash
+.venv\Scripts\python run_pipeline.py --skip-ingestion
+.venv\Scripts\python run_pipeline.py --skip-ingestion --skip-processing
+.venv\Scripts\python run_pipeline.py --no-api-data
+```
+
+This orchestrates ingestion, processing, and training, and prints a JSON
+summary with stage timings, artifact paths, and evaluation metrics.
+
 ## Run Training
 
 ```bash
@@ -64,5 +81,18 @@ curl -X POST "http://localhost:8000/predict" ^
 
 ## Docker
 
-- `docker-compose.yml`: PostgreSQL
-- `docker/api/Dockerfile`: API container scaffold
+- `docker-compose.yml`: PostgreSQL + FastAPI service
+- `docker/api/Dockerfile`: API container image
+
+Run both services:
+
+```bash
+docker compose up --build
+```
+
+Run only the API after generating `data/gold/features_dataset.csv` and
+`models/match_predictor.joblib` locally:
+
+```bash
+docker compose up --build api
+```

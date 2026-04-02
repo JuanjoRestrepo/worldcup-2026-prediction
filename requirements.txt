@@ -1,15 +1,6 @@
-pandas
-numpy
-matplotlib
-seaborn
-scikit-learn
-xgboost
-joblib
-ipykernel
-fastapi
-uvicorn[standard]
-requests
-sqlalchemy
-psycopg2-binary
-python-dotenv
-pytest
+Si me preguntas qué haría yo ahora, el orden correcto sería:
+
+expandir run_pipeline.py para orquestar ingestion + processing + train
+meter la API en docker-compose.yml
+decidir si Postgres será solo metadata/store o también fuente real de bronze/silver/gold
+después recién meter dbt
