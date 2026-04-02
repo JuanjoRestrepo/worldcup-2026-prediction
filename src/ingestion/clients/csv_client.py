@@ -1,10 +1,11 @@
 import pandas as pd
-from pathlib import Path
 import logging
+
+from src.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-RAW_PATH = Path("data/raw/international_results.csv")
+RAW_PATH = settings.RAW_DIR / "international_results.csv"
 
 
 def load_historical_data() -> pd.DataFrame:

@@ -2,8 +2,8 @@
 
 import logging
 import pandas as pd
-from pathlib import Path
 
+from src.config.settings import settings
 from src.ingestion.clients.csv_client import load_historical_data
 from src.ingestion.clients.api_data_loader import load_api_data
 from src.processing.transformers.match_standardizer import standardize_csv
@@ -12,8 +12,6 @@ from src.processing.transformers.rolling_features import compute_rolling_feature
 from src.processing.transformers.opponent_strength import compute_opponent_strength
 
 logger = logging.getLogger(__name__)
-
-SILVER_DIR = Path("data/silver")
 
 
 def _create_tournament_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -116,6 +114,7 @@ def run_processing_pipeline(use_api_data: bool = True):
     logger.info("=" * 70)
     logger.info("🚀 STARTING PROCESSING PIPELINE (Feature Engineering - Fixed)")
     logger.info("=" * 70)
+    settings.ensure_project_dirs()
 
     # PHASE 1: Load and standardize data
     logger.info("\n📊 PHASE 1: Loading and standardizing data...")
@@ -171,6 +170,10 @@ def run_processing_pipeline(use_api_data: bool = True):
     logger.info(f"    Reasoning: Football evolved significantly post-1990 (tactics, athleticism, etc.)")
     logger.info(f"    Date range: {df['date'].min().date()} → {df['date'].max().date()}")
 
+    silver_output_path = settings.SILVER_DIR / "matches_cleaned.csv"
+    df.to_csv(silver_output_path, index=False)
+    logger.info(f"✅ Saved silver layer dataset → {silver_output_path}")
+
 
     # PHASE 2: Compute ELO ratings
     logger.info("\n⚽ PHASE 2: Computing ELO ratings (no leakage)...")
@@ -213,10 +216,9 @@ def run_processing_pipeline(use_api_data: bool = True):
     logger.info(f"   - Draws (0): {target_multi.get(0, 0)} ({target_multi.get(0, 0) / len(df) * 100:.1f}%)")
     logger.info(f"   - Away wins (-1): {target_multi.get(-1, 0)} ({target_multi.get(-1, 0) / len(df) * 100:.1f}%)")
 
-    # PHASE 6: Save to silver layer
+    # PHASE 6: Save gold layer dataset
     logger.info("\n💾 PHASE 6: Saving features dataset...")
-    SILVER_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = SILVER_DIR / "features_dataset.csv"
+    output_path = settings.GOLD_DIR / "features_dataset.csv"
     
     df.to_csv(output_path, index=False)
     logger.info(f"✅ Saved → {output_path}")

@@ -1,11 +1,8 @@
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
 import json
-import os
 
-from dotenv import load_dotenv
-
+from src.config.settings import settings
 from src.ingestion.clients.api_client import FootballAPIClient
 from src.ingestion.clients.csv_client import load_historical_data
 from src.ingestion.utils.validator import validate_schema
@@ -15,16 +12,11 @@ from src.processing.transformers.match_standardizer import standardize_csv, stan
 
 logger = logging.getLogger(__name__)
 
-RAW_DIR = Path("data/raw")
-BRONZE_DIR = Path("data/bronze")
-
-# Load environment variables from .env file
-load_dotenv()
-
 
 def run_ingestion_pipeline():
     logger.info("Starting ingestion pipeline")
     logger.info("NOTE: This pipeline ONLY ingests international/national team data (NO club leagues)")
+    settings.ensure_project_dirs()
 
     # 1. CSV (histórico)
     logger.info("\n📊 PHASE 1: Loading historical international results from CSV...")
@@ -32,14 +24,13 @@ def run_ingestion_pipeline():
     validate_schema(df)
 
     df_csv_standardized = standardize_csv(df)
-    BRONZE_DIR.mkdir(parents=True, exist_ok=True)
-    csv_output_path = BRONZE_DIR / "historical_standardized.csv"
+    csv_output_path = settings.BRONZE_DIR / "historical_standardized.csv"
     df_csv_standardized.to_csv(csv_output_path, index=False)
     logger.info(f"✅ Saved standardized historical data → {csv_output_path}")
 
     # 2. API - Fetch recent international data
     logger.info("\n🌐 PHASE 2: Fetching recent international matches from API...")
-    api_key = os.getenv("FOOTBALL_API_KEY")
+    api_key = settings.FOOTBALL_API_KEY
     
     # Get the last 90 days of matches (wider window to find international matches)
     # International windows are sparse outside tournaments
@@ -67,7 +58,7 @@ def run_ingestion_pipeline():
                 logger.info(f"✅ API Data filtered: {total_before} → {len(international_matches)} matches (removed {total_before - len(international_matches)} club league matches)")
             
             if api_data and api_data.get("matches"):
-                api_output_path = BRONZE_DIR / "api_standardized.csv"
+                api_output_path = settings.BRONZE_DIR / "api_standardized.csv"
                 df_api_standardized.to_csv(api_output_path, index=False)
                 logger.info(f"✅ Saved standardized API data → {api_output_path}")
             else:
@@ -84,8 +75,7 @@ def run_ingestion_pipeline():
     logger.info("\n💾 PHASE 3: Saving processed data...")
     if api_data:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = RAW_DIR / f"api_international_matches_{timestamp}.json"
-        RAW_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = settings.RAW_DIR / f"api_international_matches_{timestamp}.json"
         
         with open(output_path, "w") as f:
             json.dump(api_data, f, indent=2)

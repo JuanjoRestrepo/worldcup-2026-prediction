@@ -79,7 +79,15 @@ data/processed/
 data/interim/
 data/raw/*.csv
 !data/raw/international_results.csv
+data/raw/*.json
+data/bronze/*
+!data/bronze/.gitkeep
+data/silver/*
+!data/silver/.gitkeep
+data/gold/*
+!data/gold/.gitkeep
 models/
+!models/.gitkeep
 *.pkl
 *.pickle
 *.joblib

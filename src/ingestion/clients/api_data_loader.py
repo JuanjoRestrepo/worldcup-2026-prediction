@@ -3,11 +3,12 @@
 import json
 import logging
 import pandas as pd
-from pathlib import Path
+
+from src.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-API_DATA_DIR = Path("data/raw")
+API_DATA_DIR = settings.RAW_DIR
 
 
 def load_api_data() -> pd.DataFrame:

@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """Verify all 7 critical corrections were applied correctly."""
 
+import sys
+
 import pandas as pd
 import numpy as np
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 print("=" * 70)
 print("🔍 VERIFYING ALL CORRECTIONS")
 print("=" * 70)
 
 # Load the generated dataset
-df = pd.read_csv('data/silver/features_dataset.csv')
+df = pd.read_csv('data/gold/features_dataset.csv')
 
 print(f"\n✅ Dataset Shape: {df.shape}")
 print(f"   - Expected: Fewer rows than initial 49,071 (pre-1990 filtered)")

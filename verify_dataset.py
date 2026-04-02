@@ -1,7 +1,12 @@
 # verify_dataset.py
+import sys
+
 import pandas as pd
 
-df = pd.read_csv('data/silver/features_dataset.csv')
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+df = pd.read_csv('data/gold/features_dataset.csv')
 
 print('📊 DATASET SCHEMA UPDATED')
 print(f'\nShape: {df.shape}')
