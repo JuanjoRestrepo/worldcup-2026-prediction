@@ -1,0 +1,274 @@
+"""Shared feature utilities for model training and inference."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from src.config.settings import settings
+
+TARGET_COLUMN = "target_multiclass"
+BINARY_TARGET_COLUMN = "target"
+LEAKAGE_COLUMNS = {"goal_diff", TARGET_COLUMN, BINARY_TARGET_COLUMN}
+NON_FEATURE_COLUMNS = {
+    "date",
+    "homeTeam",
+    "awayTeam",
+    "homeGoals",
+    "awayGoals",
+    "tournament",
+    "city",
+    "country",
+    *LEAKAGE_COLUMNS,
+}
+OUTCOME_LABELS = {
+    -1: "away_win",
+    0: "draw",
+    1: "home_win",
+}
+
+
+@lru_cache(maxsize=2)
+def _load_feature_dataset_cached(dataset_path: str) -> pd.DataFrame:
+    df = pd.read_csv(dataset_path)
+    df["date"] = pd.to_datetime(df["date"])
+    return df.sort_values("date").reset_index(drop=True)
+
+
+def load_feature_dataset(dataset_path: Path | None = None) -> pd.DataFrame:
+    """Load the model-ready gold dataset."""
+    resolved_path = Path(dataset_path or settings.GOLD_DIR / "features_dataset.csv")
+    return _load_feature_dataset_cached(str(resolved_path))
+
+
+def select_model_feature_columns(df: pd.DataFrame) -> list[str]:
+    """Select numeric model features while excluding leakage and identifiers."""
+    return [
+        column
+        for column in df.columns
+        if column not in NON_FEATURE_COLUMNS
+        and pd.api.types.is_numeric_dtype(df[column])
+    ]
+
+
+def build_tournament_flags(tournament: str | None) -> dict[str, int]:
+    """Create the same tournament flags used during feature engineering."""
+    tournament_name = (tournament or "").strip().lower()
+    return {
+        "is_friendly": int("friendly" in tournament_name),
+        "is_world_cup": int(
+            any(token in tournament_name for token in ("world cup", "wc", "fifa"))
+        ),
+        "is_qualifier": int(
+            any(
+                token in tournament_name
+                for token in (
+                    "qualification",
+                    "qualifier",
+                    "wcq",
+                    "ecq",
+                    "copaaq",
+                    "acnq",
+                    "afcq",
+                    "ofcq",
+                    "uefaq",
+                    "conmebolq",
+                )
+            )
+        ),
+        "is_continental": int(
+            any(
+                token in tournament_name
+                for token in (
+                    "championship",
+                    "euro",
+                    "copa",
+                    "africa",
+                    "asian",
+                    "confederation",
+                )
+            )
+        ),
+    }
+
+
+def _safe_value(row: pd.Series | None, column: str) -> float:
+    if row is None:
+        return float("nan")
+    value = row.get(column, np.nan)
+    return float(value) if pd.notna(value) else float("nan")
+
+
+def _coalesce(*values: float) -> float:
+    for value in values:
+        if pd.notna(value):
+            return float(value)
+    return float("nan")
+
+
+def _resolve_team_name(df: pd.DataFrame, team_name: str) -> str:
+    normalized = team_name.strip().casefold()
+    team_map = {}
+
+    for column in ("homeTeam", "awayTeam"):
+        for current_team in df[column].dropna().unique():
+            team_map[current_team.casefold()] = current_team
+
+    if normalized not in team_map:
+        raise ValueError(f"Team '{team_name}' was not found in the gold feature dataset.")
+
+    return team_map[normalized]
+
+
+def _latest_row(df: pd.DataFrame, mask: pd.Series) -> pd.Series | None:
+    if not mask.any():
+        return None
+    return df.loc[mask].sort_values("date").iloc[-1]
+
+
+def _extract_overall_snapshot(row: pd.Series, team_name: str) -> dict[str, float | pd.Timestamp]:
+    if row["homeTeam"] == team_name:
+        return {
+            "elo": _safe_value(row, "elo_home"),
+            "global_avg_goals_last5": _safe_value(row, "home_global_avg_goals_last5"),
+            "global_avg_conceded_last5": _safe_value(
+                row, "home_global_avg_conceded_last5"
+            ),
+            "global_win_rate_last5": _safe_value(row, "home_global_win_rate_last5"),
+            "date": row["date"],
+        }
+
+    return {
+        "elo": _safe_value(row, "elo_away"),
+        "global_avg_goals_last5": _safe_value(row, "away_global_avg_goals_last5"),
+        "global_avg_conceded_last5": _safe_value(
+            row, "away_global_avg_conceded_last5"
+        ),
+        "global_win_rate_last5": _safe_value(row, "away_global_win_rate_last5"),
+        "date": row["date"],
+    }
+
+
+def _build_team_context(df: pd.DataFrame, team_name: str) -> dict[str, object]:
+    overall_row = _latest_row(
+        df, (df["homeTeam"] == team_name) | (df["awayTeam"] == team_name)
+    )
+    if overall_row is None:
+        raise ValueError(f"Team '{team_name}' was not found in the gold feature dataset.")
+
+    snapshot = _extract_overall_snapshot(overall_row, team_name)
+    return {
+        "overall": overall_row,
+        "home": _latest_row(df, df["homeTeam"] == team_name),
+        "away": _latest_row(df, df["awayTeam"] == team_name),
+        "elo": snapshot["elo"],
+        "global_avg_goals_last5": snapshot["global_avg_goals_last5"],
+        "global_avg_conceded_last5": snapshot["global_avg_conceded_last5"],
+        "global_win_rate_last5": snapshot["global_win_rate_last5"],
+        "snapshot_date": snapshot["date"],
+    }
+
+
+def build_match_feature_frame(
+    home_team: str,
+    away_team: str,
+    tournament: str | None,
+    neutral: bool,
+    feature_columns: list[str],
+    feature_history_df: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """
+    Build a model-ready feature row for an upcoming match.
+
+    The assembly uses the latest available team snapshots in the gold dataset:
+    - role-specific features from the team's latest match in that role
+    - global features from the team's latest match overall
+    - match-level interaction features recomputed for the requested fixture
+    """
+    if home_team.strip().casefold() == away_team.strip().casefold():
+        raise ValueError("Home team and away team must be different teams.")
+
+    df = feature_history_df if feature_history_df is not None else load_feature_dataset()
+
+    resolved_home_team = _resolve_team_name(df, home_team)
+    resolved_away_team = _resolve_team_name(df, away_team)
+
+    home_context = _build_team_context(df, resolved_home_team)
+    away_context = _build_team_context(df, resolved_away_team)
+
+    home_home_row = home_context["home"]
+    away_away_row = away_context["away"]
+    home_elo = float(home_context["elo"])
+    away_elo = float(away_context["elo"])
+    flags = build_tournament_flags(tournament)
+
+    home_win_rate = _coalesce(
+        _safe_value(home_home_row, "home_win_rate_last5"),
+        float(home_context["global_win_rate_last5"]),
+    )
+    away_win_rate = _coalesce(
+        _safe_value(away_away_row, "away_win_rate_last5"),
+        float(away_context["global_win_rate_last5"]),
+    )
+
+    row = {
+        "neutral": bool(neutral),
+        "elo_home": home_elo,
+        "elo_away": away_elo,
+        "elo_diff": home_elo - away_elo,
+        "home_avg_goals_last5": _safe_value(home_home_row, "home_avg_goals_last5"),
+        "home_avg_goals_conceded_last5": _safe_value(
+            home_home_row, "home_avg_goals_conceded_last5"
+        ),
+        "away_avg_goals_last5": _safe_value(away_away_row, "away_avg_goals_last5"),
+        "away_avg_goals_conceded_last5": _safe_value(
+            away_away_row, "away_avg_goals_conceded_last5"
+        ),
+        "home_global_avg_goals_last5": float(home_context["global_avg_goals_last5"]),
+        "home_global_avg_conceded_last5": float(
+            home_context["global_avg_conceded_last5"]
+        ),
+        "away_global_avg_goals_last5": float(away_context["global_avg_goals_last5"]),
+        "away_global_avg_conceded_last5": float(
+            away_context["global_avg_conceded_last5"]
+        ),
+        "home_win_rate_last5": _safe_value(home_home_row, "home_win_rate_last5"),
+        "away_win_rate_last5": _safe_value(away_away_row, "away_win_rate_last5"),
+        "home_global_win_rate_last5": float(home_context["global_win_rate_last5"]),
+        "away_global_win_rate_last5": float(away_context["global_win_rate_last5"]),
+        "home_advantage_effect": 0.0 if neutral else home_win_rate - away_win_rate,
+        "home_opponent_elo": away_elo,
+        "away_opponent_elo": home_elo,
+        "home_avg_opponent_elo_last5": _safe_value(
+            home_home_row, "home_avg_opponent_elo_last5"
+        ),
+        "away_avg_opponent_elo_last5": _safe_value(
+            away_away_row, "away_avg_opponent_elo_last5"
+        ),
+        "home_weighted_win_rate_last5": _safe_value(
+            home_home_row, "home_weighted_win_rate_last5"
+        ),
+        "away_weighted_win_rate_last5": _safe_value(
+            away_away_row, "away_weighted_win_rate_last5"
+        ),
+        "elo_ratio_home": home_elo / max(away_elo, 1e-6),
+        "combined_elo_strength": home_elo + away_elo,
+        "home_opponent_elo_form": _safe_value(home_home_row, "home_opponent_elo_form"),
+        "away_opponent_elo_form": _safe_value(away_away_row, "away_opponent_elo_form"),
+        "home_elo_form": _safe_value(home_home_row, "home_elo_form"),
+        "away_elo_form": _safe_value(away_away_row, "away_elo_form"),
+        **flags,
+    }
+
+    feature_row = {column: row.get(column, float("nan")) for column in feature_columns}
+    feature_frame = pd.DataFrame([feature_row])
+    snapshot_dates = {
+        "home_team": resolved_home_team,
+        "away_team": resolved_away_team,
+        "home_snapshot_date": pd.Timestamp(home_context["snapshot_date"]).date().isoformat(),
+        "away_snapshot_date": pd.Timestamp(away_context["snapshot_date"]).date().isoformat(),
+    }
+    return feature_frame, snapshot_dates

@@ -31,11 +31,36 @@ python -m venv .venv
 - `data/silver`: cleaned canonical match tables
 - `data/gold`: feature datasets ready for ML
 
-## Next Runtime Targets
+## Pipeline Flow
 
-- Processing pipeline output in `data/gold/features_dataset.csv`
-- Future model artifact in `models/match_predictor.joblib`
-- FastAPI app entrypoint at `src.api.main:app`
+1. Ingestion writes raw snapshots and standardized bronze data
+2. Processing writes `data/silver/matches_cleaned.csv`
+3. Processing writes `data/gold/features_dataset.csv`
+4. Training exports `models/match_predictor.joblib`
+5. FastAPI serves predictions from `src.api.main:app`
+
+## Run Training
+
+```bash
+.venv\Scripts\python -m src.modeling.train
+```
+
+This trains the production XGBoost pipeline on `data/gold/features_dataset.csv`
+using a temporal holdout split and exports `models/match_predictor.joblib`.
+
+## Run API
+
+```bash
+.venv\Scripts\uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+
+Example prediction request:
+
+```bash
+curl -X POST "http://localhost:8000/predict" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"home_team\":\"Colombia\",\"away_team\":\"Argentina\",\"tournament\":\"FIFA World Cup Qualifiers\",\"neutral\":false}"
+```
 
 ## Docker
 

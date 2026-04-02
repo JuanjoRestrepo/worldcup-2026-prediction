@@ -1,9 +1,8 @@
-from pathlib import Path
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
+from src.modeling.predict import predict_match_outcome
 
 app = FastAPI(
     title="World Cup 2026 Prediction API",
@@ -20,8 +19,14 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    status: str
-    detail: str
+    home_team: str
+    away_team: str
+    predicted_class: int
+    predicted_outcome: str
+    class_probabilities: dict[str, float]
+    neutral: bool
+    tournament: str | None = None
+    feature_snapshot_dates: dict[str, str]
     model_artifact_path: str
 
 
@@ -38,31 +43,22 @@ def runtime_config() -> dict[str, str]:
         "data_dir": str(settings.DATA_DIR),
         "gold_dir": str(settings.GOLD_DIR),
         "model_artifact_path": str(settings.MODEL_ARTIFACT_PATH),
+        "model_artifact_exists": str(settings.MODEL_ARTIFACT_PATH.exists()).lower(),
     }
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
-    """
-    Placeholder serving endpoint.
-
-    The API contract is ready, but prediction execution stays disabled until
-    the training/export flow persists a production model artifact.
-    """
-    model_artifact = Path(settings.MODEL_ARTIFACT_PATH)
-    if not model_artifact.exists():
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Model artifact not found. Train/export a model to "
-                f"{model_artifact} before enabling predictions."
-            ),
+    """Predict the outcome of a fixture from the exported production artifact."""
+    try:
+        prediction = predict_match_outcome(
+            home_team=request.home_team,
+            away_team=request.away_team,
+            tournament=request.tournament,
+            neutral=request.neutral,
         )
-
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            "Prediction serving scaffold is ready, but request-to-feature "
-            "assembly is not implemented yet."
-        ),
-    )
+        return PredictionResponse(**prediction)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
