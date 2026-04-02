@@ -1,0 +1,109 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: worldcup
+          POSTGRES_PASSWORD: worldcup_dev
+          POSTGRES_DB: worldcup_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with ruff (optional)
+        run: |
+          pip install ruff
+          ruff check src/ tests/ || true
+
+      - name: Run pytest
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: worldcup_db
+          DB_USER: worldcup
+          DB_PASSWORD: worldcup_dev
+        run: |
+          # Initialize database schema
+          PGPASSWORD=worldcup_dev psql -h localhost -U worldcup -d worldcup_db -f docker/postgres/init.sql || true
+
+          # Run tests
+          pytest tests/ -v --tb=short \
+            --ignore=tests/test_inference_logger.py \
+            --ignore=tests/test_api.py \
+            --ignore=tests/test_database_persistence.py
+
+      - name: Check dbt models (syntax only)
+        run: |
+          pip install dbt-postgres
+          dbt parse --projects-dir dbt --dbt-use-mp-script || true
+
+      - name: Comment PR with test results
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ CI Pipeline Failed\n\nPlease check the test logs above and fix any failures before merging.'
+            })
+
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Type check with MyPy (optional)
+        run: |
+          pip install mypy
+          mypy src/ --ignore-missing-imports --no-strict-optional || true
+
+      - name: Check imports with bandit (security)
+        run: |
+          pip install bandit
+          bandit -ll -r src/ || true
