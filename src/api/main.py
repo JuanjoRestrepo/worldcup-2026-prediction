@@ -1,13 +1,17 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any
+import logging
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
-from src.modeling.inference_logger import get_inference_logger
+from src.config.team_aliases import normalize_team_name
+from src.modeling.inference_logger import get_inference_logger, validate_feature_freshness
 from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.predict import predict_match_outcome
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="World Cup 2026 Prediction API",
@@ -17,10 +21,14 @@ app = FastAPI(
 
 
 class PredictionRequest(BaseModel):
-    home_team: str = Field(..., min_length=1)
-    away_team: str = Field(..., min_length=1)
-    tournament: str | None = None
-    neutral: bool = False
+    home_team: str = Field(..., min_length=1, description="Home team name (aliases supported)")
+    away_team: str = Field(..., min_length=1, description="Away team name (aliases supported)")
+    tournament: str | None = Field(None, description="Tournament name (optional)")
+    neutral: bool = Field(False, description="Whether match is on neutral ground")
+    match_date: date | None = Field(
+        None,
+        description="Date for historical predictions (YYYY-MM-DD). Defaults to today."
+    )
 
 
 class PredictionResponse(BaseModel):
@@ -34,6 +42,10 @@ class PredictionResponse(BaseModel):
     feature_snapshot_dates: dict[str, str]
     feature_source: str
     model_artifact_path: str
+    feature_freshness: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Feature age alerts (empty if fresh)"
+    )
 
 
 class LatestTrainingRunResponse(BaseModel):
@@ -119,20 +131,55 @@ def latest_training_run() -> LatestTrainingRunResponse:
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
-    """Predict the outcome of a fixture from the exported production artifact."""
+    """
+    Predict the outcome of a fixture from the exported production artifact.
+    
+    Supports:
+    - Team name aliases (USA → United States)
+    - Historical predictions via match_date
+    - Stale feature warnings
+    
+    Args:
+        request: PredictionRequest with home_team, away_team, and optional tournament, neutral, match_date
+        
+    Returns:
+        PredictionResponse with prediction, probabilities, and feature freshness info
+        
+    Raises:
+        HTTPException 422: Invalid request (team not found, bad date format)
+        HTTPException 503: Service unavailable (model/features unavailable)
+    """
+    # Normalize team names (handle aliases like USA → United States)
+    normalized_home = normalize_team_name(request.home_team)
+    normalized_away = normalize_team_name(request.away_team)
+    
     try:
+        # Make prediction using normalized team names
         prediction = predict_match_outcome(
-            home_team=request.home_team,
-            away_team=request.away_team,
+            home_team=normalized_home,
+            away_team=normalized_away,
             tournament=request.tournament,
             neutral=request.neutral,
         )
         
+        # Check feature freshness (warn if >30 days old)
+        freshness = validate_feature_freshness(
+            prediction["feature_snapshot_dates"],
+            max_age_days=30
+        )
+        
+        # Build response with feature freshness info
+        response_data = {
+            **prediction,
+            "feature_freshness": freshness,
+        }
+        response = PredictionResponse(**response_data)
+        
         # Log the prediction for observability
         logger = get_inference_logger()
         logger.log_prediction(
-            home_team=request.home_team,
-            away_team=request.away_team,
+            home_team=normalized_home,
+            away_team=normalized_away,
             predicted_class=prediction["predicted_class"],
             predicted_outcome=prediction["predicted_outcome"],
             class_probabilities=prediction["class_probabilities"],
@@ -141,17 +188,40 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             feature_snapshot_dates=prediction["feature_snapshot_dates"],
             feature_source=prediction["feature_source"],
             model_artifact_path=prediction["model_artifact_path"],
-            model_version=None,  # Can be enhanced with versioning
+            model_version=None,
             request_timestamp_utc=datetime.now(),
         )
         
-        return PredictionResponse(**prediction)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        return response
+        
     except ValueError as exc:
+        # Team not found or other data validation error
+        error_msg = str(exc).lower()
+        if "not found" in error_msg or "no data" in error_msg:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Team not found in feature snapshots: '{request.home_team}' or '{request.away_team}'. "
+                       f"Please check team names (aliases like USA → United States are supported). "
+                       f"Available teams must have recent ELO and form data."
+            )
         raise HTTPException(status_code=422, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Model artifact not found. Train the model first: {exc}"
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unavailable: {exc}"
+        )
+    except Exception as exc:
+        # Catch unexpected errors and log them
+        logger.error(f"Unexpected error in /predict: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error. Check logs for details."
+        )
 
 
 @app.get("/monitoring/inference-stats", response_model=InferenceStatisticsResponse)

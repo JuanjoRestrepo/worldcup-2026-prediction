@@ -20,6 +20,50 @@ INFERENCE_LOG_SCHEMA = "monitoring"
 INFERENCE_LOG_TABLE = "inference_logs"
 
 
+def validate_feature_freshness(
+    feature_dates: dict[str, str],
+    max_age_days: int = 30,
+) -> dict[str, Any]:
+    """
+    Validate that features are fresh (not older than max_age_days).
+    
+    Args:
+        feature_dates: Dict mapping feature names/teams to ISO date strings
+        max_age_days: Maximum acceptable age in days (default: 30)
+        
+    Returns:
+        Dict with 'is_fresh' (bool), 'warning' (str or None), 'age_days' (dict)
+    """
+    now = datetime.now(timezone.utc)
+    ages = {}
+    warnings = []
+    is_fresh = True
+    
+    for feature_name, date_str in feature_dates.items():
+        try:
+            # Parse ISO format date (handles both date and datetime)
+            if "T" in date_str:
+                feature_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            else:
+                from datetime import date as date_type
+                feature_date = datetime.fromisoformat(date_str + "T00:00:00+00:00")
+            
+            age_days = (now - feature_date).days
+            ages[feature_name] = age_days
+            
+            if age_days > max_age_days:
+                is_fresh = False
+                warnings.append(f"{feature_name}: {age_days} days old")
+        except (ValueError, TypeError) as exc:
+            logger.warning(f"Could not parse feature date for {feature_name}: {date_str} ({exc})")
+    
+    return {
+        "is_fresh": is_fresh,
+        "warning": " | ".join(warnings) if warnings else None,
+        "age_days": ages,
+    }
+
+
 class InferenceLogger:
     """Centralized logging for model inference requests and predictions."""
 
