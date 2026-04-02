@@ -20,8 +20,9 @@ def get_connection() -> _connection:
             database=settings.DB_NAME,
             user=settings.DB_USER,
             password=settings.DB_PASSWORD,
+            connect_timeout=5  # Set a timeout for the connection attempt
         )
         return conn
 
-    except Exception as e:
-        raise Exception(f"Database connection failed: {e}")
+    except psycopg2.OperationalError as e:
+        raise RuntimeError(f"[DB ERROR] Connection failed: {e}")
