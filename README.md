@@ -1,13 +1,22 @@
 # World Cup 2026 Prediction Pipeline
 
-End-to-end pipeline for ingesting, processing, and serving international football match predictions.
+End-to-end pipeline for ingesting, processing, and serving international football match predictions with production-grade observability.
 
 ## Current Stack
 
 - Python for ingestion, processing, and modeling
 - PostgreSQL in Docker for infrastructure
 - dbt for SQL curation and data quality over persisted medallion tables
-- FastAPI scaffold for the serving layer
+- FastAPI scaffold for the serving layer + inference logging
+- SQLAlchemy for ORM and connection pooling
+
+## Project Documentation
+
+- 📊 [PROJECT_STATUS.md](PROJECT_STATUS.md) — Executive overview & architecture
+- 📝 [INFERENCE_LOGGING_GUIDE.md](INFERENCE_LOGGING_GUIDE.md) — Complete logging system
+- 🧪 [TESTING_INFERENCE_LOGGING.md](TESTING_INFERENCE_LOGGING.md) — Local testing guide
+- 🔧 [INGESTION_ARCHITECTURE.md](INGESTION_ARCHITECTURE.md) — Data pipeline design
+- 📈 [PHASE_3B_SENIOR_FEATURES_SUMMARY.md](PHASE_3B_SENIOR_FEATURES_SUMMARY.md) — Feature engineering
 
 ## Project Setup
 
@@ -39,7 +48,8 @@ python -m venv .venv
 3. Processing writes `data/gold/features_dataset.csv`
 4. Training exports `models/match_predictor.joblib`
 5. FastAPI serves predictions from `src.api.main:app`
-6. FastAPI prefers `dbt`-curated latest team snapshots, then falls back to PostgreSQL and CSV
+6. **NEW:** Every prediction is logged to `monitoring.inference_logs` table
+7. FastAPI prefers `dbt`-curated latest team snapshots, then falls back to PostgreSQL and CSV
 
 ## Run End-to-End Pipeline
 
@@ -67,6 +77,7 @@ PostgreSQL:
 - `silver.matches_cleaned`
 - `gold.features_dataset`
 - `gold.training_runs`
+- **NEW:** `monitoring.inference_logs` (created automatically in `docker/postgres/init.sql`)
 
 These persisted tables are the source layer for the `dbt` project documented in
 [`dbt/README.md`](dbt/README.md).
@@ -78,6 +89,31 @@ These persisted tables are the source layer for the `dbt` project documented in
 ```
 
 This trains the production XGBoost pipeline on `data/gold/features_dataset.csv`
+
+## Serve Predictions with Observability
+
+```bash
+uvicorn src.api.main:app --reload
+```
+
+Visit `http://localhost:8000/docs` for interactive API documentation.
+
+**Key endpoints:**
+
+- `POST /predict` — Predict match outcome (auto-logs to PostgreSQL)
+- `GET /monitoring/inference-stats` — Last 24h aggregated statistics
+- `GET /monitoring/recent-inferences` — Recent predictions for auditing
+- `GET /monitoring/latest-training-run` — Current model metrics
+
+**Example prediction:**
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"home_team":"Brazil","away_team":"Argentina"}'
+```
+
+See [INFERENCE_LOGGING_GUIDE.md](INFERENCE_LOGGING_GUIDE.md) for full API documentation and usage patterns.
 using a temporal holdout split and exports `models/match_predictor.joblib`.
 
 ## Run API

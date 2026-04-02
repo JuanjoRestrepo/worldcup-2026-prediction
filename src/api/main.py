@@ -1,7 +1,11 @@
+from datetime import datetime
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
+from src.modeling.inference_logger import get_inference_logger
 from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.predict import predict_match_outcome
 
@@ -52,6 +56,32 @@ class LatestTrainingRunResponse(BaseModel):
     monitoring_source: str
 
 
+class InferenceStatisticsResponse(BaseModel):
+    status: str
+    period_hours: int | None = None
+    statistics: dict[str, Any] | None = None
+    message: str | None = None
+
+
+class RecentInferenceRecord(BaseModel):
+    request_id: str
+    timestamp_utc: str
+    home_team: str
+    away_team: str
+    neutral: bool
+    tournament: str | None
+    predicted_outcome: str
+    class_probabilities_json: str
+    feature_source: str
+    model_version: str
+
+
+class RecentInferencesResponse(BaseModel):
+    status: str
+    count: int
+    inferences: list[RecentInferenceRecord]
+
+
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     """Simple readiness endpoint for container and local checks."""
@@ -97,6 +127,24 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             tournament=request.tournament,
             neutral=request.neutral,
         )
+        
+        # Log the prediction for observability
+        logger = get_inference_logger()
+        logger.log_prediction(
+            home_team=request.home_team,
+            away_team=request.away_team,
+            predicted_class=prediction["predicted_class"],
+            predicted_outcome=prediction["predicted_outcome"],
+            class_probabilities=prediction["class_probabilities"],
+            neutral=request.neutral,
+            tournament=request.tournament,
+            feature_snapshot_dates=prediction["feature_snapshot_dates"],
+            feature_source=prediction["feature_source"],
+            model_artifact_path=prediction["model_artifact_path"],
+            model_version=None,  # Can be enhanced with versioning
+            request_timestamp_utc=datetime.now(),
+        )
+        
         return PredictionResponse(**prediction)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -104,3 +152,39 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         raise HTTPException(status_code=503, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/monitoring/inference-stats", response_model=InferenceStatisticsResponse)
+def inference_statistics(hours: int = 24) -> InferenceStatisticsResponse:
+    """
+    Get inference statistics for the last N hours.
+    
+    Provides aggregated metrics: total inferences, prediction distribution,
+    feature sources used, and probability statistics.
+    """
+    if hours < 1 or hours > 720:
+        raise HTTPException(status_code=422, detail="hours must be between 1 and 720")
+    
+    logger = get_inference_logger()
+    stats_dict = logger.get_inference_statistics(hours=hours)
+    return InferenceStatisticsResponse(**stats_dict)
+
+
+@app.get("/monitoring/recent-inferences", response_model=RecentInferencesResponse)
+def recent_inferences(limit: int = 50) -> RecentInferencesResponse:
+    """
+    Retrieve recent inference logs for auditing and debugging.
+    
+    Returns the latest N predictions with full request and prediction details.
+    Useful for troubleshooting, feature source tracking, and model behavior inspection.
+    """
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+    
+    logger = get_inference_logger()
+    records = logger.get_recent_inferences(limit=limit)
+    return RecentInferencesResponse(
+        status="ok" if records else "no_data",
+        count=len(records),
+        inferences=[RecentInferenceRecord(**r) for r in records],
+    )
