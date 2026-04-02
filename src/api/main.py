@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
+from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.predict import predict_match_outcome
 
 app = FastAPI(
@@ -31,6 +32,26 @@ class PredictionResponse(BaseModel):
     model_artifact_path: str
 
 
+class LatestTrainingRunResponse(BaseModel):
+    pipeline_run_id: str | None = None
+    artifact_path: str
+    data_path: str
+    training_rows: int
+    test_rows: int
+    feature_count: int
+    train_date_start: str
+    train_date_end: str
+    test_date_start: str
+    test_date_end: str
+    accuracy: float
+    macro_f1: float
+    weighted_f1: float
+    log_loss: float
+    trained_at_utc: str
+    persisted_at_utc: str | None = None
+    monitoring_source: str
+
+
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     """Simple readiness endpoint for container and local checks."""
@@ -43,10 +64,27 @@ def runtime_config() -> dict[str, str]:
     return {
         "data_dir": str(settings.DATA_DIR),
         "gold_dir": str(settings.GOLD_DIR),
+        "dbt_base_schema": settings.DBT_BASE_SCHEMA,
         "prediction_feature_source": settings.PREDICTION_FEATURE_SOURCE,
+        "monitoring_source": settings.MONITORING_SOURCE,
         "model_artifact_path": str(settings.MODEL_ARTIFACT_PATH),
         "model_artifact_exists": str(settings.MODEL_ARTIFACT_PATH.exists()).lower(),
     }
+
+
+@app.get("/monitoring/latest-training-run", response_model=LatestTrainingRunResponse)
+def latest_training_run() -> LatestTrainingRunResponse:
+    """Expose the latest curated training summary for lightweight monitoring."""
+    try:
+        training_run, monitoring_source = load_latest_training_run_summary_with_source(
+            source=settings.MONITORING_SOURCE,
+        )
+        return LatestTrainingRunResponse(
+            monitoring_source=monitoring_source,
+            **training_run,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -61,6 +99,8 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         )
         return PredictionResponse(**prediction)
     except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

@@ -75,13 +75,25 @@ models:
           - accepted_values:
               arguments:
                 values: ['home', 'away', 'overall']
+      - name: pipeline_run_id
+        tests:
+          - not_null
+      - name: persisted_at_utc
+        tests:
+          - not_null
 
   - name: gold_latest_training_run
     description: "Latest production training run with the most recent metrics and artifact metadata."
     columns:
+      - name: pipeline_run_id
+        tests:
+          - not_null
       - name: artifact_path
         tests:
           - not_null
       - name: trained_at_utc
+        tests:
+          - not_null
+      - name: persisted_at_utc
         tests:
           - not_null

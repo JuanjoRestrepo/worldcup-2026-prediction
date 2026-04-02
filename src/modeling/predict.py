@@ -10,8 +10,10 @@ import joblib
 from src.config.settings import settings
 from src.modeling.features import (
     build_match_feature_frame,
+    build_match_feature_frame_from_latest_snapshots,
     load_feature_dataset_with_source,
 )
+from src.modeling.serving_store import load_latest_team_snapshots_from_dbt
 
 
 @lru_cache(maxsize=2)
@@ -48,7 +50,7 @@ def predict_match_outcome(
         neutral: Whether the fixture is on neutral ground
         artifact_path: Optional alternate model artifact path
         feature_data_path: Optional alternate gold dataset path for snapshots
-        feature_source: Optional feature source override: auto, postgres, or csv
+        feature_source: Optional feature source override: auto, dbt, postgres, or csv
 
     Returns:
         Dictionary with the predicted class, probabilities, and snapshot metadata
@@ -60,18 +62,49 @@ def predict_match_outcome(
     outcome_labels = bundle["outcome_labels"]
 
     resolved_feature_source = feature_source or settings.PREDICTION_FEATURE_SOURCE
-    feature_history, active_feature_source = load_feature_dataset_with_source(
-        dataset_path=feature_data_path,
-        source=resolved_feature_source,
-    )
-    feature_frame, snapshot_dates = build_match_feature_frame(
-        home_team=home_team,
-        away_team=away_team,
-        tournament=tournament,
-        neutral=neutral,
-        feature_columns=feature_columns,
-        feature_history_df=feature_history,
-    )
+    if resolved_feature_source in {"auto", "dbt"}:
+        try:
+            latest_team_snapshots = load_latest_team_snapshots_from_dbt()
+            feature_frame, snapshot_dates = build_match_feature_frame_from_latest_snapshots(
+                home_team=home_team,
+                away_team=away_team,
+                tournament=tournament,
+                neutral=neutral,
+                feature_columns=feature_columns,
+                latest_team_snapshots_df=latest_team_snapshots,
+            )
+            active_feature_source = "dbt_latest_team_snapshots"
+        except RuntimeError as exc:
+            if resolved_feature_source == "dbt":
+                raise RuntimeError(
+                    "Failed to build serving features from dbt latest team snapshots."
+                ) from exc
+
+            feature_history, active_feature_source = load_feature_dataset_with_source(
+                dataset_path=feature_data_path,
+                source="auto",
+            )
+            feature_frame, snapshot_dates = build_match_feature_frame(
+                home_team=home_team,
+                away_team=away_team,
+                tournament=tournament,
+                neutral=neutral,
+                feature_columns=feature_columns,
+                feature_history_df=feature_history,
+            )
+    else:
+        feature_history, active_feature_source = load_feature_dataset_with_source(
+            dataset_path=feature_data_path,
+            source=resolved_feature_source,
+        )
+        feature_frame, snapshot_dates = build_match_feature_frame(
+            home_team=home_team,
+            away_team=away_team,
+            tournament=tournament,
+            neutral=neutral,
+            feature_columns=feature_columns,
+            feature_history_df=feature_history,
+        )
 
     predicted_encoded = int(model.predict(feature_frame)[0])
     encoded_classes = [int(value) for value in model.named_steps["model"].classes_]

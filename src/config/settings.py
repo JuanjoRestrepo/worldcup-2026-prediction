@@ -24,6 +24,7 @@ class Settings:
         self.DB_NAME: str = os.getenv("POSTGRES_DB", "wc_db")
         self.DB_USER: str = os.getenv("POSTGRES_USER", "wc_user")
         self.DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "wc_password")
+        self.DBT_BASE_SCHEMA: str = os.getenv("DBT_BASE_SCHEMA", "analytics").strip()
         self.PERSIST_TO_DB: bool = os.getenv("PERSIST_TO_DB", "false").lower() in {
             "1",
             "true",
@@ -34,9 +35,17 @@ class Settings:
             "PREDICTION_FEATURE_SOURCE",
             "auto",
         ).strip().lower()
-        if self.PREDICTION_FEATURE_SOURCE not in {"auto", "postgres", "csv"}:
+        if self.PREDICTION_FEATURE_SOURCE not in {"auto", "dbt", "postgres", "csv"}:
             raise ValueError(
-                "PREDICTION_FEATURE_SOURCE must be one of: auto, postgres, csv."
+                "PREDICTION_FEATURE_SOURCE must be one of: auto, dbt, postgres, csv."
+            )
+        self.MONITORING_SOURCE: str = os.getenv(
+            "MONITORING_SOURCE",
+            "auto",
+        ).strip().lower()
+        if self.MONITORING_SOURCE not in {"auto", "dbt", "postgres"}:
+            raise ValueError(
+                "MONITORING_SOURCE must be one of: auto, dbt, postgres."
             )
 
         self.FOOTBALL_API_KEY: str | None = os.getenv("FOOTBALL_API_KEY")

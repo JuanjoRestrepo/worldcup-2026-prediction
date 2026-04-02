@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.settings import settings
 from src.database.connection import get_sqlalchemy_engine
+from src.modeling.serving_store import clear_serving_store_cache
 
 TARGET_COLUMN = "target_multiclass"
 BINARY_TARGET_COLUMN = "target"
@@ -79,6 +80,7 @@ def clear_feature_dataset_cache() -> None:
     """Clear cached CSV and PostgreSQL feature snapshots."""
     _load_feature_dataset_from_csv_cached.cache_clear()
     _load_feature_dataset_from_postgres_cached.cache_clear()
+    clear_serving_store_cache()
 
 
 def _normalize_feature_source(source: str) -> FeatureDatasetSource:
@@ -370,5 +372,165 @@ def build_match_feature_frame(
         "away_team": resolved_away_team,
         "home_snapshot_date": pd.Timestamp(home_context["snapshot_date"]).date().isoformat(),
         "away_snapshot_date": pd.Timestamp(away_context["snapshot_date"]).date().isoformat(),
+    }
+    return feature_frame, snapshot_dates
+
+
+def _resolve_snapshot_team_name(df: pd.DataFrame, team_name: str) -> str:
+    normalized = team_name.strip().casefold()
+    team_map = {
+        current_team.casefold(): current_team
+        for current_team in df["team"].dropna().unique()
+    }
+    if normalized not in team_map:
+        raise ValueError(f"Team '{team_name}' was not found in the dbt serving model.")
+    return team_map[normalized]
+
+
+def _latest_snapshot_row(
+    df: pd.DataFrame,
+    team_name: str,
+    team_role: str,
+) -> pd.Series | None:
+    mask = (df["team"] == team_name) & (df["team_role"] == team_role)
+    if not mask.any():
+        return None
+    return df.loc[mask].sort_values("snapshot_date").iloc[-1]
+
+
+def build_match_feature_frame_from_latest_snapshots(
+    home_team: str,
+    away_team: str,
+    tournament: str | None,
+    neutral: bool,
+    feature_columns: list[str],
+    latest_team_snapshots_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Build a feature row from the dbt-curated latest team snapshot model."""
+    if home_team.strip().casefold() == away_team.strip().casefold():
+        raise ValueError("Home team and away team must be different teams.")
+
+    resolved_home_team = _resolve_snapshot_team_name(latest_team_snapshots_df, home_team)
+    resolved_away_team = _resolve_snapshot_team_name(latest_team_snapshots_df, away_team)
+
+    home_home_row = _latest_snapshot_row(
+        latest_team_snapshots_df,
+        resolved_home_team,
+        "home",
+    )
+    away_away_row = _latest_snapshot_row(
+        latest_team_snapshots_df,
+        resolved_away_team,
+        "away",
+    )
+    home_overall_row = _latest_snapshot_row(
+        latest_team_snapshots_df,
+        resolved_home_team,
+        "overall",
+    )
+    away_overall_row = _latest_snapshot_row(
+        latest_team_snapshots_df,
+        resolved_away_team,
+        "overall",
+    )
+
+    if home_overall_row is None or away_overall_row is None:
+        raise ValueError(
+            "The dbt latest team snapshot model is missing an overall snapshot for one of the teams."
+        )
+
+    home_elo = _safe_value(home_overall_row, "elo")
+    away_elo = _safe_value(away_overall_row, "elo")
+    flags = build_tournament_flags(tournament)
+
+    home_win_rate = _coalesce(
+        _safe_value(home_home_row, "win_rate_last5"),
+        _safe_value(home_overall_row, "global_win_rate_last5"),
+    )
+    away_win_rate = _coalesce(
+        _safe_value(away_away_row, "win_rate_last5"),
+        _safe_value(away_overall_row, "global_win_rate_last5"),
+    )
+
+    row = {
+        "neutral": bool(neutral),
+        "elo_home": home_elo,
+        "elo_away": away_elo,
+        "elo_diff": home_elo - away_elo,
+        "home_avg_goals_last5": _safe_value(home_home_row, "avg_goals_last5"),
+        "home_avg_goals_conceded_last5": _safe_value(
+            home_home_row,
+            "avg_goals_conceded_last5",
+        ),
+        "away_avg_goals_last5": _safe_value(away_away_row, "avg_goals_last5"),
+        "away_avg_goals_conceded_last5": _safe_value(
+            away_away_row,
+            "avg_goals_conceded_last5",
+        ),
+        "home_global_avg_goals_last5": _safe_value(
+            home_overall_row,
+            "global_avg_goals_last5",
+        ),
+        "home_global_avg_conceded_last5": _safe_value(
+            home_overall_row,
+            "global_avg_conceded_last5",
+        ),
+        "away_global_avg_goals_last5": _safe_value(
+            away_overall_row,
+            "global_avg_goals_last5",
+        ),
+        "away_global_avg_conceded_last5": _safe_value(
+            away_overall_row,
+            "global_avg_conceded_last5",
+        ),
+        "home_win_rate_last5": _safe_value(home_home_row, "win_rate_last5"),
+        "away_win_rate_last5": _safe_value(away_away_row, "win_rate_last5"),
+        "home_global_win_rate_last5": _safe_value(
+            home_overall_row,
+            "global_win_rate_last5",
+        ),
+        "away_global_win_rate_last5": _safe_value(
+            away_overall_row,
+            "global_win_rate_last5",
+        ),
+        "home_advantage_effect": 0.0 if neutral else home_win_rate - away_win_rate,
+        "home_opponent_elo": away_elo,
+        "away_opponent_elo": home_elo,
+        "home_avg_opponent_elo_last5": _safe_value(
+            home_home_row,
+            "avg_opponent_elo_last5",
+        ),
+        "away_avg_opponent_elo_last5": _safe_value(
+            away_away_row,
+            "avg_opponent_elo_last5",
+        ),
+        "home_weighted_win_rate_last5": _safe_value(
+            home_home_row,
+            "weighted_win_rate_last5",
+        ),
+        "away_weighted_win_rate_last5": _safe_value(
+            away_away_row,
+            "weighted_win_rate_last5",
+        ),
+        "elo_ratio_home": home_elo / max(away_elo, 1e-6),
+        "combined_elo_strength": home_elo + away_elo,
+        "home_opponent_elo_form": _safe_value(home_home_row, "opponent_elo_form"),
+        "away_opponent_elo_form": _safe_value(away_away_row, "opponent_elo_form"),
+        "home_elo_form": _safe_value(home_home_row, "elo_form"),
+        "away_elo_form": _safe_value(away_away_row, "elo_form"),
+        **flags,
+    }
+
+    feature_row = {column: row.get(column, float("nan")) for column in feature_columns}
+    feature_frame = pd.DataFrame([feature_row])
+    snapshot_dates = {
+        "home_team": resolved_home_team,
+        "away_team": resolved_away_team,
+        "home_snapshot_date": pd.Timestamp(
+            home_overall_row["snapshot_date"]
+        ).date().isoformat(),
+        "away_snapshot_date": pd.Timestamp(
+            away_overall_row["snapshot_date"]
+        ).date().isoformat(),
     }
     return feature_frame, snapshot_dates

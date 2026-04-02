@@ -39,7 +39,7 @@ python -m venv .venv
 3. Processing writes `data/gold/features_dataset.csv`
 4. Training exports `models/match_predictor.joblib`
 5. FastAPI serves predictions from `src.api.main:app`
-6. FastAPI prefers `gold.features_dataset` from PostgreSQL and falls back to CSV
+6. FastAPI prefers `dbt`-curated latest team snapshots, then falls back to PostgreSQL and CSV
 
 ## Run End-to-End Pipeline
 
@@ -88,11 +88,16 @@ using a temporal holdout split and exports `models/match_predictor.joblib`.
 
 Prediction serving uses `PREDICTION_FEATURE_SOURCE=auto` by default, which:
 
-- loads team feature snapshots from `gold.features_dataset` in PostgreSQL when available
+- loads team feature snapshots from `analytics_gold.gold_latest_team_snapshots` when available
+- falls back to `gold.features_dataset` in PostgreSQL if the dbt model is unavailable
 - falls back to `data/gold/features_dataset.csv` if PostgreSQL is unavailable
 
-Use `PREDICTION_FEATURE_SOURCE=postgres` to require DB-backed serving, or
+Use `PREDICTION_FEATURE_SOURCE=dbt` to require dbt-backed serving,
+`PREDICTION_FEATURE_SOURCE=postgres` to require raw DB-backed serving, or
 `PREDICTION_FEATURE_SOURCE=csv` to force local CSV inference.
+
+Training monitoring uses `MONITORING_SOURCE=auto` by default, which prefers
+`analytics_gold.gold_latest_training_run` and falls back to `gold.training_runs`.
 
 Example prediction request:
 
@@ -100,6 +105,12 @@ Example prediction request:
 curl -X POST "http://localhost:8000/predict" ^
   -H "Content-Type: application/json" ^
   -d "{\"home_team\":\"Colombia\",\"away_team\":\"Argentina\",\"tournament\":\"FIFA World Cup Qualifiers\",\"neutral\":false}"
+```
+
+Monitoring request:
+
+```bash
+curl "http://localhost:8000/monitoring/latest-training-run"
 ```
 
 ## Docker
@@ -131,6 +142,7 @@ Recommended flow:
 ```bash
 .venv\Scripts\python run_pipeline.py --persist-to-db
 .venv\Scripts\python run_dbt.py debug
+.venv\Scripts\python run_dbt.py source freshness
 .venv\Scripts\python run_dbt.py run
 .venv\Scripts\python run_dbt.py test
 ```

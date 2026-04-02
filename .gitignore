@@ -108,7 +108,6 @@ tmp/
 temp/
 
 # Docker
-.dockerignore
 docker-compose.local.yml
 
 # dbt

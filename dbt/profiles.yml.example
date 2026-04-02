@@ -8,5 +8,5 @@ worldcup_2026:
       user: "{{ env_var('POSTGRES_USER', 'wc_user') }}"
       password: "{{ env_var('POSTGRES_PASSWORD', 'wc_password') }}"
       dbname: "{{ env_var('POSTGRES_DB', 'wc_db') }}"
-      schema: analytics
+      schema: "{{ env_var('DBT_BASE_SCHEMA', 'analytics') }}"
       threads: "{{ env_var('DBT_THREADS', '1') | int }}"

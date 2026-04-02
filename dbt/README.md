@@ -14,8 +14,10 @@ it adds:
 
 - documented sources for the persisted medallion tables
 - curated `snake_case` SQL views for analytics
-- data quality tests over silver and gold
+- freshness checks on persisted bronze, silver, and gold sources
+- lineage-oriented tests between serving snapshots and the latest training run
 - serving-oriented team snapshot models
+- monitoring-oriented training run models
 
 ## Recommended Local Flow
 
@@ -29,6 +31,7 @@ it adds:
 
 ```bash
 .venv\Scripts\python run_dbt.py debug
+.venv\Scripts\python run_dbt.py source freshness
 ```
 
 3. Build the dbt models:
@@ -52,3 +55,9 @@ Windows workflow and avoids multiprocessing issues in constrained environments.
 - `gold_team_feature_snapshots`
 - `gold_latest_team_snapshots`
 - `gold_latest_training_run`
+
+## Downstream Usage
+
+- FastAPI serving prefers `analytics_gold.gold_latest_team_snapshots`
+- FastAPI monitoring prefers `analytics_gold.gold_latest_training_run`
+- dbt exposures document those downstream dependencies for lineage

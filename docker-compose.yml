@@ -31,11 +31,13 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-wc_db}"
       POSTGRES_USER: "${POSTGRES_USER:-wc_user}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-wc_password}"
+      DBT_BASE_SCHEMA: "${DBT_BASE_SCHEMA:-analytics}"
       DATA_DIR: /app/data
       MODEL_ARTIFACT_PATH: /app/models/match_predictor.joblib
       API_HOST: 0.0.0.0
       API_PORT: 8000
       PREDICTION_FEATURE_SOURCE: auto
+      MONITORING_SOURCE: auto
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:

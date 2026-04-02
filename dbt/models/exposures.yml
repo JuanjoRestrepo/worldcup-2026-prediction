@@ -1,0 +1,25 @@
+version: 2
+
+exposures:
+  - name: fastapi_prediction_serving
+    label: "FastAPI Prediction Serving"
+    type: application
+    maturity: medium
+    description: "The FastAPI /predict endpoint consumes dbt-curated team snapshot models for online inference."
+    depends_on:
+      - ref('gold_latest_team_snapshots')
+      - ref('gold_latest_training_run')
+    owner:
+      name: "worldcup-2026-prediction"
+      email: "team@example.com"
+
+  - name: fastapi_training_monitoring
+    label: "FastAPI Training Monitoring"
+    type: dashboard
+    maturity: medium
+    description: "The FastAPI monitoring endpoint exposes the latest curated training run from dbt."
+    depends_on:
+      - ref('gold_latest_training_run')
+    owner:
+      name: "worldcup-2026-prediction"
+      email: "team@example.com"

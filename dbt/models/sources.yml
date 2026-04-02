@@ -7,8 +7,27 @@ sources:
     tables:
       - name: historical_matches
         description: "Standardized historical matches ingested from CSV."
+        loaded_at_field: cast(persisted_at_utc as timestamptz)
+        freshness:
+          warn_after:
+            count: 7
+            period: day
+          error_after:
+            count: 30
+            period: day
+        columns:
+          - name: pipeline_run_id
+            tests:
+              - not_null
+          - name: persisted_at_utc
+            tests:
+              - not_null
       - name: api_matches
         description: "Standardized incremental match snapshots ingested from the football API."
+        columns:
+          - name: persisted_at_utc
+            tests:
+              - not_null
 
   - name: silver
     description: "Persisted silver-layer canonical match table written by the processing pipeline."
@@ -16,6 +35,21 @@ sources:
     tables:
       - name: matches_cleaned
         description: "Cleaned international matches with canonical schema and targets."
+        loaded_at_field: cast(persisted_at_utc as timestamptz)
+        freshness:
+          warn_after:
+            count: 7
+            period: day
+          error_after:
+            count: 30
+            period: day
+        columns:
+          - name: pipeline_run_id
+            tests:
+              - not_null
+          - name: persisted_at_utc
+            tests:
+              - not_null
 
   - name: gold
     description: "Persisted gold-layer training and serving datasets written by the ML pipeline."
@@ -23,5 +57,38 @@ sources:
     tables:
       - name: features_dataset
         description: "Model-ready match features used for training and inference."
+        loaded_at_field: cast(persisted_at_utc as timestamptz)
+        freshness:
+          warn_after:
+            count: 7
+            period: day
+          error_after:
+            count: 30
+            period: day
+        columns:
+          - name: pipeline_run_id
+            tests:
+              - not_null
+          - name: persisted_at_utc
+            tests:
+              - not_null
       - name: training_runs
         description: "Training metadata persisted for each production model build."
+        loaded_at_field: cast(persisted_at_utc as timestamptz)
+        freshness:
+          warn_after:
+            count: 14
+            period: day
+          error_after:
+            count: 60
+            period: day
+        columns:
+          - name: pipeline_run_id
+            tests:
+              - not_null
+          - name: persisted_at_utc
+            tests:
+              - not_null
+          - name: trained_at_utc
+            tests:
+              - not_null
