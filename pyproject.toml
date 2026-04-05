@@ -1,0 +1,2 @@
+[tool.ruff.lint]
+ignore = ["E402"] # Ignora la regla de imports al principio en este proyecto
