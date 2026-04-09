@@ -32,11 +32,24 @@ def _ensure_profiles_file() -> Path:
 
 
 def _resolve_dbt_executable() -> Path:
-    candidate = BASE_DIR / ".venv" / "Scripts" / "dbt.exe"
-    if candidate.exists():
-        return candidate
+    """Resolve dbt executable path for both Windows and Unix environments."""
+    # Check Windows path first
+    windows_candidate = BASE_DIR / ".venv" / "Scripts" / "dbt.exe"
+    if windows_candidate.exists():
+        return windows_candidate
+
+    # Check Unix path
+    unix_candidate = BASE_DIR / ".venv" / "bin" / "dbt"
+    if unix_candidate.exists():
+        return unix_candidate
+
+    # Try to find dbt in PATH as fallback
+    dbt_in_path = shutil.which("dbt")
+    if dbt_in_path:
+        return Path(dbt_in_path)
+
     raise FileNotFoundError(
-        "dbt executable not found in .venv. Install project dependencies first."
+        "dbt executable not found. Install project dependencies first with 'uv sync'."
     )
 
 
