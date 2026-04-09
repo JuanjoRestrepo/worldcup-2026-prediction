@@ -106,6 +106,8 @@ class PredictionResult(TypedDict):
     feature_snapshot_dates: FeatureSnapshotDates
     feature_source: str
     model_artifact_path: str
+    match_segment: str | None
+    is_override_triggered: bool
 
 
 class LatestTrainingRunSummary(TypedDict):

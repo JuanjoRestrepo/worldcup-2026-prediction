@@ -26,11 +26,11 @@ def validate_feature_freshness(
 ) -> dict[str, Any]:
     """
     Validate that features are fresh (not older than max_age_days).
-    
+
     Args:
         feature_dates: Dict mapping feature names/teams to ISO date strings
         max_age_days: Maximum acceptable age in days (default: 30)
-        
+
     Returns:
         Dict with 'is_fresh' (bool), 'warning' (str or None), 'age_days' (dict)
     """
@@ -38,7 +38,7 @@ def validate_feature_freshness(
     ages = {}
     warnings = []
     is_fresh = True
-    
+
     for feature_name, raw_date_value in feature_dates.items():
         date_str = str(raw_date_value)
         try:
@@ -47,16 +47,18 @@ def validate_feature_freshness(
                 feature_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             else:
                 feature_date = datetime.fromisoformat(date_str + "T00:00:00+00:00")
-            
+
             age_days = (now - feature_date).days
             ages[feature_name] = age_days
-            
+
             if age_days > max_age_days:
                 is_fresh = False
                 warnings.append(f"{feature_name}: {age_days} days old")
         except (ValueError, TypeError) as exc:
-            logger.warning(f"Could not parse feature date for {feature_name}: {date_str} ({exc})")
-    
+            logger.warning(
+                f"Could not parse feature date for {feature_name}: {date_str} ({exc})"
+            )
+
     return {
         "is_fresh": is_fresh,
         "warning": " | ".join(warnings) if warnings else None,
@@ -93,8 +95,23 @@ class InferenceLogger:
                     feature_source VARCHAR(100) NOT NULL,
                     model_artifact_path TEXT NOT NULL,
                     model_version VARCHAR(100),
+                    match_segment VARCHAR(100),
+                    is_override_triggered BOOLEAN DEFAULT FALSE,
                     persisted_at_utc TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )
+                """
+            )
+            # Add columns if they don't exist (for backward compatibility with existing tables)
+            connection.exec_driver_sql(
+                f"""
+                ALTER TABLE "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
+                ADD COLUMN IF NOT EXISTS match_segment VARCHAR(100)
+                """
+            )
+            connection.exec_driver_sql(
+                f"""
+                ALTER TABLE "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
+                ADD COLUMN IF NOT EXISTS is_override_triggered BOOLEAN DEFAULT FALSE
                 """
             )
             connection.exec_driver_sql(
@@ -119,6 +136,8 @@ class InferenceLogger:
         model_version: str | None = None,
         requested_match_date: date | None = None,
         request_timestamp_utc: datetime | None = None,
+        match_segment: str | None = None,
+        is_override_triggered: bool | None = None,
     ) -> None:
         """
         Log a single prediction to PostgreSQL.
@@ -136,6 +155,8 @@ class InferenceLogger:
             model_artifact_path: Path to model artifact used
             model_version: Optional model version identifier
             request_timestamp_utc: Optional request timestamp (defaults to now)
+            match_segment: Optional segment detected by ensemble (friendlies, worldcup, etc.)
+            is_override_triggered: Optional flag indicating specialist override
         """
         timestamp = request_timestamp_utc or datetime.now(timezone.utc)
 
@@ -158,6 +179,8 @@ class InferenceLogger:
             "feature_source": feature_source,
             "model_artifact_path": str(model_artifact_path),
             "model_version": model_version or "unknown",
+            "match_segment": match_segment,
+            "is_override_triggered": is_override_triggered or False,
             "persisted_at_utc": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -177,7 +200,9 @@ class InferenceLogger:
                 method="multi",
                 chunksize=1000,
             )
-            logger.debug(f"Logged {len(df)} inference(s) to {INFERENCE_LOG_SCHEMA}.{INFERENCE_LOG_TABLE}")
+            logger.debug(
+                f"Logged {len(df)} inference(s) to {INFERENCE_LOG_SCHEMA}.{INFERENCE_LOG_TABLE}"
+            )
         except Exception as exc:
             logger.error(f"Failed to persist inference log: {exc}")
             # Don't raise - inference should not fail due to logging error
@@ -221,7 +246,10 @@ class InferenceLogger:
         try:
             df = pd.read_sql_query(query, con=self.engine)
             if df.empty:
-                return {"status": "no_data", "message": f"No inferences in last {hours} hours"}
+                return {
+                    "status": "no_data",
+                    "message": f"No inferences in last {hours} hours",
+                }
 
             stats = df.iloc[0].to_dict()
             # Convert numeric columns properly
@@ -229,7 +257,9 @@ class InferenceLogger:
                 if pd.isna(stats[key]):
                     stats[key] = None
                 elif key.startswith("avg_"):
-                    stats[key] = round(float(stats[key]), 4) if stats[key] is not None else None
+                    stats[key] = (
+                        round(float(stats[key]), 4) if stats[key] is not None else None
+                    )
             return {
                 "status": "ok",
                 "period_hours": hours,

@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS monitoring.inference_logs (
     feature_source VARCHAR(100) NOT NULL,
     model_artifact_path TEXT NOT NULL,
     model_version VARCHAR(100),
+    -- Segment-Aware Hybrid Ensemble telemetry (v2.0)
+    match_segment VARCHAR(100),
+    -- true = specialist override generalist, false/null = standard prediction
+    is_override_triggered BOOLEAN DEFAULT FALSE,
     persisted_at_utc TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,3 +36,8 @@ CREATE INDEX IF NOT EXISTS idx_inference_logs_outcome
     ON monitoring.inference_logs(predicted_outcome);
 CREATE INDEX IF NOT EXISTS idx_inference_logs_model_version 
     ON monitoring.inference_logs(model_version);
+-- Indexes for segment-aware ensemble monitoring
+CREATE INDEX IF NOT EXISTS idx_inference_logs_segment 
+    ON monitoring.inference_logs(match_segment);
+CREATE INDEX IF NOT EXISTS idx_inference_logs_override 
+    ON monitoring.inference_logs(is_override_triggered);

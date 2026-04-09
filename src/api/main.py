@@ -1,15 +1,18 @@
-from datetime import datetime, date, timezone
-from typing import Any
 import logging
+from datetime import date, datetime, timezone
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
 from src.config.team_aliases import normalize_team_name
-from src.modeling.inference_logger import get_inference_logger, validate_feature_freshness
-from src.modeling.serving_store import load_latest_training_run_summary_with_source
+from src.modeling.inference_logger import (
+    get_inference_logger,
+    validate_feature_freshness,
+)
 from src.modeling.predict import predict_match_outcome
+from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.types import LatestTrainingRunSummary, PredictionResult
 
 logger = logging.getLogger(__name__)
@@ -22,13 +25,17 @@ app = FastAPI(
 
 
 class PredictionRequest(BaseModel):
-    home_team: str = Field(..., min_length=1, description="Home team name (aliases supported)")
-    away_team: str = Field(..., min_length=1, description="Away team name (aliases supported)")
+    home_team: str = Field(
+        ..., min_length=1, description="Home team name (aliases supported)"
+    )
+    away_team: str = Field(
+        ..., min_length=1, description="Away team name (aliases supported)"
+    )
     tournament: str | None = Field(None, description="Tournament name (optional)")
     neutral: bool = Field(False, description="Whether match is on neutral ground")
     match_date: date | None = Field(
         None,
-        description="Date for historical predictions (YYYY-MM-DD). Defaults to the latest available feature snapshot."
+        description="Date for historical predictions (YYYY-MM-DD). Defaults to the latest available feature snapshot.",
     )
 
 
@@ -44,9 +51,16 @@ class PredictionResponse(BaseModel):
     feature_snapshot_dates: dict[str, str]
     feature_source: str
     model_artifact_path: str
+    match_segment: str | None = Field(
+        None,
+        description="Tournament segment detected by ensemble (worldcup, continental, friendlies, qualifiers)",
+    )
+    is_override_triggered: bool = Field(
+        False,
+        description="Whether specialist ensemble override was triggered for this prediction",
+    )
     feature_freshness: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Feature age alerts (empty if fresh)"
+        default_factory=dict, description="Feature age alerts (empty if fresh)"
     )
 
 
@@ -137,18 +151,18 @@ def latest_training_run() -> LatestTrainingRunResponse:
 def predict(request: PredictionRequest) -> PredictionResponse:
     """
     Predict the outcome of a fixture from the exported production artifact.
-    
+
     Supports:
     - Team name aliases (USA → United States)
     - Historical predictions via match_date
     - Stale feature warnings
-    
+
     Args:
         request: PredictionRequest with home_team, away_team, and optional tournament, neutral, match_date
-        
+
     Returns:
         PredictionResponse with prediction, probabilities, and feature freshness info
-        
+
     Raises:
         HTTPException 422: Invalid request (team not found, bad date format)
         HTTPException 503: Service unavailable (model/features unavailable)
@@ -156,7 +170,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     # Normalize team names (handle aliases like USA → United States)
     normalized_home = normalize_team_name(request.home_team)
     normalized_away = normalize_team_name(request.away_team)
-    
+
     try:
         # Make prediction using normalized team names
         prediction: PredictionResult = predict_match_outcome(
@@ -166,11 +180,10 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             neutral=request.neutral,
             match_date=request.match_date,
         )
-        
+
         # Check feature freshness (warn if >30 days old)
         freshness = validate_feature_freshness(
-            prediction["feature_snapshot_dates"],
-            max_age_days=30
+            prediction["feature_snapshot_dates"], max_age_days=30
         )
         response = PredictionResponse(
             home_team=prediction["home_team"],
@@ -187,9 +200,11 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             },
             feature_source=prediction["feature_source"],
             model_artifact_path=prediction["model_artifact_path"],
+            match_segment=prediction.get("match_segment"),
+            is_override_triggered=prediction.get("is_override_triggered", False),
             feature_freshness=freshness,
         )
-        
+
         # Log the prediction for observability
         inference_logger = get_inference_logger()
         inference_logger.log_prediction(
@@ -206,10 +221,12 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             model_version=None,
             requested_match_date=request.match_date,
             request_timestamp_utc=datetime.now(timezone.utc),
+            match_segment=prediction.get("match_segment"),
+            is_override_triggered=prediction.get("is_override_triggered", False),
         )
-        
+
         return response
-        
+
     except ValueError as exc:
         # Team not found or other data validation error
         error_msg = str(exc).lower()
@@ -217,26 +234,22 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             raise HTTPException(
                 status_code=422,
                 detail=f"Team not found in feature snapshots: '{request.home_team}' or '{request.away_team}'. "
-                       f"Please check team names (aliases like USA → United States are supported). "
-                       f"Available teams must have recent ELO and form data."
+                f"Please check team names (aliases like USA → United States are supported). "
+                f"Available teams must have recent ELO and form data.",
             )
         raise HTTPException(status_code=422, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=503,
-            detail=f"Model artifact not found. Train the model first: {exc}"
+            detail=f"Model artifact not found. Train the model first: {exc}",
         )
     except RuntimeError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Service unavailable: {exc}"
-        )
+        raise HTTPException(status_code=503, detail=f"Service unavailable: {exc}")
     except Exception as exc:
         # Catch unexpected errors and log them
         logger.error(f"Unexpected error in /predict: {exc}")
         raise HTTPException(
-            status_code=500,
-            detail="Internal server error. Check logs for details."
+            status_code=500, detail="Internal server error. Check logs for details."
         )
 
 
@@ -244,13 +257,13 @@ def predict(request: PredictionRequest) -> PredictionResponse:
 def inference_statistics(hours: int = 24) -> InferenceStatisticsResponse:
     """
     Get inference statistics for the last N hours.
-    
+
     Provides aggregated metrics: total inferences, prediction distribution,
     feature sources used, and probability statistics.
     """
     if hours < 1 or hours > 720:
         raise HTTPException(status_code=422, detail="hours must be between 1 and 720")
-    
+
     logger = get_inference_logger()
     stats_dict = logger.get_inference_statistics(hours=hours)
     return InferenceStatisticsResponse(**stats_dict)
@@ -260,13 +273,13 @@ def inference_statistics(hours: int = 24) -> InferenceStatisticsResponse:
 def recent_inferences(limit: int = 50) -> RecentInferencesResponse:
     """
     Retrieve recent inference logs for auditing and debugging.
-    
+
     Returns the latest N predictions with full request and prediction details.
     Useful for troubleshooting, feature source tracking, and model behavior inspection.
     """
     if limit < 1 or limit > 500:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
-    
+
     logger = get_inference_logger()
     records = logger.get_recent_inferences(limit=limit)
     return RecentInferencesResponse(

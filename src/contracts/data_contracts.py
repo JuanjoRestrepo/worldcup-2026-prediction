@@ -70,7 +70,9 @@ def _require_columns(
     *,
     contract_name: str,
 ) -> None:
-    missing_columns = [column for column in required_columns if column not in df.columns]
+    missing_columns = [
+        column for column in required_columns if column not in df.columns
+    ]
     if missing_columns:
         raise DataContractError(
             f"{contract_name} contract failed: missing columns {missing_columns}."
@@ -90,9 +92,7 @@ def _require_non_null(
 ) -> None:
     null_counts = df[list(columns)].isna().sum()
     failing_columns = {
-        column: int(count)
-        for column, count in null_counts.items()
-        if int(count) > 0
+        column: int(count) for column, count in null_counts.items() if int(count) > 0
     }
     if failing_columns:
         raise DataContractError(
@@ -268,7 +268,10 @@ def validate_training_summary_contract(training_summary: TrainingSummary) -> Non
         raise DataContractError(
             "training_summary contract failed: metric 'log_loss' must be non-negative."
         )
-    if int(training_summary["training_rows"]) <= 0 or int(training_summary["test_rows"]) <= 0:
+    if (
+        int(training_summary["training_rows"]) <= 0
+        or int(training_summary["test_rows"]) <= 0
+    ):
         raise DataContractError(
             "training_summary contract failed: training_rows and test_rows must be positive."
         )
@@ -330,3 +333,75 @@ def validate_persisted_dataframe_contract(
     if validator is None:
         return
     validator(df)
+
+
+def validate_prediction_result_contract(prediction_result: dict[str, Any]) -> None:
+    """
+    Validate prediction result from predict_match_outcome.
+
+    Ensures all required fields are present and have correct types,
+    including optional segment-aware ensemble fields.
+
+    Args:
+        prediction_result: Dictionary from predict_match_outcome or ensemble
+
+    Raises:
+        DataContractError: If contract is violated
+    """
+    contract_name = "prediction_result"
+
+    # Required fields (always present)
+    required_fields = {
+        "home_team",
+        "away_team",
+        "predicted_class",
+        "predicted_outcome",
+        "class_probabilities",
+        "neutral",
+        "feature_snapshot_dates",
+        "feature_source",
+        "model_artifact_path",
+    }
+
+    # Optional fields (for segment-aware ensemble)
+    optional_fields = {
+        "tournament",  # May come from match data
+        "match_date",  # Optional historical prediction date
+        "match_segment",  # Segment detected by ensemble (NEW)
+        "is_override_triggered",  # Whether specialist override (NEW)
+    }
+
+    missing_required = required_fields - set(prediction_result.keys())
+    if missing_required:
+        raise DataContractError(
+            f"{contract_name} contract failed: missing required fields {missing_required}."
+        )
+
+    # Validate class probabilities is a dict
+    proba = prediction_result.get("class_probabilities", {})
+    if not isinstance(proba, dict) or not proba:
+        raise DataContractError(
+            f"{contract_name} contract failed: class_probabilities must be a non-empty dict."
+        )
+
+    # Validate probabilities sum to ~1.0
+    proba_sum = sum(float(p) for p in proba.values())
+    if not 0.99 <= proba_sum <= 1.01:  # Allow small floating point error
+        raise DataContractError(
+            f"{contract_name} contract failed: class_probabilities must sum to 1.0, got {proba_sum}."
+        )
+
+    # Validate optional ensemble fields if present
+    if "match_segment" in prediction_result:
+        segment = prediction_result["match_segment"]
+        if segment is not None and not isinstance(segment, str):
+            raise DataContractError(
+                f"{contract_name} contract failed: match_segment must be str or None."
+            )
+
+    if "is_override_triggered" in prediction_result:
+        override = prediction_result["is_override_triggered"]
+        if not isinstance(override, (bool, type(None))):
+            raise DataContractError(
+                f"{contract_name} contract failed: is_override_triggered must be bool or None."
+            )
