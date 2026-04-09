@@ -202,7 +202,9 @@ class SegmentAwareHybridDrawOverrideEnsemble(BaseEstimator, ClassifierMixin):
         """Detect segment for a single fixture. Returns segment_id or None."""
         if self.segment_detector_fn is None:
             return None
-        return self.segment_detector_fn(row)
+        result = self.segment_detector_fn(row)
+        # Type: detector_fn returns Any, but should be str | None
+        return cast(str | None, result)
 
     def _get_thresholds_for_segment(
         self, segment_id: str | None

@@ -363,14 +363,6 @@ def validate_prediction_result_contract(prediction_result: dict[str, Any]) -> No
         "model_artifact_path",
     }
 
-    # Optional fields (for segment-aware ensemble)
-    optional_fields = {
-        "tournament",  # May come from match data
-        "match_date",  # Optional historical prediction date
-        "match_segment",  # Segment detected by ensemble (NEW)
-        "is_override_triggered",  # Whether specialist override (NEW)
-    }
-
     missing_required = required_fields - set(prediction_result.keys())
     if missing_required:
         raise DataContractError(

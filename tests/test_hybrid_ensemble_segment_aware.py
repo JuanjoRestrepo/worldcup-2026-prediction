@@ -430,7 +430,6 @@ class TestSegmentStatistics:
         )
         # Use only numeric columns for fitting
         X_train_numeric = X_train[["feature_1", "feature_2", "feature_3"]]
-        X_test_numeric = X_test[["feature_1", "feature_2", "feature_3"]]
         ensemble.fit(X_train_numeric, y_train)
 
         y_test = pd.Series(np.random.choice([0, 1, 2], len(X_test)), name="outcome")

@@ -16,10 +16,6 @@ from src.modeling.features import (
     build_match_feature_frame_from_team_snapshots,
     load_feature_dataset_with_source,
 )
-from src.modeling.hybrid_ensemble_segment_aware import (
-    SegmentAwareHybridDrawOverrideEnsemble,
-    SegmentConfig,
-)
 from src.modeling.inference_logger import InferenceLogger
 from src.modeling.serving_store import (
     load_latest_team_snapshots_from_dbt,
@@ -184,68 +180,16 @@ def predict_match_outcome(
     predicted_outcome = int(encoded_to_outcome[predicted_encoded])
 
     # ============================================================================
-    # Segment-Aware Ensemble: Route specialist predictions per tournament segment
+    # Segment-Aware Telemetry: Detect tournament segment for monitoring
     # ============================================================================
+    # Note: Ensemble-based override logic is reserved for future phases when
+    # separate generalist/specialist estimators are available in the artifact.
+    # For now, we capture segment for observability and logging.
+
     match_segment = _detect_match_segment(tournament)
-    is_override_triggered = False
-
-    # Prepare feature frame with tournament column for segment detection
-    feature_frame_with_tournament = feature_frame.copy()
-    if "tournament" not in feature_frame_with_tournament.columns:
-        feature_frame_with_tournament.insert(0, "tournament", tournament or "unknown")
-
-    # Define segment-specific thresholds based on tournament type
-    segment_configs = {
-        "worldcup": SegmentConfig(
-            segment_id="worldcup",
-            uncertainty_threshold=0.50,
-            draw_conviction_threshold=0.65,
-        ),
-        "continental": SegmentConfig(
-            segment_id="continental",
-            uncertainty_threshold=0.45,
-            draw_conviction_threshold=0.60,
-        ),
-        "qualifiers": SegmentConfig(
-            segment_id="qualifiers",
-            uncertainty_threshold=0.48,
-            draw_conviction_threshold=0.62,
-        ),
-        "friendlies": SegmentConfig(
-            segment_id="friendlies",
-            uncertainty_threshold=0.35,
-            draw_conviction_threshold=0.55,
-        ),
-    }
-
-    try:
-        ensemble = SegmentAwareHybridDrawOverrideEnsemble(
-            segment_configs=segment_configs,
-            segment_detector_fn=_detect_match_segment,
-        )
-        ensemble.fit(
-            X=feature_frame_with_tournament,
-            y=None,
-        )
-
-        # Get ensemble predictions with override information
-        ensemble_probs = ensemble.predict_proba(feature_frame_with_tournament)
-        ensemble_pred = ensemble_probs[0]
-
-        # Extract segment-aware telemetry
-        if (
-            hasattr(ensemble, "last_override_mask_")
-            and ensemble.last_override_mask_ is not None
-        ):
-            is_override_triggered = bool(ensemble.last_override_mask_[0])
-    except Exception as e:
-        # Gracefully fallback to base model if ensemble fails
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.warning(
-            f"Segment-aware ensemble failed: {e}. Using base model predictions."
-        )
+    is_override_triggered: bool = (
+        False  # Default: no specialist override in current version
+    )
 
     # ============================================================================
     # Log prediction with segment-aware telemetry
