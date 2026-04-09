@@ -72,6 +72,9 @@ jobs:
       - name: Validate dbt project syntax
         run: uv run python run_dbt.py parse
 
+      - name: Run dbt data contract tests
+        run: uv run python run_dbt.py test
+
       - name: Run Ruff on source and tests
         run: uv run python -m ruff check src tests run_dbt.py run_pipeline.py
 
