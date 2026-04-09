@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.config.settings import settings
 from src.database.connection import get_sqlalchemy_engine
 from src.modeling.serving_store import clear_serving_store_cache
+from src.modeling.types import OverallSnapshot, TeamContext, TeamSnapshotMetadata
 
 TARGET_COLUMN = "target_multiclass"
 BINARY_TARGET_COLUMN = "target"
@@ -214,11 +215,12 @@ def _coalesce(*values: float) -> float:
 
 def _resolve_team_name(df: pd.DataFrame, team_name: str) -> str:
     normalized = team_name.strip().casefold()
-    team_map = {}
+    team_map: dict[str, str] = {}
 
     for column in ("homeTeam", "awayTeam"):
         for current_team in df[column].dropna().unique():
-            team_map[current_team.casefold()] = current_team
+            normalized_team = str(current_team)
+            team_map[normalized_team.casefold()] = normalized_team
 
     if normalized not in team_map:
         raise ValueError(f"Team '{team_name}' was not found in the gold feature dataset.")
@@ -232,7 +234,7 @@ def _latest_row(df: pd.DataFrame, mask: pd.Series) -> pd.Series | None:
     return df.loc[mask].sort_values("date").iloc[-1]
 
 
-def _extract_overall_snapshot(row: pd.Series, team_name: str) -> dict[str, float | pd.Timestamp]:
+def _extract_overall_snapshot(row: pd.Series, team_name: str) -> OverallSnapshot:
     if row["homeTeam"] == team_name:
         return {
             "elo": _safe_value(row, "elo_home"),
@@ -255,7 +257,7 @@ def _extract_overall_snapshot(row: pd.Series, team_name: str) -> dict[str, float
     }
 
 
-def _build_team_context(df: pd.DataFrame, team_name: str) -> dict[str, object]:
+def _build_team_context(df: pd.DataFrame, team_name: str) -> TeamContext:
     overall_row = _latest_row(
         df, (df["homeTeam"] == team_name) | (df["awayTeam"] == team_name)
     )
@@ -283,7 +285,7 @@ def build_match_feature_frame(
     feature_columns: list[str],
     feature_history_df: pd.DataFrame | None = None,
     match_date: date | None = None,
-) -> tuple[pd.DataFrame, dict[str, str]]:
+) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
     """
     Build a model-ready feature row for an upcoming match.
 
@@ -376,7 +378,7 @@ def build_match_feature_frame(
 
     feature_row = {column: row.get(column, float("nan")) for column in feature_columns}
     feature_frame = pd.DataFrame([feature_row])
-    snapshot_dates = {
+    snapshot_dates: TeamSnapshotMetadata = {
         "home_team": resolved_home_team,
         "away_team": resolved_away_team,
         "home_snapshot_date": pd.Timestamp(home_context["snapshot_date"]).date().isoformat(),
@@ -388,7 +390,7 @@ def build_match_feature_frame(
 def _resolve_snapshot_team_name(df: pd.DataFrame, team_name: str) -> str:
     normalized = team_name.strip().casefold()
     team_map = {
-        current_team.casefold(): current_team
+        str(current_team).casefold(): str(current_team)
         for current_team in df["team"].dropna().unique()
     }
     if normalized not in team_map:
@@ -414,7 +416,7 @@ def build_match_feature_frame_from_team_snapshots(
     neutral: bool,
     feature_columns: list[str],
     team_snapshots_df: pd.DataFrame,
-) -> tuple[pd.DataFrame, dict[str, str]]:
+) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
     """Build a feature row from a dbt-curated team snapshot serving model."""
     if home_team.strip().casefold() == away_team.strip().casefold():
         raise ValueError("Home team and away team must be different teams.")
@@ -532,7 +534,7 @@ def build_match_feature_frame_from_team_snapshots(
 
     feature_row = {column: row.get(column, float("nan")) for column in feature_columns}
     feature_frame = pd.DataFrame([feature_row])
-    snapshot_dates = {
+    snapshot_dates: TeamSnapshotMetadata = {
         "home_team": resolved_home_team,
         "away_team": resolved_away_team,
         "home_snapshot_date": pd.Timestamp(
@@ -552,7 +554,7 @@ def build_match_feature_frame_from_latest_snapshots(
     neutral: bool,
     feature_columns: list[str],
     latest_team_snapshots_df: pd.DataFrame,
-) -> tuple[pd.DataFrame, dict[str, str]]:
+) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
     """Backward-compatible wrapper for latest-snapshot serving."""
     return build_match_feature_frame_from_team_snapshots(
         home_team=home_team,

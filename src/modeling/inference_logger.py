@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 import logging
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 from sqlalchemy.engine import Engine
 
 from src.database.connection import get_sqlalchemy_engine
 from src.database.persistence import ensure_schema
+from src.modeling.types import FeatureSnapshotDates
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ INFERENCE_LOG_TABLE = "inference_logs"
 
 
 def validate_feature_freshness(
-    feature_dates: dict[str, str],
+    feature_dates: FeatureSnapshotDates | dict[str, str],
     max_age_days: int = 30,
 ) -> dict[str, Any]:
     """
@@ -38,7 +39,8 @@ def validate_feature_freshness(
     warnings = []
     is_fresh = True
     
-    for feature_name, date_str in feature_dates.items():
+    for feature_name, raw_date_value in feature_dates.items():
+        date_str = str(raw_date_value)
         try:
             # Parse ISO format date (handles both date and datetime)
             if "T" in date_str:
@@ -111,7 +113,7 @@ class InferenceLogger:
         class_probabilities: dict[str, float],
         neutral: bool,
         tournament: str | None,
-        feature_snapshot_dates: dict[str, str],
+        feature_snapshot_dates: FeatureSnapshotDates | dict[str, str],
         feature_source: str,
         model_artifact_path: str,
         model_version: str | None = None,
@@ -125,7 +127,7 @@ class InferenceLogger:
             home_team: Home team name
             away_team: Away team name
             predicted_class: Encoded prediction (0, 1, 2)
-            predicted_outcome: Human-readable outcome (win, loss, draw)
+            predicted_outcome: Human-readable outcome (home_win, away_win, draw)
             class_probabilities: Dict mapping outcomes to probabilities
             neutral: Whether match is on neutral ground
             tournament: Optional tournament name
@@ -152,7 +154,7 @@ class InferenceLogger:
             "predicted_class": predicted_class,
             "predicted_outcome": predicted_outcome,
             "class_probabilities_json": json.dumps(class_probabilities),
-            "feature_snapshot_dates_json": json.dumps(feature_snapshot_dates),
+            "feature_snapshot_dates_json": json.dumps(dict(feature_snapshot_dates)),
             "feature_source": feature_source,
             "model_artifact_path": str(model_artifact_path),
             "model_version": model_version or "unknown",
@@ -270,7 +272,8 @@ class InferenceLogger:
 
         try:
             df = pd.read_sql_query(query, con=self.engine)
-            return df.to_dict(orient="records")
+            records = df.to_dict(orient="records")
+            return [cast(dict[str, Any], record) for record in records]
         except Exception as exc:
             logger.error(f"Failed to retrieve recent inferences: {exc}")
             return []

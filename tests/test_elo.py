@@ -1,6 +1,5 @@
 """Unit tests for ELO rating module."""
 
-import pytest
 import pandas as pd
 from src.processing.transformers.elo import (
     INITIAL_ELO,

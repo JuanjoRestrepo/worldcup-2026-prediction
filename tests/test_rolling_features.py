@@ -1,6 +1,5 @@
 """Unit tests for rolling features module with leakage prevention."""
 
-import pytest
 import pandas as pd
 from src.processing.transformers.rolling_features import compute_rolling_features
 

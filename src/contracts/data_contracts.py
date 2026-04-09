@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 import pandas as pd
+
+from src.modeling.types import TrainingSummary
 
 
 class DataContractError(ValueError):
@@ -234,7 +236,7 @@ def validate_feature_dataset_contract(df: pd.DataFrame) -> None:
     )
 
 
-def validate_training_summary_contract(training_summary: dict[str, Any]) -> None:
+def validate_training_summary_contract(training_summary: TrainingSummary) -> None:
     """Validate the training summary payload before persistence."""
     required_keys = {
         "artifact_path",
@@ -257,12 +259,12 @@ def validate_training_summary_contract(training_summary: dict[str, Any]) -> None
 
     metrics = training_summary["metrics"]
     for metric_name in ("accuracy", "macro_f1", "weighted_f1"):
-        metric_value = metrics.get(metric_name)
-        if metric_value is None or not 0 <= float(metric_value) <= 1:
+        metric_value = metrics[metric_name]
+        if not 0 <= float(metric_value) <= 1:
             raise DataContractError(
                 f"training_summary contract failed: metric '{metric_name}' must be between 0 and 1."
             )
-    if float(metrics.get("log_loss", -1)) < 0:
+    if float(metrics["log_loss"]) < 0:
         raise DataContractError(
             "training_summary contract failed: metric 'log_loss' must be non-negative."
         )
@@ -317,7 +319,7 @@ def validate_persisted_dataframe_contract(
     table_name: str,
 ) -> None:
     """Validate persisted datasets using schema/table-aware contracts."""
-    contract_map = {
+    contract_map: dict[tuple[str, str], Callable[[pd.DataFrame], None]] = {
         ("bronze", "historical_matches"): validate_standardized_matches_contract,
         ("bronze", "api_matches"): validate_standardized_matches_contract,
         ("silver", "matches_cleaned"): validate_standardized_matches_contract,

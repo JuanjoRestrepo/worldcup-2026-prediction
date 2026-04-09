@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app

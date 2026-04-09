@@ -1,6 +1,5 @@
 """Unit tests for opponent strength features module."""
 
-import pytest
 import pandas as pd
 from src.processing.transformers.opponent_strength import compute_opponent_strength
 

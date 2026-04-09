@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from src.config.team_aliases import normalize_team_name, TEAM_ALIASES
 
@@ -67,7 +66,7 @@ class TestTeamAliases:
         for alias, target in TEAM_ALIASES.items():
             assert isinstance(alias, str), f"Alias key must be string: {alias}"
             assert isinstance(target, str), f"Alias target must be string: {target}"
-            assert len(alias) > 0, f"Alias cannot be empty"
+            assert len(alias) > 0, "Alias cannot be empty"
             assert len(target) > 0, f"Target for alias {alias} cannot be empty"
     
     def test_no_alias_to_empty_string(self):

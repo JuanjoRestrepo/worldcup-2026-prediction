@@ -120,7 +120,6 @@ def compute_opponent_strength(df: pd.DataFrame, window: int = 5) -> pd.DataFrame
     
     # Clip away team ELO to avoid division by near-zero (unlikely but safe)
     elo_away_clipped = np.clip(df["elo_away"], 1e-6, None)
-    elo_home_clipped = np.clip(df["elo_home"], 1e-6, None)
     
     # ELO ratio: home_team_power / away_team_power
     # 1.5 = home team 50% stronger

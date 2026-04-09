@@ -8,7 +8,9 @@ import logging
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score, classification_report, f1_score, log_loss
 from sklearn.pipeline import Pipeline
@@ -20,6 +22,7 @@ from src.contracts.data_contracts import validate_feature_dataset_contract
 from src.database.persistence import persist_training_run
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
+from src.modeling.types import ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +76,8 @@ def _summarize_metrics(
     y_true: pd.Series,
     y_true_encoded: pd.Series,
     y_pred_encoded: pd.Series,
-    probabilities,
-) -> dict[str, object]:
+    probabilities: NDArray[np.float64],
+) -> TrainingMetrics:
     y_pred = y_pred_encoded.map(ENCODED_TO_OUTCOME)
 
     return {
@@ -109,7 +112,7 @@ def train_and_export_model(
     test_size: float = DEFAULT_TEST_SIZE,
     persist_to_db: bool = False,
     pipeline_run_id: str | None = None,
-) -> dict[str, object]:
+) -> TrainingSummary:
     """
     Train the production model from the gold feature dataset and export it.
 
@@ -163,7 +166,7 @@ def train_and_export_model(
         probabilities=probabilities,
     )
 
-    training_summary = {
+    training_summary: TrainingSummary = {
         "artifact_path": str(output_path),
         "training_rows": int(len(train_df)),
         "test_rows": int(len(test_df)),
@@ -189,7 +192,7 @@ def train_and_export_model(
         "metrics": metrics,
     }
 
-    artifact = {
+    artifact: ModelArtifactBundle = {
         "model": pipeline,
         "feature_columns": feature_columns,
         "target_column": TARGET_COLUMN,
@@ -210,9 +213,9 @@ def train_and_export_model(
         logger.info("Training metadata appended to gold.training_runs")
     logger.info(
         "Evaluation metrics | accuracy=%.4f macro_f1=%.4f weighted_f1=%.4f",
-        metrics["accuracy"],
-        metrics["macro_f1"],
-        metrics["weighted_f1"],
+        training_summary["metrics"]["accuracy"],
+        training_summary["metrics"]["macro_f1"],
+        training_summary["metrics"]["weighted_f1"],
     )
 
     return training_summary

@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.settings import settings
 from src.database.connection import get_sqlalchemy_engine
+from src.modeling.types import LatestTrainingRunSummary
 
 logger = logging.getLogger(__name__)
 
@@ -195,20 +196,47 @@ def load_team_snapshots_as_of_date_from_dbt(match_date: date) -> tuple[pd.DataFr
     return snapshots, DBT_TEAM_SNAPSHOTS_AT_DATE_SOURCE
 
 
-def _serialize_training_run_row(row: pd.Series) -> dict[str, object]:
-    serialized: dict[str, object] = {}
-    for key, value in row.items():
-        if isinstance(value, pd.Timestamp):
-            serialized[key] = value.isoformat()
-        elif hasattr(value, "isoformat") and not isinstance(value, str):
-            serialized[key] = value.isoformat()
-        elif value is None:
-            serialized[key] = None
-        elif isinstance(value, float) and pd.isna(value):
-            serialized[key] = None
-        else:
-            serialized[key] = value
-    return serialized
+def _serialize_training_run_value(value: object) -> str | int | float | None:
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if hasattr(value, "isoformat") and not isinstance(value, str):
+        iso_value = getattr(value, "isoformat")()
+        return str(iso_value)
+    if value is None:
+        return None
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    if isinstance(value, (str, int, float)):
+        return value
+    return str(value)
+
+
+def _serialize_optional_string(value: object) -> str | None:
+    serialized_value = _serialize_training_run_value(value)
+    if serialized_value is None:
+        return None
+    return str(serialized_value)
+
+
+def _serialize_training_run_row(row: pd.Series) -> LatestTrainingRunSummary:
+    return {
+        "pipeline_run_id": _serialize_optional_string(row["pipeline_run_id"]),
+        "artifact_path": str(_serialize_training_run_value(row["artifact_path"])),
+        "data_path": str(_serialize_training_run_value(row["data_path"])),
+        "training_rows": int(row["training_rows"]),
+        "test_rows": int(row["test_rows"]),
+        "feature_count": int(row["feature_count"]),
+        "train_date_start": str(_serialize_training_run_value(row["train_date_start"])),
+        "train_date_end": str(_serialize_training_run_value(row["train_date_end"])),
+        "test_date_start": str(_serialize_training_run_value(row["test_date_start"])),
+        "test_date_end": str(_serialize_training_run_value(row["test_date_end"])),
+        "accuracy": float(row["accuracy"]),
+        "macro_f1": float(row["macro_f1"]),
+        "weighted_f1": float(row["weighted_f1"]),
+        "log_loss": float(row["log_loss"]),
+        "trained_at_utc": str(_serialize_training_run_value(row["trained_at_utc"])),
+        "persisted_at_utc": _serialize_optional_string(row["persisted_at_utc"]),
+    }
 
 
 @lru_cache(maxsize=1)
@@ -218,7 +246,7 @@ def _load_latest_training_run_from_dbt_cached(
     db_name: str,
     db_user: str,
     dbt_base_schema: str,
-) -> dict[str, object]:
+) -> LatestTrainingRunSummary:
     df = _read_relation(
         f"""
         SELECT
@@ -248,7 +276,7 @@ def _load_latest_training_run_from_dbt_cached(
     return _serialize_training_run_row(df.iloc[0])
 
 
-def _load_latest_training_run_from_dbt() -> dict[str, object]:
+def _load_latest_training_run_from_dbt() -> LatestTrainingRunSummary:
     return _load_latest_training_run_from_dbt_cached(
         settings.DB_HOST,
         settings.DB_PORT,
@@ -264,7 +292,7 @@ def _load_latest_training_run_from_postgres_cached(
     db_port: int,
     db_name: str,
     db_user: str,
-) -> dict[str, object]:
+) -> LatestTrainingRunSummary:
     df = _read_relation(
         f"""
         SELECT
@@ -296,7 +324,7 @@ def _load_latest_training_run_from_postgres_cached(
     return _serialize_training_run_row(df.iloc[0])
 
 
-def _load_latest_training_run_from_postgres() -> dict[str, object]:
+def _load_latest_training_run_from_postgres() -> LatestTrainingRunSummary:
     return _load_latest_training_run_from_postgres_cached(
         settings.DB_HOST,
         settings.DB_PORT,
@@ -307,7 +335,7 @@ def _load_latest_training_run_from_postgres() -> dict[str, object]:
 
 def load_latest_training_run_summary_with_source(
     source: str = "auto",
-) -> tuple[dict[str, object], str]:
+) -> tuple[LatestTrainingRunSummary, str]:
     """Load the latest training run summary for monitoring."""
     normalized_source = _normalize_monitoring_source(source)
 

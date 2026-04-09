@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timezone
+from typing import Literal
 
 import pandas as pd
 from sqlalchemy.engine import Engine
@@ -14,6 +15,7 @@ from src.contracts.data_contracts import (
     validate_training_summary_contract,
 )
 from src.database.connection import get_sqlalchemy_engine
+from src.modeling.types import TrainingSummary
 
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -38,7 +40,7 @@ def persist_dataframe(
     *,
     schema_name: str,
     table_name: str,
-    if_exists: str = "replace",
+    if_exists: Literal["fail", "replace", "append"] = "replace",
     engine: Engine | None = None,
     pipeline_run_id: str | None = None,
 ) -> None:
@@ -74,7 +76,7 @@ def persist_dataframe(
 
 
 def build_training_run_frame(
-    training_summary: dict[str, object],
+    training_summary: TrainingSummary,
     *,
     pipeline_run_id: str | None = None,
 ) -> pd.DataFrame:
@@ -110,7 +112,7 @@ def build_training_run_frame(
 
 
 def persist_training_run(
-    training_summary: dict[str, object],
+    training_summary: TrainingSummary,
     *,
     engine: Engine | None = None,
     pipeline_run_id: str | None = None,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
+from typing import cast
 
 import joblib
 
@@ -18,14 +19,15 @@ from src.modeling.serving_store import (
     load_latest_team_snapshots_from_dbt,
     load_team_snapshots_as_of_date_from_dbt,
 )
+from src.modeling.types import ModelArtifactBundle, PredictionResult
 
 
 @lru_cache(maxsize=2)
-def _load_model_bundle_cached(artifact_path: str) -> dict[str, object]:
-    return joblib.load(artifact_path)
+def _load_model_bundle_cached(artifact_path: str) -> ModelArtifactBundle:
+    return cast(ModelArtifactBundle, joblib.load(artifact_path))
 
 
-def load_model_bundle(artifact_path: Path | None = None) -> dict[str, object]:
+def load_model_bundle(artifact_path: Path | None = None) -> ModelArtifactBundle:
     """Load the exported model artifact bundle."""
     resolved_path = Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
     if not resolved_path.exists():
@@ -44,7 +46,7 @@ def predict_match_outcome(
     artifact_path: Path | None = None,
     feature_data_path: Path | None = None,
     feature_source: str | None = None,
-) -> dict[str, object]:
+) -> PredictionResult:
     """
     Predict the outcome of a fixture using the exported model artifact.
 

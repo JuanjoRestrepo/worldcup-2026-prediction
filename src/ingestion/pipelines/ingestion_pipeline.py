@@ -136,5 +136,5 @@ def run_ingestion_pipeline(
     if api_data:
         logger.info(f"  ✓ API data: {len(api_data.get('matches', []))} recent international matches")
         logger.info(f"  ✓ Data coverage: {ninety_days_ago} to {today_str}")
-    logger.info(f"  ✓ Format: INTERNATIONAL MATCHES ONLY (no club leagues)")
+    logger.info("  ✓ Format: INTERNATIONAL MATCHES ONLY (no club leagues)")
     logger.info("\n🎯 Next step: Data processing & feature engineering for WC 2026 prediction")

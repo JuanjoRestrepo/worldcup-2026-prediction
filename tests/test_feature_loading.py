@@ -1,5 +1,6 @@
 """Unit tests for gold feature dataset loading across serving sources."""
 
+from datetime import date
 from pathlib import Path
 
 import pandas as pd

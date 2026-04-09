@@ -155,9 +155,9 @@ def run_processing_pipeline(
     else:
         df = df_csv
     
-    logger.info(f"   📌 Scaling note: Applied later in ML phase (Phase 4 modeling)")
-    logger.info(f"      - StandardScaler: for Logistic Regression (linear models need normalization)")
-    logger.info(f"      - No scaling: for tree models (XGBoost, Random Forest, Decision Trees)")
+    logger.info("   📌 Scaling note: Applied later in ML phase (Phase 4 modeling)")
+    logger.info("      - StandardScaler: for Logistic Regression (linear models need normalization)")
+    logger.info("      - No scaling: for tree models (XGBoost, Random Forest, Decision Trees)")
     
     # Convert date column
     if "date" in df.columns:
@@ -176,7 +176,7 @@ def run_processing_pipeline(
     
     rows_removed = initial_row_count - len(df)
     logger.info(f"⚠️  TEMPORAL DRIFT FILTERING: Removed {rows_removed:,} matches before 1990")
-    logger.info(f"    Reasoning: Football evolved significantly post-1990 (tactics, athleticism, etc.)")
+    logger.info("    Reasoning: Football evolved significantly post-1990 (tactics, athleticism, etc.)")
     logger.info(f"    Date range: {df['date'].min().date()} → {df['date'].max().date()}")
 
     validate_standardized_matches_contract(
@@ -200,40 +200,40 @@ def run_processing_pipeline(
     # PHASE 2: Compute ELO ratings
     logger.info("\n⚽ PHASE 2: Computing ELO ratings (no leakage)...")
     df = compute_elo(df)
-    logger.info(f"✅ ELO ratings computed")
+    logger.info("✅ ELO ratings computed")
     logger.info(f"   - ELO diff range: [{df['elo_diff'].min():.2f}, {df['elo_diff'].max():.2f}]")
     logger.info(f"   - Mean ELO diff: {df['elo_diff'].mean():.2f}")
 
     # PHASE 3: Compute rolling features (with shift to prevent leakage)
     logger.info("\n📈 PHASE 3: Computing rolling features (with .shift(1) to prevent leakage)...")
     df = compute_rolling_features(df, window=5)
-    logger.info(f"✅ Rolling features computed (window=5, shifted)")
-    logger.info(f"   - Position-specific: home/away avg goals & goals_conceded (role-aware)")
-    logger.info(f"   - TRUE GLOBAL:**from long-format (all matches, no home/away bias)")
-    logger.info(f"   - Win rates: 1.0 (win), 0.5 (draw), 0.0 (loss) [vectorized, not binary]")
-    logger.info(f"   - Home advantage: derived as home_wr - away_wr")
+    logger.info("✅ Rolling features computed (window=5, shifted)")
+    logger.info("   - Position-specific: home/away avg goals & goals_conceded (role-aware)")
+    logger.info("   - TRUE GLOBAL:**from long-format (all matches, no home/away bias)")
+    logger.info("   - Win rates: 1.0 (win), 0.5 (draw), 0.0 (loss) [vectorized, not binary]")
+    logger.info("   - Home advantage: derived as home_wr - away_wr")
 
     # PHASE 3B: Compute opponent strength features
     logger.info("\n💪 PHASE 3B: Computing opponent strength features...")
     df = compute_opponent_strength(df, window=5)
-    logger.info(f"✅ Opponent strength features computed")
-    logger.info(f"   - Opponent ELO: current and rolling")
-    logger.info(f"   - Weighted win rate: wins weighted by opponent strength")
-    logger.info(f"   - Combined strength: ELO of both teams")
+    logger.info("✅ Opponent strength features computed")
+    logger.info("   - Opponent ELO: current and rolling")
+    logger.info("   - Weighted win rate: wins weighted by opponent strength")
+    logger.info("   - Combined strength: ELO of both teams")
 
     # PHASE 4: Create tournament and ELO form features
     logger.info("\n🏆 PHASE 4: Creating tournament and ELO form features...")
     df = _create_tournament_features(df)
     df = _create_elo_form_features(df, window=5)
-    logger.info(f"✅ Tournament features: is_friendly, is_world_cup, is_qualifier, is_continental")
-    logger.info(f"✅ ELO form features: home_elo_form, away_elo_form")
+    logger.info("✅ Tournament features: is_friendly, is_world_cup, is_qualifier, is_continental")
+    logger.info("✅ ELO form features: home_elo_form, away_elo_form")
 
     # PHASE 5: Create target variables
     logger.info("\n🎯 PHASE 5: Creating target variables...")
     df = _create_multiclass_target(df)
     
     target_multi = df["target_multiclass"].value_counts()
-    logger.info(f"✅ Multiclass target created (1=win, 0=draw, -1=loss)")
+    logger.info("✅ Multiclass target created (1=win, 0=draw, -1=loss)")
     logger.info(f"   - Home wins (1): {target_multi.get(1, 0)} ({target_multi.get(1, 0) / len(df) * 100:.1f}%)")
     logger.info(f"   - Draws (0): {target_multi.get(0, 0)} ({target_multi.get(0, 0) / len(df) * 100:.1f}%)")
     logger.info(f"   - Away wins (-1): {target_multi.get(-1, 0)} ({target_multi.get(-1, 0) / len(df) * 100:.1f}%)")
@@ -273,15 +273,15 @@ def run_processing_pipeline(
     # Check for NaN values (data leakage indicator)
     nan_check = df[['elo_home', 'elo_away', 'home_avg_goals_last5', 'target_multiclass']].isnull().sum()
     if nan_check.sum() == 0:
-        logger.info(f"\n✅ Data integrity: No NaN values in critical columns")
+        logger.info("\n✅ Data integrity: No NaN values in critical columns")
     else:
         logger.warning(f"\n⚠️  NaN values detected: {nan_check}")
     
-    logger.info(f"\n🎯 Production-ready dataset for ML modeling!")
-    logger.info(f"   ✅ No data leakage")
-    logger.info(f"   ✅ Global + position-specific features")
-    logger.info(f"   ✅ Opponent strength context")
-    logger.info(f"   ✅ Multiclass + binary targets")
+    logger.info("\n🎯 Production-ready dataset for ML modeling!")
+    logger.info("   ✅ No data leakage")
+    logger.info("   ✅ Global + position-specific features")
+    logger.info("   ✅ Opponent strength context")
+    logger.info("   ✅ Multiclass + binary targets")
     
     return df
 

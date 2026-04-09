@@ -10,6 +10,7 @@ from src.config.team_aliases import normalize_team_name
 from src.modeling.inference_logger import get_inference_logger, validate_feature_freshness
 from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.predict import predict_match_outcome
+from src.modeling.types import LatestTrainingRunSummary, PredictionResult
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class PredictionRequest(BaseModel):
     neutral: bool = Field(False, description="Whether match is on neutral ground")
     match_date: date | None = Field(
         None,
-        description="Date for historical predictions (YYYY-MM-DD). Defaults to today."
+        description="Date for historical predictions (YYYY-MM-DD). Defaults to the latest available feature snapshot."
     )
 
 
@@ -123,9 +124,10 @@ def latest_training_run() -> LatestTrainingRunResponse:
         training_run, monitoring_source = load_latest_training_run_summary_with_source(
             source=settings.MONITORING_SOURCE,
         )
+        typed_training_run: LatestTrainingRunSummary = training_run
         return LatestTrainingRunResponse(
             monitoring_source=monitoring_source,
-            **training_run,
+            **typed_training_run,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -157,7 +159,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     
     try:
         # Make prediction using normalized team names
-        prediction = predict_match_outcome(
+        prediction: PredictionResult = predict_match_outcome(
             home_team=normalized_home,
             away_team=normalized_away,
             tournament=request.tournament,
@@ -170,17 +172,27 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             prediction["feature_snapshot_dates"],
             max_age_days=30
         )
-        
-        # Build response with feature freshness info
-        response_data = {
-            **prediction,
-            "feature_freshness": freshness,
-        }
-        response = PredictionResponse(**response_data)
+        response = PredictionResponse(
+            home_team=prediction["home_team"],
+            away_team=prediction["away_team"],
+            predicted_class=prediction["predicted_class"],
+            predicted_outcome=prediction["predicted_outcome"],
+            class_probabilities=prediction["class_probabilities"],
+            neutral=prediction["neutral"],
+            tournament=prediction["tournament"],
+            match_date=request.match_date,
+            feature_snapshot_dates={
+                "home_team": prediction["feature_snapshot_dates"]["home_team"],
+                "away_team": prediction["feature_snapshot_dates"]["away_team"],
+            },
+            feature_source=prediction["feature_source"],
+            model_artifact_path=prediction["model_artifact_path"],
+            feature_freshness=freshness,
+        )
         
         # Log the prediction for observability
-        logger = get_inference_logger()
-        logger.log_prediction(
+        inference_logger = get_inference_logger()
+        inference_logger.log_prediction(
             home_team=normalized_home,
             away_team=normalized_away,
             predicted_class=prediction["predicted_class"],

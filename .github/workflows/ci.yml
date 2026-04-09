@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: Test and dbt Validation
+    name: Tests, dbt, and Typing Validation
     runs-on: ubuntu-latest
 
     services:
@@ -71,6 +71,12 @@ jobs:
 
       - name: Validate dbt project syntax
         run: uv run python run_dbt.py parse
+
+      - name: Run Ruff on source and tests
+        run: uv run python -m ruff check src tests run_dbt.py run_pipeline.py
+
+      - name: Run MyPy on critical pipeline modules
+        run: uv run python -m mypy src/api src/modeling src/database src/contracts
 
       - name: Comment PR with test results
         if: failure() && github.event_name == 'pull_request'
