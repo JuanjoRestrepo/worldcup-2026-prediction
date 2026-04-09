@@ -1,4 +1,24 @@
-"""Delegated draw-specialist ensemble for football match outcome prediction."""
+"""Delegated draw-specialist ensemble for football match outcome prediction.
+
+⚠️  LEGACY VERSION - Use SegmentAwareHybridDrawOverrideEnsemble instead
+════════════════════════════════════════════════════════════════════════
+
+This module contains the original single-threshold hybrid ensemble.
+It is KEPT for backward compatibility only.
+
+✓ RECOMMENDED: Use src.modeling.hybrid_ensemble_segment_aware.SegmentAwareHybridDrawOverrideEnsemble
+
+  Key reason: The original 0.45 global threshold was TOO BROAD.
+  It overrides the generalist even on strong, certain predictions (high equity matches),
+  leading to net performance loss. The new version is SELECTIVE by segment:
+
+  • Friendlies: Narrower threshold (specialist can help in uncertain context)
+  • World Cup: Wider threshold (generalist is strong, avoid interference)
+  • Etc.
+
+For migration examples, see tests/test_hybrid_ensemble.py and
+the PHASE_3B_SENIOR_FEATURES_SUMMARY.md closure analysis.
+"""
 
 from __future__ import annotations
 
