@@ -184,6 +184,11 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     normalized_away = normalize_team_name(request.away_team)
 
     try:
+        logger.info(
+            f"Prediction request | home={normalized_home} away={normalized_away} "
+            f"tournament={request.tournament} match_date={request.match_date}"
+        )
+
         # Make prediction using normalized team names
         prediction: PredictionResult = predict_match_outcome(
             home_team=normalized_home,
@@ -191,6 +196,9 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             tournament=request.tournament,
             neutral=request.neutral,
             match_date=request.match_date,
+        )
+        logger.info(
+            f"Prediction successful | outcome={prediction['predicted_outcome']}"
         )
 
         # Check feature freshness (warn if >30 days old)
@@ -258,10 +266,15 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=f"Service unavailable: {exc}")
     except Exception as exc:
-        # Catch unexpected errors and log them
-        logger.error(f"Unexpected error in /predict: {exc}")
+        # Catch unexpected errors and log them with full traceback
+        import traceback
+
+        logger.error(
+            f"Unexpected error in /predict for {normalized_home} vs {normalized_away}: {exc}\n{traceback.format_exc()}"
+        )
         raise HTTPException(
-            status_code=500, detail="Internal server error. Check logs for details."
+            status_code=500,
+            detail=f"Internal server error: {type(exc).__name__}: {str(exc)[:200]}",
         )
 
 
