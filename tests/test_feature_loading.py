@@ -114,6 +114,8 @@ def test_load_feature_dataset_with_source_prefers_postgres(monkeypatch):
 
 
 def test_load_feature_dataset_with_source_falls_back_to_csv(monkeypatch):
+    import os
+
     sample_df = _sample_feature_df()
 
     def fail_postgres() -> pd.DataFrame:
@@ -132,7 +134,10 @@ def test_load_feature_dataset_with_source_falls_back_to_csv(monkeypatch):
     )
 
     assert active_source == "csv"
-    assert loaded_df.loc[0, "source_path"] == "data\\gold\\features_dataset.csv"
+    # Normalize path separators for cross-platform compatibility
+    expected_path = os.path.normpath(str(Path("data/gold/features_dataset.csv")))
+    actual_path = os.path.normpath(loaded_df.loc[0, "source_path"])
+    assert actual_path == expected_path
 
 
 def test_load_feature_dataset_with_source_requires_postgres_when_requested(
@@ -165,13 +170,15 @@ def test_build_match_feature_frame_from_latest_snapshots():
         "is_qualifier",
     ]
 
-    feature_frame, snapshot_dates = features.build_match_feature_frame_from_latest_snapshots(
-        home_team="Colombia",
-        away_team="Argentina",
-        tournament="FIFA World Cup Qualifiers",
-        neutral=False,
-        feature_columns=feature_columns,
-        latest_team_snapshots_df=latest_snapshots_df,
+    feature_frame, snapshot_dates = (
+        features.build_match_feature_frame_from_latest_snapshots(
+            home_team="Colombia",
+            away_team="Argentina",
+            tournament="FIFA World Cup Qualifiers",
+            neutral=False,
+            feature_columns=feature_columns,
+            latest_team_snapshots_df=latest_snapshots_df,
+        )
     )
 
     assert feature_frame.loc[0, "elo_home"] == 1805.0
@@ -191,7 +198,9 @@ def test_build_match_feature_frame_from_latest_snapshots():
 def test_build_match_feature_frame_filters_history_by_match_date():
     feature_history_df = pd.DataFrame(
         {
-            "date": pd.to_datetime(["2025-01-10", "2025-03-20", "2025-01-12", "2025-03-25"]),
+            "date": pd.to_datetime(
+                ["2025-01-10", "2025-03-20", "2025-01-12", "2025-03-25"]
+            ),
             "homeTeam": ["Colombia", "Colombia", "Brazil", "Brazil"],
             "awayTeam": ["Peru", "Ecuador", "Argentina", "Chile"],
             "elo_home": [1750.0, 1810.0, 1900.0, 1920.0],
