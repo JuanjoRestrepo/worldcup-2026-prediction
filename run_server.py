@@ -1,17 +1,92 @@
 #!/usr/bin/env python
 """Run the FastAPI server with the correct port from environment variable."""
 
+import logging
 import os
+import sys
 
 import uvicorn
 
 from src.api.main import app
+from src.database.connection import get_db_session
+
+logger = logging.getLogger(__name__)
+
+
+def ensure_dbt_tables_exist():
+    """Check if dbt analytics tables exist. If not, run dbt and data pipelines."""
+    try:
+        logger.info("🔍 Checking if dbt analytics tables exist...")
+
+        session = get_db_session()
+        result = session.execute(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='analytics_gold' AND table_name='gold_latest_team_snapshots')"
+        )
+        table_exists = result.scalar()
+        session.close()
+
+        if table_exists:
+            logger.info("✅ Analytics tables found. Skipping initialization.")
+            return
+
+        logger.warning(
+            "⚠️  Analytics tables not found. Running initialization pipeline..."
+        )
+
+        # Import here to avoid circular imports
+
+        logger.info("📂 Loading data...")
+        try:
+            import subprocess
+            from pathlib import Path
+
+            # Try load_data script if available
+            if Path("load_data.py").exists():
+                logger.info("Running load_data.py...")
+                result = subprocess.run(
+                    [sys.executable, "load_data.py"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                if result.returncode != 0:
+                    logger.error(f"load_data.py failed: {result.stderr}")
+
+            # Run dbt
+            if Path("run_dbt.py").exists():
+                logger.info("Running dbt pipeline...")
+                result = subprocess.run(
+                    [sys.executable, "run_dbt.py", "run"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                if result.returncode != 0:
+                    logger.error(f"dbt run failed: {result.stderr}")
+                else:
+                    logger.info("✅ dbt pipeline completed")
+        except Exception as e:
+            logger.error(f"Initialization pipeline failed: {e}")
+            # Don't crash the server - it can still serve predictions from CSV
+
+    except Exception as e:
+        logger.warning(f"Could not check dbt tables: {e}. Continuing anyway...")
+
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+
+    # Ensure dbt tables exist before starting the server
+    ensure_dbt_tables_exist()
+
     # Render uses PORT environment variable
     port = int(os.getenv("PORT", 10000))
     host = os.getenv("HOST", "0.0.0.0")
 
+    logger.info(f"🚀 Starting FastAPI server on {host}:{port}")
     uvicorn.run(
         app,
         host=host,
