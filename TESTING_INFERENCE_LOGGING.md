@@ -7,7 +7,7 @@
 .venv\Scripts\activate
 
 # Ensure dependencies installed
-pip install -r requirements.txt
+uv sync
 
 # Start PostgreSQL (from project root)
 docker-compose up -d postgres

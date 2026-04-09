@@ -111,7 +111,7 @@ curl "http://localhost:8000/monitoring/inference-stats?hours=24"
 
 ### Tier 1: Solidify /predict Endpoint (2-3 hours)
 
-- [ ] Accept `match_date` param for historical predictions
+- [x] Accept `match_date` param for historical predictions
 - [ ] Handle team name aliases ("USA" → "United States")
 - [ ] Validate feature snapshots aren't stale (warn if >30d old)
 - [ ] Better error messages for missing teams

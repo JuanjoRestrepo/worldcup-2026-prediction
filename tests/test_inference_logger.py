@@ -31,6 +31,7 @@ def test_log_prediction(inference_logger):
         feature_source="dbt_latest_team_snapshots",
         model_artifact_path="/models/match_predictor.joblib",
         model_version="v1.0",
+        requested_match_date=datetime(2026, 6, 12, tzinfo=timezone.utc).date(),
         request_timestamp_utc=timestamp,
     )
     
@@ -67,6 +68,34 @@ def test_get_recent_inferences(inference_logger):
     # Retrieve recent inferences
     recent = inference_logger.get_recent_inferences(limit=10)
     assert isinstance(recent, list)
+
+
+def test_log_prediction_includes_requested_match_date(monkeypatch):
+    captured = {}
+    inference_logger = InferenceLogger(engine=object())
+
+    monkeypatch.setattr(
+        inference_logger,
+        "_persist_log",
+        lambda df: captured.setdefault("frame", df.copy()),
+    )
+
+    inference_logger.log_prediction(
+        home_team="Colombia",
+        away_team="Argentina",
+        predicted_class=1,
+        predicted_outcome="home_win",
+        class_probabilities={"home_win": 0.55, "draw": 0.25, "away_win": 0.20},
+        neutral=False,
+        tournament="FIFA World Cup Qualifiers",
+        feature_snapshot_dates={"home_team": "2025-11-15", "away_team": "2025-11-16"},
+        feature_source="dbt_team_snapshots_as_of_date",
+        model_artifact_path="/models/match_predictor.joblib",
+        requested_match_date=datetime(2025, 11, 18, tzinfo=timezone.utc).date(),
+        request_timestamp_utc=datetime.now(timezone.utc),
+    )
+
+    assert captured["frame"].loc[0, "requested_match_date"] == "2025-11-18"
 
 
 def test_log_prediction_with_none_tournament(inference_logger):

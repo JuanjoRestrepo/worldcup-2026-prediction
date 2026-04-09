@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import pandas as pd
@@ -71,6 +71,39 @@ class InferenceLogger:
         """Initialize with optional SQLAlchemy engine."""
         self.engine = engine or get_sqlalchemy_engine()
 
+    def _ensure_inference_log_table(self) -> None:
+        """Create or align the inference logging table for current monitoring fields."""
+        ensure_schema(self.engine, INFERENCE_LOG_SCHEMA)
+        with self.engine.begin() as connection:
+            connection.exec_driver_sql(
+                f"""
+                CREATE TABLE IF NOT EXISTS "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}" (
+                    id SERIAL PRIMARY KEY,
+                    request_id VARCHAR(255) NOT NULL,
+                    timestamp_utc TIMESTAMP WITH TIME ZONE NOT NULL,
+                    requested_match_date DATE,
+                    home_team VARCHAR(255) NOT NULL,
+                    away_team VARCHAR(255) NOT NULL,
+                    neutral BOOLEAN NOT NULL,
+                    tournament VARCHAR(255),
+                    predicted_class INTEGER NOT NULL,
+                    predicted_outcome VARCHAR(50) NOT NULL,
+                    class_probabilities_json JSONB NOT NULL,
+                    feature_snapshot_dates_json JSONB NOT NULL,
+                    feature_source VARCHAR(100) NOT NULL,
+                    model_artifact_path TEXT NOT NULL,
+                    model_version VARCHAR(100),
+                    persisted_at_utc TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            connection.exec_driver_sql(
+                f"""
+                ALTER TABLE "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
+                ADD COLUMN IF NOT EXISTS requested_match_date DATE
+                """
+            )
+
     def log_prediction(
         self,
         home_team: str,
@@ -84,6 +117,7 @@ class InferenceLogger:
         feature_source: str,
         model_artifact_path: str,
         model_version: str | None = None,
+        requested_match_date: date | None = None,
         request_timestamp_utc: datetime | None = None,
     ) -> None:
         """
@@ -108,6 +142,11 @@ class InferenceLogger:
         log_row = {
             "request_id": f"{home_team}_{away_team}_{timestamp.timestamp()}",
             "timestamp_utc": timestamp.isoformat(),
+            "requested_match_date": (
+                requested_match_date.isoformat()
+                if requested_match_date is not None
+                else None
+            ),
             "home_team": home_team,
             "away_team": away_team,
             "neutral": neutral,
@@ -128,7 +167,7 @@ class InferenceLogger:
     def _persist_log(self, df: pd.DataFrame) -> None:
         """Persist a log DataFrame to PostgreSQL."""
         try:
-            ensure_schema(self.engine, INFERENCE_LOG_SCHEMA)
+            self._ensure_inference_log_table()
             df.to_sql(
                 name=INFERENCE_LOG_TABLE,
                 con=self.engine,
@@ -165,6 +204,8 @@ class InferenceLogger:
             COUNT(DISTINCT home_team || '_' || away_team) as unique_matchups,
             COUNT(DISTINCT feature_source) as feature_sources_used,
             AVG(CAST(class_probabilities_json->>'home_win' AS FLOAT)) as avg_home_win_prob,
+            SUM(CASE WHEN requested_match_date IS NOT NULL THEN 1 ELSE 0 END) as historical_requests,
+            SUM(CASE WHEN requested_match_date IS NULL THEN 1 ELSE 0 END) as latest_requests,
             SUM(CASE WHEN predicted_outcome = 'win' THEN 1 ELSE 0 END) as home_wins_predicted,
             SUM(CASE WHEN predicted_outcome = 'loss' THEN 1 ELSE 0 END) as home_losses_predicted,
             SUM(CASE WHEN predicted_outcome = 'draw' THEN 1 ELSE 0 END) as draws_predicted,
@@ -213,6 +254,7 @@ class InferenceLogger:
         SELECT 
             request_id,
             timestamp_utc,
+            requested_match_date,
             home_team,
             away_team,
             neutral,

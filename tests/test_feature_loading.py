@@ -185,3 +185,58 @@ def test_build_match_feature_frame_from_latest_snapshots():
         "home_snapshot_date": "2026-03-25",
         "away_snapshot_date": "2026-03-26",
     }
+
+
+def test_build_match_feature_frame_filters_history_by_match_date():
+    feature_history_df = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-10", "2025-03-20", "2025-01-12", "2025-03-25"]),
+            "homeTeam": ["Colombia", "Colombia", "Brazil", "Brazil"],
+            "awayTeam": ["Peru", "Ecuador", "Argentina", "Chile"],
+            "elo_home": [1750.0, 1810.0, 1900.0, 1920.0],
+            "elo_away": [1700.0, 1725.0, 1880.0, 1830.0],
+            "home_avg_goals_last5": [1.2, 1.9, 1.4, 2.1],
+            "home_avg_goals_conceded_last5": [0.7, 0.5, 0.9, 0.8],
+            "away_avg_goals_last5": [1.0, 0.8, 1.7, 1.3],
+            "away_avg_goals_conceded_last5": [1.1, 1.0, 0.7, 0.9],
+            "home_global_avg_goals_last5": [1.3, 1.8, 1.6, 2.0],
+            "home_global_avg_conceded_last5": [0.8, 0.6, 0.8, 0.7],
+            "away_global_avg_goals_last5": [1.1, 1.0, 1.8, 1.5],
+            "away_global_avg_conceded_last5": [1.0, 0.9, 0.8, 0.8],
+            "home_win_rate_last5": [0.4, 0.8, 0.6, 0.8],
+            "away_win_rate_last5": [0.3, 0.2, 0.7, 0.5],
+            "home_global_win_rate_last5": [0.5, 0.7, 0.6, 0.75],
+            "away_global_win_rate_last5": [0.4, 0.35, 0.72, 0.58],
+            "home_avg_opponent_elo_last5": [1710.0, 1740.0, 1860.0, 1840.0],
+            "away_avg_opponent_elo_last5": [1740.0, 1760.0, 1820.0, 1810.0],
+            "home_weighted_win_rate_last5": [0.45, 0.79, 0.62, 0.82],
+            "away_weighted_win_rate_last5": [0.32, 0.25, 0.7, 0.51],
+            "home_opponent_elo_form": [1705.0, 1735.0, 1855.0, 1835.0],
+            "away_opponent_elo_form": [1735.0, 1755.0, 1815.0, 1805.0],
+            "home_elo_form": [1742.0, 1804.0, 1892.0, 1915.0],
+            "away_elo_form": [1695.0, 1718.0, 1872.0, 1822.0],
+            "neutral": [False, False, False, False],
+            "is_friendly": [0, 0, 0, 0],
+            "is_world_cup": [0, 0, 0, 0],
+            "is_qualifier": [1, 1, 1, 1],
+            "is_continental": [0, 0, 0, 0],
+            "target_multiclass": [1, 1, -1, 1],
+            "target": [1, 1, 0, 1],
+        }
+    )
+    feature_columns = ["elo_home", "elo_away", "elo_diff", "is_qualifier"]
+
+    feature_frame, snapshot_dates = features.build_match_feature_frame(
+        home_team="Colombia",
+        away_team="Brazil",
+        tournament="FIFA World Cup Qualifiers",
+        neutral=False,
+        feature_columns=feature_columns,
+        feature_history_df=feature_history_df,
+        match_date=date(2025, 1, 31),
+    )
+
+    assert feature_frame.loc[0, "elo_home"] == 1750.0
+    assert feature_frame.loc[0, "elo_away"] == 1900.0
+    assert snapshot_dates["home_snapshot_date"] == "2025-01-10"
+    assert snapshot_dates["away_snapshot_date"] == "2025-01-12"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 import logging
 from functools import lru_cache
 from pathlib import Path
@@ -281,6 +282,7 @@ def build_match_feature_frame(
     neutral: bool,
     feature_columns: list[str],
     feature_history_df: pd.DataFrame | None = None,
+    match_date: date | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
     """
     Build a model-ready feature row for an upcoming match.
@@ -294,6 +296,13 @@ def build_match_feature_frame(
         raise ValueError("Home team and away team must be different teams.")
 
     df = feature_history_df if feature_history_df is not None else load_feature_dataset()
+    if match_date is not None:
+        requested_timestamp = pd.Timestamp(match_date)
+        df = df.loc[df["date"] <= requested_timestamp].copy()
+        if df.empty:
+            raise ValueError(
+                f"No historical feature data is available on or before '{match_date.isoformat()}'."
+            )
 
     resolved_home_team = _resolve_team_name(df, home_team)
     resolved_away_team = _resolve_team_name(df, away_team)
@@ -398,38 +407,38 @@ def _latest_snapshot_row(
     return df.loc[mask].sort_values("snapshot_date").iloc[-1]
 
 
-def build_match_feature_frame_from_latest_snapshots(
+def build_match_feature_frame_from_team_snapshots(
     home_team: str,
     away_team: str,
     tournament: str | None,
     neutral: bool,
     feature_columns: list[str],
-    latest_team_snapshots_df: pd.DataFrame,
+    team_snapshots_df: pd.DataFrame,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
-    """Build a feature row from the dbt-curated latest team snapshot model."""
+    """Build a feature row from a dbt-curated team snapshot serving model."""
     if home_team.strip().casefold() == away_team.strip().casefold():
         raise ValueError("Home team and away team must be different teams.")
 
-    resolved_home_team = _resolve_snapshot_team_name(latest_team_snapshots_df, home_team)
-    resolved_away_team = _resolve_snapshot_team_name(latest_team_snapshots_df, away_team)
+    resolved_home_team = _resolve_snapshot_team_name(team_snapshots_df, home_team)
+    resolved_away_team = _resolve_snapshot_team_name(team_snapshots_df, away_team)
 
     home_home_row = _latest_snapshot_row(
-        latest_team_snapshots_df,
+        team_snapshots_df,
         resolved_home_team,
         "home",
     )
     away_away_row = _latest_snapshot_row(
-        latest_team_snapshots_df,
+        team_snapshots_df,
         resolved_away_team,
         "away",
     )
     home_overall_row = _latest_snapshot_row(
-        latest_team_snapshots_df,
+        team_snapshots_df,
         resolved_home_team,
         "overall",
     )
     away_overall_row = _latest_snapshot_row(
-        latest_team_snapshots_df,
+        team_snapshots_df,
         resolved_away_team,
         "overall",
     )
@@ -534,3 +543,22 @@ def build_match_feature_frame_from_latest_snapshots(
         ).date().isoformat(),
     }
     return feature_frame, snapshot_dates
+
+
+def build_match_feature_frame_from_latest_snapshots(
+    home_team: str,
+    away_team: str,
+    tournament: str | None,
+    neutral: bool,
+    feature_columns: list[str],
+    latest_team_snapshots_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Backward-compatible wrapper for latest-snapshot serving."""
+    return build_match_feature_frame_from_team_snapshots(
+        home_team=home_team,
+        away_team=away_team,
+        tournament=tournament,
+        neutral=neutral,
+        feature_columns=feature_columns,
+        team_snapshots_df=latest_team_snapshots_df,
+    )

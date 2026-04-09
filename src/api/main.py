@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Any
 import logging
 
@@ -39,6 +39,7 @@ class PredictionResponse(BaseModel):
     class_probabilities: dict[str, float]
     neutral: bool
     tournament: str | None = None
+    match_date: date | None = None
     feature_snapshot_dates: dict[str, str]
     feature_source: str
     model_artifact_path: str
@@ -78,6 +79,7 @@ class InferenceStatisticsResponse(BaseModel):
 class RecentInferenceRecord(BaseModel):
     request_id: str
     timestamp_utc: str
+    requested_match_date: str | None = None
     home_team: str
     away_team: str
     neutral: bool
@@ -160,6 +162,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             away_team=normalized_away,
             tournament=request.tournament,
             neutral=request.neutral,
+            match_date=request.match_date,
         )
         
         # Check feature freshness (warn if >30 days old)
@@ -189,7 +192,8 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             feature_source=prediction["feature_source"],
             model_artifact_path=prediction["model_artifact_path"],
             model_version=None,
-            request_timestamp_utc=datetime.now(),
+            requested_match_date=request.match_date,
+            request_timestamp_utc=datetime.now(timezone.utc),
         )
         
         return response

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS monitoring.inference_logs (
     id SERIAL PRIMARY KEY,
     request_id VARCHAR(255) NOT NULL,
     timestamp_utc TIMESTAMP WITH TIME ZONE NOT NULL,
+    requested_match_date DATE,
     home_team VARCHAR(255) NOT NULL,
     away_team VARCHAR(255) NOT NULL,
     neutral BOOLEAN NOT NULL,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 import logging
 from functools import lru_cache
 from typing import Literal, cast
@@ -15,9 +16,11 @@ from src.database.connection import get_sqlalchemy_engine
 logger = logging.getLogger(__name__)
 
 DBT_GOLD_TEAM_SNAPSHOTS_TABLE = "gold_latest_team_snapshots"
+DBT_GOLD_TEAM_HISTORY_TABLE = "gold_team_feature_snapshots"
 DBT_GOLD_TRAINING_RUN_TABLE = "gold_latest_training_run"
 RAW_GOLD_TRAINING_RUNS_TABLE = "training_runs"
 DBT_TEAM_SNAPSHOTS_SOURCE = "dbt_latest_team_snapshots"
+DBT_TEAM_SNAPSHOTS_AT_DATE_SOURCE = "dbt_team_snapshots_as_of_date"
 DBT_TRAINING_RUN_SOURCE = "dbt_latest_training_run"
 RAW_TRAINING_RUN_SOURCE = "postgres_training_runs"
 MONITORING_SOURCE_OPTIONS = {"auto", "dbt", "postgres"}
@@ -74,6 +77,122 @@ def load_latest_team_snapshots_from_dbt() -> pd.DataFrame:
         settings.DB_USER,
         settings.DBT_BASE_SCHEMA,
     )
+
+
+@lru_cache(maxsize=32)
+def _load_team_snapshots_as_of_date_from_dbt_cached(
+    db_host: str,
+    db_port: int,
+    db_name: str,
+    db_user: str,
+    dbt_base_schema: str,
+    match_date_iso: str,
+) -> pd.DataFrame:
+    df = _read_relation(
+        f"""
+        WITH filtered_snapshots AS (
+            SELECT *
+            FROM "{dbt_base_schema}_gold"."{DBT_GOLD_TEAM_HISTORY_TABLE}"
+            WHERE snapshot_date <= DATE '{match_date_iso}'
+        ),
+        latest_role_snapshots AS (
+            SELECT
+                snapshot_date,
+                team,
+                opponent,
+                team_role,
+                elo,
+                opponent_elo,
+                avg_goals_last5,
+                avg_goals_conceded_last5,
+                global_avg_goals_last5,
+                global_avg_conceded_last5,
+                win_rate_last5,
+                global_win_rate_last5,
+                avg_opponent_elo_last5,
+                weighted_win_rate_last5,
+                opponent_elo_form,
+                elo_form,
+                home_advantage_effect,
+                is_friendly,
+                is_world_cup,
+                is_qualifier,
+                is_continental,
+                pipeline_run_id,
+                persisted_at_utc
+            FROM (
+                SELECT
+                    *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY team, team_role
+                        ORDER BY snapshot_date DESC, persisted_at_utc DESC
+                    ) AS row_num
+                FROM filtered_snapshots
+            ) ranked
+            WHERE row_num = 1
+        ),
+        latest_overall_snapshots AS (
+            SELECT
+                snapshot_date,
+                team,
+                opponent,
+                'overall' AS team_role,
+                elo,
+                opponent_elo,
+                avg_goals_last5,
+                avg_goals_conceded_last5,
+                global_avg_goals_last5,
+                global_avg_conceded_last5,
+                win_rate_last5,
+                global_win_rate_last5,
+                avg_opponent_elo_last5,
+                weighted_win_rate_last5,
+                opponent_elo_form,
+                elo_form,
+                home_advantage_effect,
+                is_friendly,
+                is_world_cup,
+                is_qualifier,
+                is_continental,
+                pipeline_run_id,
+                persisted_at_utc
+            FROM (
+                SELECT
+                    *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY team
+                        ORDER BY snapshot_date DESC, persisted_at_utc DESC
+                    ) AS row_num
+                FROM filtered_snapshots
+            ) ranked
+            WHERE row_num = 1
+        )
+        SELECT * FROM latest_role_snapshots
+        UNION ALL
+        SELECT * FROM latest_overall_snapshots
+        """
+    )
+    if df.empty:
+        raise RuntimeError(
+            "dbt team snapshot history is empty for the requested match_date."
+        )
+
+    df["snapshot_date"] = pd.to_datetime(df["snapshot_date"])
+    df["persisted_at_utc"] = pd.to_datetime(df["persisted_at_utc"], utc=True)
+    return df.sort_values(["team", "team_role", "snapshot_date"]).reset_index(drop=True)
+
+
+def load_team_snapshots_as_of_date_from_dbt(match_date: date) -> tuple[pd.DataFrame, str]:
+    """Load team snapshots as of a historical match date from the dbt serving model."""
+    snapshots = _load_team_snapshots_as_of_date_from_dbt_cached(
+        settings.DB_HOST,
+        settings.DB_PORT,
+        settings.DB_NAME,
+        settings.DB_USER,
+        settings.DBT_BASE_SCHEMA,
+        match_date.isoformat(),
+    )
+    return snapshots, DBT_TEAM_SNAPSHOTS_AT_DATE_SOURCE
 
 
 def _serialize_training_run_row(row: pd.Series) -> dict[str, object]:
@@ -221,5 +340,6 @@ def load_latest_training_run_summary_with_source(
 def clear_serving_store_cache() -> None:
     """Clear cached dbt/raw serving and monitoring snapshots."""
     _load_latest_team_snapshots_from_dbt_cached.cache_clear()
+    _load_team_snapshots_as_of_date_from_dbt_cached.cache_clear()
     _load_latest_training_run_from_dbt_cached.cache_clear()
     _load_latest_training_run_from_postgres_cached.cache_clear()

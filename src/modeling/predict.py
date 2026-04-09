@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,10 +11,13 @@ import joblib
 from src.config.settings import settings
 from src.modeling.features import (
     build_match_feature_frame,
-    build_match_feature_frame_from_latest_snapshots,
+    build_match_feature_frame_from_team_snapshots,
     load_feature_dataset_with_source,
 )
-from src.modeling.serving_store import load_latest_team_snapshots_from_dbt
+from src.modeling.serving_store import (
+    load_latest_team_snapshots_from_dbt,
+    load_team_snapshots_as_of_date_from_dbt,
+)
 
 
 @lru_cache(maxsize=2)
@@ -36,6 +40,7 @@ def predict_match_outcome(
     away_team: str,
     tournament: str | None = None,
     neutral: bool = False,
+    match_date: date | None = None,
     artifact_path: Path | None = None,
     feature_data_path: Path | None = None,
     feature_source: str | None = None,
@@ -48,6 +53,7 @@ def predict_match_outcome(
         away_team: Away team name
         tournament: Optional tournament label for tournament flags
         neutral: Whether the fixture is on neutral ground
+        match_date: Optional historical fixture date for as-of snapshot serving
         artifact_path: Optional alternate model artifact path
         feature_data_path: Optional alternate gold dataset path for snapshots
         feature_source: Optional feature source override: auto, dbt, postgres, or csv
@@ -64,20 +70,25 @@ def predict_match_outcome(
     resolved_feature_source = feature_source or settings.PREDICTION_FEATURE_SOURCE
     if resolved_feature_source in {"auto", "dbt"}:
         try:
-            latest_team_snapshots = load_latest_team_snapshots_from_dbt()
-            feature_frame, snapshot_dates = build_match_feature_frame_from_latest_snapshots(
+            if match_date is None:
+                team_snapshots = load_latest_team_snapshots_from_dbt()
+                active_feature_source = "dbt_latest_team_snapshots"
+            else:
+                team_snapshots, active_feature_source = load_team_snapshots_as_of_date_from_dbt(
+                    match_date
+                )
+            feature_frame, snapshot_dates = build_match_feature_frame_from_team_snapshots(
                 home_team=home_team,
                 away_team=away_team,
                 tournament=tournament,
                 neutral=neutral,
                 feature_columns=feature_columns,
-                latest_team_snapshots_df=latest_team_snapshots,
+                team_snapshots_df=team_snapshots,
             )
-            active_feature_source = "dbt_latest_team_snapshots"
         except RuntimeError as exc:
             if resolved_feature_source == "dbt":
                 raise RuntimeError(
-                    "Failed to build serving features from dbt latest team snapshots."
+                    "Failed to build serving features from dbt team snapshots."
                 ) from exc
 
             feature_history, active_feature_source = load_feature_dataset_with_source(
@@ -91,6 +102,7 @@ def predict_match_outcome(
                 neutral=neutral,
                 feature_columns=feature_columns,
                 feature_history_df=feature_history,
+                match_date=match_date,
             )
     else:
         feature_history, active_feature_source = load_feature_dataset_with_source(
@@ -104,6 +116,7 @@ def predict_match_outcome(
             neutral=neutral,
             feature_columns=feature_columns,
             feature_history_df=feature_history,
+            match_date=match_date,
         )
 
     predicted_encoded = int(model.predict(feature_frame)[0])
@@ -124,6 +137,7 @@ def predict_match_outcome(
         "class_probabilities": class_probabilities,
         "neutral": bool(neutral),
         "tournament": tournament,
+        "match_date": match_date.isoformat() if match_date is not None else None,
         "feature_snapshot_dates": {
             "home_team": snapshot_dates["home_snapshot_date"],
             "away_team": snapshot_dates["away_snapshot_date"],
