@@ -90,6 +90,10 @@ data/gold/*
 !data/gold/.gitkeep
 models/
 !models/.gitkeep
+!models/match_predictor.joblib
+!models/match_predictor_metrics.json
+!models/match_predictor_evaluation_report.json
+!models/match_predictor_evaluation_report.md
 !dbt/models/
 !dbt/models/**
 *.pkl
