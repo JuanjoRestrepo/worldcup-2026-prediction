@@ -111,6 +111,18 @@ class RecentInferencesResponse(BaseModel):
     inferences: list[RecentInferenceRecord]
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    """Root endpoint with API information."""
+    return {
+        "message": "World Cup 2026 Prediction API",
+        "docs": "/docs",
+        "health": "/health",
+        "config": "/config",
+        "predict": "/predict (POST)",
+    }
+
+
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     """Simple readiness endpoint for container and local checks."""
