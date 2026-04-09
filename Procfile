@@ -1,2 +1,2 @@
-web: gunicorn -w 4 -b 0.0.0.0:$PORT -k uvicorn.workers.UvicornWorker src.api.main:app
+web: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT --workers 4
 release: python load_data.py && python run_dbt.py test
