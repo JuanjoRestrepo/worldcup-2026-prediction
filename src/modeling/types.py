@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, NotRequired, TypedDict
 
 import pandas as pd
-from sklearn.pipeline import Pipeline
 
 
 class DateRange(TypedDict):
@@ -17,7 +16,12 @@ class TrainingMetrics(TypedDict):
     accuracy: float
     macro_f1: float
     weighted_f1: float
+    balanced_accuracy: float
+    matthews_corrcoef: float
+    cohen_kappa: float
     log_loss: float
+    multiclass_brier_score: float
+    expected_calibration_error: float
     classification_report: dict[str, object]
 
 
@@ -26,22 +30,34 @@ class TrainingSummary(TypedDict):
     data_path: str
     training_rows: int
     test_rows: int
+    calibration_rows: int
     feature_count: int
     feature_columns: list[str]
     train_date_range: DateRange
+    calibration_date_range: DateRange
     test_date_range: DateRange
     class_distribution_train: dict[str, int]
+    class_distribution_calibration: dict[str, int]
     class_distribution_test: dict[str, int]
+    selected_model_name: str
+    selected_model_class: str
+    deployed_model_variant: str
+    calibration_method: str
     metrics: TrainingMetrics
+    uncalibrated_metrics: NotRequired[TrainingMetrics]
+    evaluation_artifacts: NotRequired[dict[str, object]]
 
 
 class ModelArtifactBundle(TypedDict):
-    model: Pipeline
+    model: Any
     feature_columns: list[str]
     target_column: str
     outcome_to_encoded: dict[int, int]
     encoded_to_outcome: dict[int, int]
     outcome_labels: dict[int, str]
+    selected_model_name: str
+    deployed_model_variant: str
+    calibration_method: str
     training_summary: TrainingSummary
 
 

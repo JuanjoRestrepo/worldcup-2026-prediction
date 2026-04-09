@@ -15,6 +15,7 @@ from src.modeling.features import (
     build_match_feature_frame_from_team_snapshots,
     load_feature_dataset_with_source,
 )
+from src.modeling.evaluation import extract_estimator_classes, predict_proba_aligned
 from src.modeling.serving_store import (
     load_latest_team_snapshots_from_dbt,
     load_team_snapshots_as_of_date_from_dbt,
@@ -122,8 +123,8 @@ def predict_match_outcome(
         )
 
     predicted_encoded = int(model.predict(feature_frame)[0])
-    encoded_classes = [int(value) for value in model.named_steps["model"].classes_]
-    probabilities = model.predict_proba(feature_frame)[0]
+    encoded_classes = [int(value) for value in extract_estimator_classes(model)]
+    probabilities = predict_proba_aligned(model, feature_frame)[0]
 
     class_probabilities = {}
     for encoded_class, probability in zip(encoded_classes, probabilities):

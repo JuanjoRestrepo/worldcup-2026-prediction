@@ -79,7 +79,16 @@ When `--persist-to-db` is enabled, the pipeline writes:
 uv run python -m src.modeling.train
 ```
 
-This trains the production XGBoost pipeline with a temporal holdout split and exports `models/match_predictor.joblib`.
+This now performs:
+
+- rolling temporal backtesting across candidate models
+- post-selection calibration checks with `uncalibrated`, `sigmoid`, and `isotonic` variants
+- deployment gating so calibration is only exported when it improves probability quality without materially hurting macro-F1 or draw recall
+
+The command exports:
+
+- `models/match_predictor.joblib`
+- `models/match_predictor_metrics.json`
 
 ## Run dbt
 
