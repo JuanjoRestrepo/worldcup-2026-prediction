@@ -40,6 +40,7 @@ from src.modeling.evaluation import (
 )
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
+from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
 from src.modeling.reporting import generate_evaluation_report
 from src.modeling.two_stage import TwoStageDrawClassifier
 from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
@@ -53,6 +54,7 @@ DEFAULT_CALIBRATION_SELECTION_SIZE = 0.5
 DEFAULT_BACKTEST_SPLITS = 5
 OUTCOME_TO_ENCODED = {-1: 0, 0: 1, 1: 2}
 ENCODED_TO_OUTCOME = {value: key for key, value in OUTCOME_TO_ENCODED.items()}
+SPECIALIST_DRAW_WEIGHT_MULTIPLIER = 4 / 3
 
 
 def _build_pipeline(model: object) -> Pipeline:
@@ -278,6 +280,80 @@ def _build_candidate_specs() -> dict[str, CandidateSpec]:
                 "draw_probability_scale": draw_probability_scale,
             },
             notes="Two-stage draw-vs-non-draw decomposition with aggressive draw weighting",
+        )
+
+    hybrid_override_variants: list[dict[str, float]] = [
+        {"uncertainty_threshold": 0.42, "draw_conviction_threshold": 0.50},
+        {"uncertainty_threshold": 0.42, "draw_conviction_threshold": 0.60},
+        {"uncertainty_threshold": 0.45, "draw_conviction_threshold": 0.50},
+        {"uncertainty_threshold": 0.45, "draw_conviction_threshold": 0.60},
+        {"uncertainty_threshold": 0.48, "draw_conviction_threshold": 0.50},
+        {"uncertainty_threshold": 0.48, "draw_conviction_threshold": 0.60},
+    ]
+    for hybrid_variant in hybrid_override_variants:
+        uncertainty_threshold = hybrid_variant["uncertainty_threshold"]
+        draw_conviction_threshold = hybrid_variant["draw_conviction_threshold"]
+        name = (
+            f"hybrid_override_u{uncertainty_threshold:g}_"
+            f"d{draw_conviction_threshold:g}"
+        )
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=cast(
+                ProbabilisticEstimator,
+                HybridDrawOverrideEnsemble(
+                    generalist_estimator=_build_scaled_pipeline(
+                        LogisticRegression(
+                            C=2.0,
+                            max_iter=2500,
+                            class_weight="balanced",
+                            random_state=RANDOM_STATE,
+                        )
+                    ),
+                    specialist_estimator=cast(
+                        ProbabilisticEstimator,
+                        TwoStageDrawClassifier(
+                            stage1_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=2.0,
+                                    max_iter=2500,
+                                    class_weight="balanced",
+                                    random_state=RANDOM_STATE,
+                                )
+                            ),
+                            stage2_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=1.0,
+                                    max_iter=2500,
+                                    class_weight="balanced",
+                                    random_state=RANDOM_STATE,
+                                )
+                            ),
+                            draw_probability_scale=1.0,
+                        ),
+                    ),
+                    uncertainty_threshold=uncertainty_threshold,
+                    draw_conviction_threshold=draw_conviction_threshold,
+                    specialist_draw_weight_multiplier=SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                ),
+            ),
+            sample_weight_builder=_make_sample_weight_builder(1.2),
+            family="hybrid_draw_override_ensemble",
+            hyperparameters={
+                "generalist_c": 2.0,
+                "generalist_draw_boost": 1.2,
+                "specialist_stage1_c": 2.0,
+                "specialist_stage2_c": 1.0,
+                "specialist_draw_boost": 1.6,
+                "specialist_draw_weight_multiplier": SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                "specialist_draw_probability_scale": 1.0,
+                "uncertainty_threshold": uncertainty_threshold,
+                "draw_conviction_threshold": draw_conviction_threshold,
+            },
+            notes=(
+                "Delegated ensemble: generalist owns confident fixtures; "
+                "two-stage specialist only overrides uncertain rows into draw"
+            ),
         )
 
     return candidate_specs
