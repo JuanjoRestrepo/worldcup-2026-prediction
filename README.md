@@ -89,6 +89,10 @@ The command exports:
 
 - `models/match_predictor.joblib`
 - `models/match_predictor_metrics.json`
+- `models/match_predictor_evaluation_report.json`
+- `models/match_predictor_evaluation_report.md`
+- `models/match_predictor_confusion_matrix.png`
+- `models/match_predictor_calibration_curves.png`
 
 ## Run dbt
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -28,6 +29,7 @@ from src.config.settings import settings
 from src.contracts.data_contracts import validate_feature_dataset_contract
 from src.database.persistence import persist_training_run
 from src.modeling.evaluation import (
+    CandidateSpec,
     ProbabilisticEstimator,
     evaluate_candidates_with_backtesting,
     evaluate_multiclass_predictions,
@@ -37,6 +39,7 @@ from src.modeling.evaluation import (
 )
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
+from src.modeling.reporting import generate_evaluation_report
 from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
 logger = logging.getLogger(__name__)
@@ -71,52 +74,147 @@ def _build_scaled_pipeline(model: object) -> Pipeline:
     )
 
 
-def _build_candidate_pipelines() -> dict[str, Pipeline]:
-    """Create the candidate model set for temporal selection."""
-    return {
-        "dummy_prior": _build_pipeline(
-            DummyClassifier(strategy="prior")
-        ),
-        "logistic_regression": _build_scaled_pipeline(
-            LogisticRegression(
-                max_iter=2000,
-                class_weight="balanced",
-                random_state=RANDOM_STATE,
-            )
-        ),
-        "random_forest": _build_pipeline(
-            RandomForestClassifier(
-                n_estimators=250,
-                min_samples_leaf=2,
-                class_weight="balanced_subsample",
-                random_state=RANDOM_STATE,
-                n_jobs=1,
-            )
-        ),
-        "xgboost": _build_pipeline(
-            XGBClassifier(
-                objective="multi:softprob",
-                num_class=3,
-                eval_metric="mlogloss",
-                n_estimators=300,
-                max_depth=6,
-                learning_rate=0.05,
-                subsample=0.9,
-                colsample_bytree=0.9,
-                min_child_weight=1,
-                reg_lambda=1.0,
-                random_state=RANDOM_STATE,
-                n_jobs=0,
-            )
-        ),
+def _make_sample_weight_builder(
+    draw_boost: float = 1.0,
+) -> Callable[[pd.Series], NDArray[np.float64]]:
+    def _builder(y_encoded: pd.Series) -> NDArray[np.float64]:
+        sample_weight = np.asarray(
+            compute_sample_weight(class_weight="balanced", y=y_encoded),
+            dtype=np.float64,
+        )
+        if draw_boost != 1.0:
+            draw_mask = y_encoded.to_numpy(dtype=np.int64, copy=False) == OUTCOME_TO_ENCODED[0]
+            sample_weight[draw_mask] *= draw_boost
+            sample_weight *= len(sample_weight) / sample_weight.sum()
+        return sample_weight
+
+    return _builder
+
+
+def _build_candidate_specs() -> dict[str, CandidateSpec]:
+    """Create a compact temporal hyperparameter search space."""
+    candidate_specs: dict[str, CandidateSpec] = {
+        "dummy_prior": CandidateSpec(
+            name="dummy_prior",
+            pipeline=_build_pipeline(DummyClassifier(strategy="prior")),
+            sample_weight_builder=_make_sample_weight_builder(),
+            family="dummy",
+            hyperparameters={"strategy": "prior"},
+            notes="Sanity baseline",
+        )
     }
 
+    logistic_variants: list[dict[str, float]] = [
+        {"c": 0.5, "draw_boost": 1.0},
+        {"c": 1.0, "draw_boost": 1.0},
+        {"c": 2.0, "draw_boost": 1.0},
+        {"c": 1.0, "draw_boost": 1.25},
+        {"c": 2.0, "draw_boost": 1.2},
+    ]
+    for logistic_variant in logistic_variants:
+        c_value = logistic_variant["c"]
+        draw_boost = logistic_variant["draw_boost"]
+        name = f"logistic_c{c_value:g}_draw{draw_boost:g}"
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=_build_scaled_pipeline(
+                LogisticRegression(
+                    C=c_value,
+                    max_iter=2500,
+                    class_weight="balanced",
+                    random_state=RANDOM_STATE,
+                )
+            ),
+            sample_weight_builder=_make_sample_weight_builder(draw_boost),
+            family="logistic_regression",
+            hyperparameters={"C": c_value, "draw_boost": draw_boost},
+            notes="Scaled linear baseline with optional draw emphasis",
+        )
 
-def _build_sample_weight(y_encoded: pd.Series) -> NDArray[np.float64]:
-    return np.asarray(
-        compute_sample_weight(class_weight="balanced", y=y_encoded),
-        dtype=np.float64,
-    )
+    random_forest_variants: list[dict[str, int | float | None]] = [
+        {"n_estimators": 300, "max_depth": None, "min_samples_leaf": 2, "draw_boost": 1.0},
+        {"n_estimators": 400, "max_depth": 12, "min_samples_leaf": 2, "draw_boost": 1.0},
+        {"n_estimators": 300, "max_depth": 12, "min_samples_leaf": 4, "draw_boost": 1.15},
+    ]
+    for forest_variant in random_forest_variants:
+        n_estimators = cast(int, forest_variant["n_estimators"])
+        max_depth = cast(int | None, forest_variant["max_depth"])
+        min_samples_leaf = cast(int, forest_variant["min_samples_leaf"])
+        draw_boost = cast(float, forest_variant["draw_boost"])
+        name = (
+            f"random_forest_n{n_estimators}_d"
+            f"{'none' if max_depth is None else max_depth}_leaf{min_samples_leaf}_draw{draw_boost:g}"
+        )
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=_build_pipeline(
+                RandomForestClassifier(
+                    n_estimators=n_estimators,
+                    max_depth=max_depth,
+                    min_samples_leaf=min_samples_leaf,
+                    class_weight="balanced_subsample",
+                    random_state=RANDOM_STATE,
+                    n_jobs=1,
+                )
+            ),
+            sample_weight_builder=_make_sample_weight_builder(draw_boost),
+            family="random_forest",
+            hyperparameters={
+                "n_estimators": n_estimators,
+                "max_depth": max_depth,
+                "min_samples_leaf": min_samples_leaf,
+                "draw_boost": draw_boost,
+            },
+            notes="Tree ensemble with draw-aware weighting variants",
+        )
+
+    xgboost_variants: list[dict[str, int | float]] = [
+        {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05, "reg_lambda": 1.0, "draw_boost": 1.0},
+        {"n_estimators": 350, "max_depth": 4, "learning_rate": 0.05, "reg_lambda": 1.0, "draw_boost": 1.0},
+        {"n_estimators": 400, "max_depth": 4, "learning_rate": 0.03, "reg_lambda": 2.0, "draw_boost": 1.0},
+        {"n_estimators": 350, "max_depth": 5, "learning_rate": 0.05, "reg_lambda": 1.5, "draw_boost": 1.15},
+    ]
+    for xgb_variant in xgboost_variants:
+        n_estimators = cast(int, xgb_variant["n_estimators"])
+        max_depth = cast(int, xgb_variant["max_depth"])
+        learning_rate = xgb_variant["learning_rate"]
+        reg_lambda = xgb_variant["reg_lambda"]
+        draw_boost = xgb_variant["draw_boost"]
+        name = (
+            f"xgboost_n{n_estimators}_d{max_depth}_lr{learning_rate}_"
+            f"lambda{reg_lambda}_draw{draw_boost:g}"
+        )
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=_build_pipeline(
+                XGBClassifier(
+                    objective="multi:softprob",
+                    num_class=3,
+                    eval_metric="mlogloss",
+                    n_estimators=n_estimators,
+                    max_depth=max_depth,
+                    learning_rate=learning_rate,
+                    subsample=0.9,
+                    colsample_bytree=0.9,
+                    min_child_weight=1,
+                    reg_lambda=reg_lambda,
+                    random_state=RANDOM_STATE,
+                    n_jobs=0,
+                )
+            ),
+            sample_weight_builder=_make_sample_weight_builder(draw_boost),
+            family="xgboost",
+            hyperparameters={
+                "n_estimators": n_estimators,
+                "max_depth": max_depth,
+                "learning_rate": learning_rate,
+                "reg_lambda": reg_lambda,
+                "draw_boost": draw_boost,
+            },
+            notes="Gradient boosting search with lightweight draw emphasis",
+        )
+
+    return candidate_specs
 
 
 def _fit_pipeline(
@@ -124,9 +222,10 @@ def _fit_pipeline(
     *,
     X: pd.DataFrame,
     y_encoded: pd.Series,
+    sample_weight_builder: Callable[[pd.Series], NDArray[np.float64]],
 ) -> Pipeline:
     fitted_pipeline = cast(Pipeline, clone(pipeline))
-    sample_weight = _build_sample_weight(y_encoded)
+    sample_weight = sample_weight_builder(y_encoded)
     fitted_pipeline.fit(X, y_encoded, model__sample_weight=sample_weight)
     return fitted_pipeline
 
@@ -207,6 +306,8 @@ def _evaluate_pipeline(
             float,
             evaluation["expected_calibration_error"],
         ),
+        "draw_f1": cast(float, evaluation["draw_f1"]),
+        "draw_recall": cast(float, evaluation["draw_recall"]),
         "classification_report": cast(dict[str, object], evaluation["classification_report"]),
     }
     return metrics
@@ -277,25 +378,25 @@ def train_and_export_model(
     X_test = test_df[feature_columns].copy()
     y_train = train_df[TARGET_COLUMN].map(OUTCOME_TO_ENCODED)
     y_test = test_df[TARGET_COLUMN]
-    candidate_pipelines = _build_candidate_pipelines()
+    candidate_specs = _build_candidate_specs()
 
     logger.info(
         "Running temporal backtesting with %s splits across %s candidates",
         backtest_splits,
-        len(candidate_pipelines),
+        len(candidate_specs),
     )
     candidate_backtests, selected_model_name = evaluate_candidates_with_backtesting(
-        candidate_pipelines=candidate_pipelines,
+        candidate_specs=candidate_specs,
         train_df=train_df,
         feature_columns=feature_columns,
         target_column=TARGET_COLUMN,
         outcome_to_encoded=OUTCOME_TO_ENCODED,
-        sample_weight_builder=_build_sample_weight,
         n_splits=backtest_splits,
     )
     logger.info("Selected candidate after backtesting: %s", selected_model_name)
 
-    selected_candidate_pipeline = candidate_pipelines[selected_model_name]
+    selected_candidate_spec = candidate_specs[selected_model_name]
+    selected_candidate_pipeline = cast(Pipeline, selected_candidate_spec.pipeline)
 
     X_calibration_fit = calibration_fit_df[feature_columns].copy()
     X_calibration_selection = calibration_selection_df[feature_columns].copy()
@@ -306,6 +407,7 @@ def train_and_export_model(
         selected_candidate_pipeline,
         X=X_train,
         y_encoded=y_train,
+        sample_weight_builder=selected_candidate_spec.sample_weight_builder,
     )
     calibration_selection_metrics: dict[str, TrainingMetrics] = {
         "uncalibrated": _evaluate_pipeline(
@@ -339,6 +441,7 @@ def train_and_export_model(
         selected_candidate_pipeline,
         X=X_pretest,
         y_encoded=y_pretest,
+        sample_weight_builder=selected_candidate_spec.sample_weight_builder,
     )
 
     final_deployed_model: ProbabilisticEstimator = final_uncalibrated_model
@@ -351,6 +454,7 @@ def train_and_export_model(
             selected_candidate_pipeline,
             X=X_base,
             y_encoded=y_base,
+            sample_weight_builder=selected_candidate_spec.sample_weight_builder,
         )
         final_deployed_model = _fit_calibrated_variant(
             base_pipeline,
@@ -404,15 +508,26 @@ def train_and_export_model(
         "metrics": metrics,
         "uncalibrated_metrics": uncalibrated_metrics,
         "evaluation_artifacts": {
-            "selection_strategy": "temporal_backtesting_rank_sum",
+            "selection_strategy": "temporal_backtesting_rank_sum_draw_aware",
             "selection_metrics": [
                 "macro_f1",
+                "draw_f1",
+                "draw_recall",
                 "balanced_accuracy",
                 "matthews_corrcoef",
                 "log_loss",
                 "multiclass_brier_score",
                 "expected_calibration_error",
             ],
+            "candidate_search_space": {
+                "candidate_count": int(len(candidate_specs)),
+                "families": sorted(
+                    {
+                        candidate_spec.family
+                        for candidate_spec in candidate_specs.values()
+                    }
+                ),
+            },
             "candidate_backtests": candidate_backtests,
             "calibration_variant_selection": {
                 "fit_rows": int(len(calibration_fit_df)),
@@ -423,6 +538,20 @@ def train_and_export_model(
                 "deployment_decision": deployment_decision,
             },
         },
+    }
+
+    report_payload = generate_evaluation_report(
+        training_summary=training_summary,
+        test_df=test_df,
+        probabilities=predict_proba_aligned(final_deployed_model, X_test),
+        y_pred_encoded=final_deployed_model.predict(X_test).astype(np.int64),
+        artifact_path=output_path,
+    )
+    training_summary["evaluation_artifacts"]["report_artifacts"] = {
+        "report_json": cast(dict[str, object], report_payload["artifacts"])["report_json"],
+        "report_markdown": cast(dict[str, object], report_payload["artifacts"])["report_markdown"],
+        "confusion_matrix_png": cast(dict[str, object], report_payload["artifacts"])["confusion_matrix_png"],
+        "calibration_curves_png": cast(dict[str, object], report_payload["artifacts"])["calibration_curves_png"],
     }
 
     artifact: ModelArtifactBundle = {

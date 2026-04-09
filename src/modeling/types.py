@@ -22,6 +22,8 @@ class TrainingMetrics(TypedDict):
     log_loss: float
     multiclass_brier_score: float
     expected_calibration_error: float
+    draw_f1: NotRequired[float]
+    draw_recall: NotRequired[float]
     classification_report: dict[str, object]
 
 

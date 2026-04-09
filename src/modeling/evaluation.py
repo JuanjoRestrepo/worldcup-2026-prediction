@@ -26,6 +26,8 @@ from src.modeling.types import TrainingMetrics
 
 PRIMARY_SELECTION_METRICS = (
     "macro_f1",
+    "draw_f1",
+    "draw_recall",
     "balanced_accuracy",
     "matthews_corrcoef",
     "log_loss",
@@ -42,6 +44,18 @@ class TemporalDataSplit:
     train_df: pd.DataFrame
     calibration_df: pd.DataFrame
     test_df: pd.DataFrame
+
+
+@dataclass(frozen=True)
+class CandidateSpec:
+    """Model-search candidate with estimator pipeline and weighting strategy."""
+
+    name: str
+    pipeline: ProbabilisticEstimator
+    sample_weight_builder: Callable[[pd.Series], NDArray[np.float64]]
+    family: str
+    hyperparameters: dict[str, object]
+    notes: str | None = None
 
 
 class ProbabilisticEstimator(Protocol):
@@ -172,6 +186,18 @@ def evaluate_multiclass_predictions(
             ],
             output_dict=True,
             zero_division=0,
+        ),
+        "draw_f1": float(
+            f1_score(
+                (y_true_array == 0).astype(np.int64),
+                (y_pred_array == 0).astype(np.int64),
+                zero_division=0,
+            )
+        ),
+        "draw_recall": float(
+            np.mean(y_pred_array[y_true_array == 0] == 0)
+            if np.any(y_true_array == 0)
+            else 0.0
         ),
     }
 
@@ -341,12 +367,11 @@ def split_train_calibration_test(
 
 def evaluate_candidates_with_backtesting(
     *,
-    candidate_pipelines: dict[str, ProbabilisticEstimator],
+    candidate_specs: dict[str, CandidateSpec],
     train_df: pd.DataFrame,
     feature_columns: list[str],
     target_column: str,
     outcome_to_encoded: dict[int, int],
-    sample_weight_builder: Callable[[pd.Series], NDArray[np.float64]],
     n_splits: int,
 ) -> tuple[list[dict[str, object]], str]:
     """Evaluate candidate models with rolling temporal validation and rank them."""
@@ -360,7 +385,7 @@ def evaluate_candidates_with_backtesting(
     splitter = TimeSeriesSplit(n_splits=n_splits)
     candidate_summaries: list[dict[str, object]] = []
 
-    for candidate_name, candidate_pipeline in candidate_pipelines.items():
+    for candidate_name, candidate_spec in candidate_specs.items():
         fold_results: list[dict[str, object]] = []
         for fold_index, (train_idx, valid_idx) in enumerate(splitter.split(X), start=1):
             X_train = X.iloc[train_idx].copy()
@@ -370,8 +395,8 @@ def evaluate_candidates_with_backtesting(
             y_train_encoded = y_train.map(outcome_to_encoded).astype("int64")
             y_valid_encoded = y_valid.map(outcome_to_encoded).astype("int64")
 
-            estimator = cast(ProbabilisticEstimator, clone(candidate_pipeline))
-            sample_weight = sample_weight_builder(y_train_encoded)
+            estimator = cast(ProbabilisticEstimator, clone(candidate_spec.pipeline))
+            sample_weight = candidate_spec.sample_weight_builder(y_train_encoded)
             estimator.fit(X_train, y_train_encoded, model__sample_weight=sample_weight)
 
             probabilities = predict_proba_aligned(estimator, X_valid)
@@ -430,6 +455,9 @@ def evaluate_candidates_with_backtesting(
         candidate_summaries.append(
             {
                 "model_name": candidate_name,
+                "model_family": candidate_spec.family,
+                "hyperparameters": candidate_spec.hyperparameters,
+                "notes": candidate_spec.notes,
                 "fold_results": fold_results,
                 "mean_metrics": mean_metrics,
                 "std_metrics": std_metrics,
@@ -446,6 +474,14 @@ def evaluate_candidates_with_backtesting(
         ]
     )
     ranking_frame["rank_macro_f1"] = ranking_frame["macro_f1"].rank(
+        ascending=False,
+        method="dense",
+    )
+    ranking_frame["rank_draw_f1"] = ranking_frame["draw_f1"].rank(
+        ascending=False,
+        method="dense",
+    )
+    ranking_frame["rank_draw_recall"] = ranking_frame["draw_recall"].rank(
         ascending=False,
         method="dense",
     )
@@ -472,6 +508,8 @@ def evaluate_candidates_with_backtesting(
     ranking_frame["selection_score"] = ranking_frame[
         [
             "rank_macro_f1",
+            "rank_draw_f1",
+            "rank_draw_recall",
             "rank_balanced_accuracy",
             "rank_matthews_corrcoef",
             "rank_log_loss",
@@ -480,8 +518,8 @@ def evaluate_candidates_with_backtesting(
         ]
     ].sum(axis=1)
     ranking_frame = ranking_frame.sort_values(
-        ["selection_score", "macro_f1", "log_loss"],
-        ascending=[True, False, True],
+        ["selection_score", "macro_f1", "draw_f1", "draw_recall", "log_loss"],
+        ascending=[True, False, False, False, True],
     ).reset_index(drop=True)
 
     best_model_name = str(ranking_frame.loc[0, "model_name"])
