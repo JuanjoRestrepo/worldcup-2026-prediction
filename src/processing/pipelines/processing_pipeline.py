@@ -4,6 +4,10 @@ import logging
 import pandas as pd
 
 from src.config.settings import settings
+from src.contracts.data_contracts import (
+    validate_feature_dataset_contract,
+    validate_standardized_matches_contract,
+)
 from src.database.persistence import persist_dataframe
 from src.ingestion.clients.csv_client import load_historical_data
 from src.ingestion.clients.api_data_loader import load_api_data
@@ -175,6 +179,10 @@ def run_processing_pipeline(
     logger.info(f"    Reasoning: Football evolved significantly post-1990 (tactics, athleticism, etc.)")
     logger.info(f"    Date range: {df['date'].min().date()} → {df['date'].max().date()}")
 
+    validate_standardized_matches_contract(
+        df,
+        contract_name="silver_matches_cleaned",
+    )
     silver_output_path = settings.SILVER_DIR / "matches_cleaned.csv"
     df.to_csv(silver_output_path, index=False)
     logger.info(f"✅ Saved silver layer dataset → {silver_output_path}")
@@ -234,6 +242,7 @@ def run_processing_pipeline(
     logger.info("\n💾 PHASE 6: Saving features dataset...")
     output_path = settings.GOLD_DIR / "features_dataset.csv"
     
+    validate_feature_dataset_contract(df)
     df.to_csv(output_path, index=False)
     logger.info(f"✅ Saved → {output_path}")
     logger.info(f"   - Rows: {len(df)}")

@@ -7,8 +7,8 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
-    name: Test Suite
+  validate:
+    name: Test and dbt Validation
     runs-on: ubuntu-latest
 
     services:
@@ -19,54 +19,58 @@ jobs:
           POSTGRES_PASSWORD: worldcup_dev
           POSTGRES_DB: worldcup_db
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U worldcup -d worldcup_db"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
           - 5432:5432
 
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: worldcup_db
+      POSTGRES_USER: worldcup
+      POSTGRES_PASSWORD: worldcup_dev
+      DBT_BASE_SCHEMA: analytics
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-          cache: 'pip'
+          python-version-file: .python-version
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Lint with ruff (optional)
+      - name: Install PostgreSQL client
         run: |
-          pip install ruff
-          ruff check src/ tests/ || true
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Sync project dependencies
+        run: uv sync
+
+      - name: Initialize database schema
+        env:
+          PGPASSWORD: worldcup_dev
+        run: |
+          psql \
+            -h localhost \
+            -U worldcup \
+            -d worldcup_db \
+            -f docker/postgres/init.sql
 
       - name: Run pytest
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: worldcup_db
-          DB_USER: worldcup
-          DB_PASSWORD: worldcup_dev
-        run: |
-          # Initialize database schema
-          PGPASSWORD=worldcup_dev psql -h localhost -U worldcup -d worldcup_db -f docker/postgres/init.sql || true
+        run: uv run python -m pytest tests/ -v --tb=short
 
-          # Run tests
-          pytest tests/ -v --tb=short \
-            --ignore=tests/test_inference_logger.py \
-            --ignore=tests/test_api.py \
-            --ignore=tests/test_database_persistence.py
-
-      - name: Check dbt models (syntax only)
-        run: |
-          pip install dbt-postgres
-          dbt parse --projects-dir dbt --dbt-use-mp-script || true
+      - name: Validate dbt project syntax
+        run: uv run python run_dbt.py parse
 
       - name: Comment PR with test results
         if: failure() && github.event_name == 'pull_request'
@@ -77,33 +81,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ CI Pipeline Failed\n\nPlease check the test logs above and fix any failures before merging.'
+              body: '❌ CI pipeline failed.\n\nThe blocking validation suite did not pass. Please review the workflow logs before merging.'
             })
-
-  lint:
-    name: Code Quality Checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Type check with MyPy (optional)
-        run: |
-          pip install mypy
-          mypy src/ --ignore-missing-imports --no-strict-optional || true
-
-      - name: Check imports with bandit (security)
-        run: |
-          pip install bandit
-          bandit -ll -r src/ || true

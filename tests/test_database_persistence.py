@@ -33,7 +33,16 @@ class _DummyEngine:
 
 
 def test_persist_dataframe_creates_schema_and_adds_lineage(monkeypatch):
-    df = pd.DataFrame({"match_id": [1, 2], "value": [10, 20]})
+    df = pd.DataFrame(
+        {
+            "date": ["2024-01-01", "2024-01-02"],
+            "homeTeam": ["Colombia", "Brazil"],
+            "awayTeam": ["Argentina", "Chile"],
+            "homeGoals": [1, 2],
+            "awayGoals": [0, 1],
+            "tournament": ["Friendly", "Friendly"],
+        }
+    )
     engine = _DummyEngine()
     captured: dict[str, object] = {}
 

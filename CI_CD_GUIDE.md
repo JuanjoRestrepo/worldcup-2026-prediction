@@ -8,57 +8,45 @@
 
 ## Overview
 
-The CI/CD pipeline automates testing and code quality checks on every push and pull request. It ensures that:
+The CI/CD pipeline automates blocking validation on every push and pull request. It ensures that:
 
 - ✅ All unit tests pass
-- ✅ Code quality standards are met
 - ✅ dbt models are syntactically valid
-- ✅ Security vulnerabilities are detected
-- ✅ Type hints are valid (optional)
+- ✅ PostgreSQL-backed tests run against a real service container
+- ✅ The repo installs reproducibly through `uv`
 
 ---
 
 ## Pipeline Stages
 
-### 1. **Test Suite** (Primary)
+### 1. **Blocking Validation**
 
 Runs on Ubuntu + PostgreSQL 15 service container.
 
 **What it does:**
 
-- Installs dependencies from `requirements.txt`
+- Syncs dependencies with `uv`
 - Sets up PostgreSQL with monitoring schema
-- Runs pytest on core modules:
-  - `test_team_aliases.py` (13 tests) ✅
-  - `test_api_hardening.py` ✅
-  - Other integration tests (skipped in CI for now)
+- Runs the repository test suite without ignoring critical tests
+- Runs `dbt parse` through `run_dbt.py`
 - Comments on PRs if tests fail
 
 **Tests Run:**
 
 ```bash
-pytest tests/ -v --tb=short \
-  --ignore=tests/test_inference_logger.py   # Needs live DB
-  --ignore=tests/test_api.py                # Requires full setup
-  --ignore=tests/test_database_persistence.py
+uv sync
+uv run python -m pytest tests/ -v --tb=short
+uv run python run_dbt.py parse
 ```
 
 **Duration:** ~2-3 minutes
 
 ---
 
-### 2. **Code Quality Checks** (Secondary)
+### 2. **Quality Hardening**
 
-Runs linting and security checks.
-
-**What it does:**
-
-- Ruff: Python style checker (non-blocking)
-- MyPy: Type checking (non-blocking)
-- Bandit: Security scanning (non-blocking)
-- dbt parse: Model syntax validation (non-blocking)
-
-**All code quality checks are advisory** (run with `|| true`) so they don't block merges, but failures are visible in logs.
+MyPy, Pylance-oriented cleanup, and stricter static analysis are the next step after functionality.
+They are intentionally kept out of the blocking path until the functional validation layer is stable.
 
 ---
 
@@ -66,20 +54,13 @@ Runs linting and security checks.
 
 ### `.github/workflows/ci.yml`
 
-Main pipeline configuration (2 jobs):
+Main pipeline configuration:
 
-**Job 1: `test`**
-
-- Runs unit tests
-- Services: PostgreSQL 15
-- Publishes results + PR comments
-- **Status:** Blocks if tes fail ❌
-
-**Job 2: `lint`**
-
-- Code quality checks
-- No blocking (all checks use `|| true`)
-- **Status:** Advisory only ⚠️
+- one blocking validation job
+- PostgreSQL 15 service container
+- `uv` environment sync
+- pytest + dbt parse
+- PR comment on failure
 
 ---
 
@@ -88,17 +69,15 @@ Main pipeline configuration (2 jobs):
 Before pushing, run these locally to simulate CI:
 
 ```bash
-# 1. Activate venv
-.venv\Scripts\activate
+# 1. Sync environment
+uv sync
 
-# 2. Run tests (skip DB-dependent tests)
-pytest tests/test_team_aliases.py tests/test_api_hardening.py -v
+# 2. Start PostgreSQL
+docker compose up -d postgres
 
-# 3. Check code quality (optional)
-pip install ruff mypy bandit
-ruff check src/
-mypy src/ --ignore-missing-imports
-bandit -ll -r src/
+# 3. Run blocking checks
+uv run python -m pytest tests/ -v --tb=short
+uv run python run_dbt.py parse
 ```
 
 ---
@@ -110,13 +89,12 @@ When you push:
 1. **Status checks appear** on your commit/PR
 2. **Green ✅** = All tests passed, safe to merge
 3. **Red ❌** = Tests failed, fix before merge
-4. **Orange ⚠️** = Quality warnings (for info only)
+4. **Orange ⚠️** = Only for optional future hardening jobs
 
 ### Example Status:
 
 ```
-✅ CI Pipeline / Test Suite — All checks passed
-⚠️  CI Pipeline / Code Quality Checks — Some non-critical warnings
+✅ CI Pipeline / Test and dbt Validation — All checks passed
 ```
 
 ---
@@ -141,7 +119,7 @@ To enforce CI passing before merge:
 1. Go to repo settings → Branches → Branch rules
 2. Choose `main` branch
 3. Enable: "Require status checks to pass before merging"
-4. Select: "CI Pipeline / Test Suite"
+4. Select: "CI Pipeline / Test and dbt Validation"
 5. Save
 
 Now PRs can't merge until tests pass. ✅
@@ -153,11 +131,11 @@ Now PRs can't merge until tests pass. ✅
 PostgreSQL connection in GitHub Actions:
 
 ```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=worldcup_db
-DB_USER=worldcup
-DB_PASSWORD=worldcup_dev
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=worldcup_db
+POSTGRES_USER=worldcup
+POSTGRES_PASSWORD=worldcup_dev
 ```
 
 These are set automatically by the `services.postgres` config.
@@ -198,7 +176,7 @@ GitHub Actions → add `environment: production` for approval gates.
 | --------------------------------- | ------------------------------------------------------- |
 | Tests fail on CI but pass locally | Check env vars match `.env`                             |
 | PostgreSQL connection fails       | Ensure postgres service is running (check logs)         |
-| Python version mismatch           | CI uses Python 3.13, verify local version               |
+| Python version mismatch           | CI uses `.python-version`, verify local `uv` interpreter |
 | Actionsfail to trigger            | Check `.github/workflows/ci.yml` syntax with `yamllint` |
 | Want to skip CI for a commit      | Use `[skip ci]` in commit message (⚠️ not recommended)  |
 
@@ -219,7 +197,7 @@ GitHub Actions → add `environment: production` for approval gates.
 - Disable CI checks
 - Skip tests with "band-aid" fixes
 - Push directly to `main` (use PRs + CI)
-- Ignore security warnings
+- Ignore failing blocking checks
 - Leave failing tests in main branch
 
 ---
@@ -229,9 +207,9 @@ GitHub Actions → add `environment: production` for approval gates.
 Once pipeline is working:
 
 1. **Enforce**: Require CI passing before PR merge (in branch settings)
-2. **Extend**: Add more tests as features are added
+2. **Extend**: Add MyPy and stricter Ruff once the functional layer is stable
 3. **Monitor**: Watch for patterns in failures (flaky tests?)
-4. **Optimize**: Cache dependencies to speed up runs
+4. **Optimize**: Keep `uv` cache warm in Actions
 5. **Deploy**: Add deployment job for automated releases
 
 ---

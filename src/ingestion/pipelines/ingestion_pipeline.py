@@ -7,6 +7,7 @@ from src.config.settings import settings
 from src.database.persistence import persist_dataframe
 from src.ingestion.clients.api_client import FootballAPIClient
 from src.ingestion.clients.csv_client import load_historical_data
+from src.contracts.data_contracts import validate_standardized_matches_contract
 from src.ingestion.utils.validator import validate_schema
 from src.ingestion.utils.international_validator import filter_international_matches
 
@@ -29,6 +30,10 @@ def run_ingestion_pipeline(
     validate_schema(df)
 
     df_csv_standardized = standardize_csv(df)
+    validate_standardized_matches_contract(
+        df_csv_standardized,
+        contract_name="bronze_historical_matches",
+    )
     csv_output_path = settings.BRONZE_DIR / "historical_standardized.csv"
     df_csv_standardized.to_csv(csv_output_path, index=False)
     logger.info(f"✅ Saved standardized historical data → {csv_output_path}")
@@ -70,6 +75,21 @@ def run_ingestion_pipeline(
                 international_matches = filter_international_matches(api_data["matches"])
                 api_data["matches"] = international_matches
                 df_api_standardized = standardize_api(international_matches)
+                if not df_api_standardized.empty:
+                    initial_api_rows = len(df_api_standardized)
+                    df_api_standardized = df_api_standardized.dropna(
+                        subset=["homeGoals", "awayGoals"]
+                    ).reset_index(drop=True)
+                    skipped_unscored_rows = initial_api_rows - len(df_api_standardized)
+                    if skipped_unscored_rows > 0:
+                        logger.info(
+                            "Skipped %s API matches without final scores before bronze validation",
+                            skipped_unscored_rows,
+                        )
+                    validate_standardized_matches_contract(
+                        df_api_standardized,
+                        contract_name="bronze_api_matches",
+                    )
                 logger.info(f"✅ API Data filtered: {total_before} → {len(international_matches)} matches (removed {total_before - len(international_matches)} club league matches)")
             
             if api_data and api_data.get("matches"):

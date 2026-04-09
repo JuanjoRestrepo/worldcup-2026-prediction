@@ -9,6 +9,10 @@ from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy.engine import Engine
 
+from src.contracts.data_contracts import (
+    validate_persisted_dataframe_contract,
+    validate_training_summary_contract,
+)
 from src.database.connection import get_sqlalchemy_engine
 
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -51,6 +55,11 @@ def persist_dataframe(
     persisted_df = df.copy()
     persisted_df["pipeline_run_id"] = pipeline_run_id
     persisted_df["persisted_at_utc"] = datetime.now(timezone.utc).isoformat()
+    validate_persisted_dataframe_contract(
+        persisted_df,
+        schema_name=validated_schema,
+        table_name=validated_table,
+    )
 
     ensure_schema(sql_engine, validated_schema)
     persisted_df.to_sql(
@@ -70,6 +79,7 @@ def build_training_run_frame(
     pipeline_run_id: str | None = None,
 ) -> pd.DataFrame:
     """Convert nested training metadata into a one-row DataFrame for DB storage."""
+    validate_training_summary_contract(training_summary)
     metrics = training_summary["metrics"]
     row = {
         "pipeline_run_id": pipeline_run_id,

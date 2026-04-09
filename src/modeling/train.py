@@ -16,6 +16,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
 from src.config.settings import settings
+from src.contracts.data_contracts import validate_feature_dataset_contract
 from src.database.persistence import persist_training_run
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
@@ -128,6 +129,7 @@ def train_and_export_model(
 
     logger.info("Loading gold feature dataset from %s", dataset_path)
     df = load_feature_dataset(dataset_path)
+    validate_feature_dataset_contract(df)
     feature_columns = select_model_feature_columns(df)
     if not feature_columns:
         raise RuntimeError("No model feature columns were found in the gold dataset.")

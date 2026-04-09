@@ -1,13 +1,6 @@
 import pandas as pd
 
-REQUIRED_COLUMNS = [
-    "date",
-    "home_team",
-    "away_team",
-    "home_score",
-    "away_score",
-    "tournament"
-]
+from src.contracts.data_contracts import validate_historical_raw_contract
 
 
 def validate_schema(df: pd.DataFrame) -> None:
@@ -17,7 +10,4 @@ def validate_schema(df: pd.DataFrame) -> None:
     Raises:
         ValueError if schema is invalid
     """
-    missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
-
-    if missing:
-        raise ValueError(f"Missing columns: {missing}")
+    validate_historical_raw_contract(df)

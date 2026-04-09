@@ -13,11 +13,12 @@ CREATE TABLE monitoring.inference_logs (
     id SERIAL PRIMARY KEY,
     request_id VARCHAR(255),              -- Unique request identifier
     timestamp_utc TIMESTAMP,               -- When request was made
+    requested_match_date DATE,             -- Optional historical as-of serving date
     home_team VARCHAR(255),
     away_team VARCHAR(255),
     neutral BOOLEAN,
     tournament VARCHAR(255),               -- Optional tournament label
-    predicted_class INTEGER,               -- 0=win, 1=loss, 2=draw
+    predicted_class INTEGER,               -- -1=away_win, 0=draw, 1=home_win
     predicted_outcome VARCHAR(50),         -- Human-readable outcome
     class_probabilities_json JSONB,        -- Full probability distribution
     feature_snapshot_dates_json JSONB,     -- When features were captured
@@ -67,11 +68,11 @@ curl -X POST http://localhost:8000/predict \
 {
   "home_team": "Brazil",
   "away_team": "Argentina",
-  "predicted_class": 0,
-  "predicted_outcome": "win",
+  "predicted_class": 1,
+  "predicted_outcome": "home_win",
   "class_probabilities": {
-    "win": 0.72,
-    "loss": 0.15,
+    "home_win": 0.72,
+    "away_win": 0.15,
     "draw": 0.13
   },
   "neutral": false,
@@ -103,8 +104,10 @@ curl http://localhost:8000/monitoring/inference-stats?hours=24
     "unique_matchups": 48,
     "feature_sources_used": 2,
     "avg_home_win_prob": 0.51,
+    "avg_away_win_prob": 0.24,
+    "avg_draw_prob": 0.25,
     "home_wins_predicted": 89,
-    "home_losses_predicted": 41,
+    "away_wins_predicted": 41,
     "draws_predicted": 26,
     "tournaments_predicted": 3,
     "earliest_request": "2026-04-01T10:30:00+00:00",
@@ -115,7 +118,7 @@ curl http://localhost:8000/monitoring/inference-stats?hours=24
 
 **Interpretación:**
 - `avg_home_win_prob: 0.51` → Modelo no está sesgado
-- `home_wins_predicted: 89` vs `losses_predicted: 41` → Distribution balanceada
+- `home_wins_predicted: 89` vs `away_wins_predicted: 41` → Distribution balanceada
 - `unique_matchups` → Cobertura de equipos
 
 ### GET `/monitoring/recent-inferences?limit=50`
@@ -133,12 +136,13 @@ curl http://localhost:8000/monitoring/recent-inferences?limit=10
     {
       "request_id": "Brazil_Argentina_1743667500.5",
       "timestamp_utc": "2026-04-02T14:45:00.5+00:00",
+      "requested_match_date": "2025-11-18",
       "home_team": "Brazil",
       "away_team": "Argentina",
       "neutral": false,
       "tournament": "2026 FIFA World Cup",
-      "predicted_outcome": "win",
-      "class_probabilities_json": "{\"win\": 0.72, \"loss\": 0.15, \"draw\": 0.13}",
+      "predicted_outcome": "home_win",
+      "class_probabilities_json": "{\"home_win\": 0.72, \"away_win\": 0.15, \"draw\": 0.13}",
       "feature_source": "dbt_latest_team_snapshots",
       "model_version": "v1.0.0"
     },

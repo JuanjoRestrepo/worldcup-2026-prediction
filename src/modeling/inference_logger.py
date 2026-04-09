@@ -10,7 +10,6 @@ from typing import Any
 import pandas as pd
 from sqlalchemy.engine import Engine
 
-from src.config.settings import settings
 from src.database.connection import get_sqlalchemy_engine
 from src.database.persistence import ensure_schema
 
@@ -45,7 +44,6 @@ def validate_feature_freshness(
             if "T" in date_str:
                 feature_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             else:
-                from datetime import date as date_type
                 feature_date = datetime.fromisoformat(date_str + "T00:00:00+00:00")
             
             age_days = (now - feature_date).days
@@ -204,10 +202,12 @@ class InferenceLogger:
             COUNT(DISTINCT home_team || '_' || away_team) as unique_matchups,
             COUNT(DISTINCT feature_source) as feature_sources_used,
             AVG(CAST(class_probabilities_json->>'home_win' AS FLOAT)) as avg_home_win_prob,
+            AVG(CAST(class_probabilities_json->>'away_win' AS FLOAT)) as avg_away_win_prob,
+            AVG(CAST(class_probabilities_json->>'draw' AS FLOAT)) as avg_draw_prob,
             SUM(CASE WHEN requested_match_date IS NOT NULL THEN 1 ELSE 0 END) as historical_requests,
             SUM(CASE WHEN requested_match_date IS NULL THEN 1 ELSE 0 END) as latest_requests,
-            SUM(CASE WHEN predicted_outcome = 'win' THEN 1 ELSE 0 END) as home_wins_predicted,
-            SUM(CASE WHEN predicted_outcome = 'loss' THEN 1 ELSE 0 END) as home_losses_predicted,
+            SUM(CASE WHEN predicted_outcome = 'home_win' THEN 1 ELSE 0 END) as home_wins_predicted,
+            SUM(CASE WHEN predicted_outcome = 'away_win' THEN 1 ELSE 0 END) as away_wins_predicted,
             SUM(CASE WHEN predicted_outcome = 'draw' THEN 1 ELSE 0 END) as draws_predicted,
             COUNT(DISTINCT tournament) as tournaments_predicted,
             MIN(timestamp_utc) as earliest_request,

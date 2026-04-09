@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pandas as pd
 import pytest
 
 from src.modeling.inference_logger import InferenceLogger, INFERENCE_LOG_SCHEMA
@@ -96,6 +97,42 @@ def test_log_prediction_includes_requested_match_date(monkeypatch):
     )
 
     assert captured["frame"].loc[0, "requested_match_date"] == "2025-11-18"
+
+
+def test_inference_statistics_query_uses_multiclass_labels(monkeypatch):
+    captured = {}
+    inference_logger = InferenceLogger(engine=object())
+
+    def fake_read_sql_query(query, con):
+        captured["query"] = query
+        return pd.DataFrame(
+            [
+                {
+                    "total_inferences": 3,
+                    "unique_matchups": 2,
+                    "feature_sources_used": 1,
+                    "avg_home_win_prob": 0.51,
+                    "avg_away_win_prob": 0.24,
+                    "avg_draw_prob": 0.25,
+                    "historical_requests": 1,
+                    "latest_requests": 2,
+                    "home_wins_predicted": 1,
+                    "away_wins_predicted": 1,
+                    "draws_predicted": 1,
+                    "tournaments_predicted": 2,
+                    "earliest_request": "2026-04-01T00:00:00+00:00",
+                    "latest_request": "2026-04-02T00:00:00+00:00",
+                }
+            ]
+        )
+
+    monkeypatch.setattr(pd, "read_sql_query", fake_read_sql_query)
+
+    stats = inference_logger.get_inference_statistics(hours=24)
+
+    assert "predicted_outcome = 'home_win'" in captured["query"]
+    assert "predicted_outcome = 'away_win'" in captured["query"]
+    assert stats["statistics"]["away_wins_predicted"] == 1
 
 
 def test_log_prediction_with_none_tournament(inference_logger):
