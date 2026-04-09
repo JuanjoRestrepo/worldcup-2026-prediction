@@ -68,6 +68,20 @@ class ProbabilisticEstimator(Protocol):
     def predict_proba(self, X: pd.DataFrame) -> NDArray[np.float64]: ...
 
 
+def fit_estimator_with_sample_weight(
+    estimator: ProbabilisticEstimator,
+    X: pd.DataFrame,
+    y: pd.Series,
+    sample_weight: NDArray[np.float64],
+) -> None:
+    """Fit either a sklearn Pipeline or a custom estimator with sample weights."""
+    named_steps = getattr(estimator, "named_steps", None)
+    if named_steps is not None and "model" in named_steps:
+        estimator.fit(X, y, model__sample_weight=sample_weight)
+        return
+    estimator.fit(X, y, sample_weight=sample_weight)
+
+
 def extract_estimator_classes(estimator: ProbabilisticEstimator) -> NDArray[np.int64]:
     """Return encoded classes from a fitted estimator or wrapped pipeline."""
     estimator_classes = getattr(estimator, "classes_", None)
@@ -397,7 +411,12 @@ def evaluate_candidates_with_backtesting(
 
             estimator = cast(ProbabilisticEstimator, clone(candidate_spec.pipeline))
             sample_weight = candidate_spec.sample_weight_builder(y_train_encoded)
-            estimator.fit(X_train, y_train_encoded, model__sample_weight=sample_weight)
+            fit_estimator_with_sample_weight(
+                estimator,
+                X_train,
+                y_train_encoded,
+                sample_weight,
+            )
 
             probabilities = predict_proba_aligned(estimator, X_valid)
             predicted = estimator.predict(X_valid).astype(np.int64)

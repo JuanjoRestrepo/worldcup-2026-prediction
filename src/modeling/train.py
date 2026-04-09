@@ -33,6 +33,7 @@ from src.modeling.evaluation import (
     ProbabilisticEstimator,
     evaluate_candidates_with_backtesting,
     evaluate_multiclass_predictions,
+    fit_estimator_with_sample_weight,
     predict_proba_aligned,
     select_deployment_variant,
     split_train_calibration_test,
@@ -40,6 +41,7 @@ from src.modeling.evaluation import (
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
 from src.modeling.reporting import generate_evaluation_report
+from src.modeling.two_stage import TwoStageDrawClassifier
 from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
 logger = logging.getLogger(__name__)
@@ -214,19 +216,83 @@ def _build_candidate_specs() -> dict[str, CandidateSpec]:
             notes="Gradient boosting search with lightweight draw emphasis",
         )
 
+    two_stage_variants: list[dict[str, float]] = [
+        {
+            "stage1_c": 2.0,
+            "stage2_c": 1.0,
+            "draw_boost": 1.6,
+            "draw_probability_scale": 1.0,
+        },
+        {
+            "stage1_c": 2.0,
+            "stage2_c": 1.0,
+            "draw_boost": 1.8,
+            "draw_probability_scale": 1.08,
+        },
+        {
+            "stage1_c": 1.0,
+            "stage2_c": 2.0,
+            "draw_boost": 2.0,
+            "draw_probability_scale": 1.1,
+        },
+    ]
+    for two_stage_variant in two_stage_variants:
+        stage1_c = two_stage_variant["stage1_c"]
+        stage2_c = two_stage_variant["stage2_c"]
+        draw_boost = two_stage_variant["draw_boost"]
+        draw_probability_scale = two_stage_variant["draw_probability_scale"]
+        name = (
+            f"two_stage_s1c{stage1_c:g}_s2c{stage2_c:g}_"
+            f"draw{draw_boost:g}_scale{draw_probability_scale:g}"
+        )
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=cast(
+                ProbabilisticEstimator,
+                TwoStageDrawClassifier(
+                    stage1_estimator=_build_scaled_pipeline(
+                        LogisticRegression(
+                            C=stage1_c,
+                            max_iter=2500,
+                            class_weight="balanced",
+                            random_state=RANDOM_STATE,
+                        )
+                    ),
+                    stage2_estimator=_build_scaled_pipeline(
+                        LogisticRegression(
+                            C=stage2_c,
+                            max_iter=2500,
+                            class_weight="balanced",
+                            random_state=RANDOM_STATE,
+                        )
+                    ),
+                    draw_probability_scale=draw_probability_scale,
+                ),
+            ),
+            sample_weight_builder=_make_sample_weight_builder(draw_boost),
+            family="two_stage_draw_classifier",
+            hyperparameters={
+                "stage1_c": stage1_c,
+                "stage2_c": stage2_c,
+                "draw_boost": draw_boost,
+                "draw_probability_scale": draw_probability_scale,
+            },
+            notes="Two-stage draw-vs-non-draw decomposition with aggressive draw weighting",
+        )
+
     return candidate_specs
 
 
 def _fit_pipeline(
-    pipeline: Pipeline,
+    pipeline: ProbabilisticEstimator,
     *,
     X: pd.DataFrame,
     y_encoded: pd.Series,
     sample_weight_builder: Callable[[pd.Series], NDArray[np.float64]],
-) -> Pipeline:
-    fitted_pipeline = cast(Pipeline, clone(pipeline))
+) -> ProbabilisticEstimator:
+    fitted_pipeline = cast(ProbabilisticEstimator, clone(pipeline))
     sample_weight = sample_weight_builder(y_encoded)
-    fitted_pipeline.fit(X, y_encoded, model__sample_weight=sample_weight)
+    fit_estimator_with_sample_weight(fitted_pipeline, X, y_encoded, sample_weight)
     return fitted_pipeline
 
 
@@ -273,6 +339,13 @@ def _date_range(df: pd.DataFrame) -> DateRange:
         "start": df["date"].min().date().isoformat(),
         "end": df["date"].max().date().isoformat(),
     }
+
+
+def _model_class_name(estimator: ProbabilisticEstimator) -> str:
+    named_steps = getattr(estimator, "named_steps", None)
+    if named_steps is not None and "model" in named_steps:
+        return str(named_steps["model"].__class__.__name__)
+    return estimator.__class__.__name__
 
 
 def _evaluate_pipeline(
@@ -396,7 +469,7 @@ def train_and_export_model(
     logger.info("Selected candidate after backtesting: %s", selected_model_name)
 
     selected_candidate_spec = candidate_specs[selected_model_name]
-    selected_candidate_pipeline = cast(Pipeline, selected_candidate_spec.pipeline)
+    selected_candidate_pipeline = selected_candidate_spec.pipeline
 
     X_calibration_fit = calibration_fit_df[feature_columns].copy()
     X_calibration_selection = calibration_selection_df[feature_columns].copy()
@@ -502,7 +575,7 @@ def train_and_export_model(
             for label, count in test_df[TARGET_COLUMN].value_counts().sort_index().items()
         },
         "selected_model_name": selected_model_name,
-        "selected_model_class": selected_candidate_pipeline.named_steps["model"].__class__.__name__,
+        "selected_model_class": _model_class_name(selected_candidate_pipeline),
         "deployed_model_variant": deployed_model_variant,
         "calibration_method": calibration_method,
         "metrics": metrics,
