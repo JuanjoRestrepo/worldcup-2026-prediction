@@ -191,26 +191,26 @@ For each fixture:
 
 ### Phase 1: Integration (1-2 hours)
 
-- [ ] Update `src/modeling/predict.py` to use segment-aware ensemble
-- [ ] Add segment detection to preprocessing
-- [ ] Log segment + override_flag in inference logs
+- [x] Update `src/modeling/predict.py` to use segment-aware ensemble
+- [x] Add segment detection to preprocessing (via `src/modeling/segment_routing.py`)
+- [x] Log segment + override_flag in inference logs (and shadow metrics)
 
 ### Phase 2: Training (1 hour)
 
-- [ ] Re-train with segment-aware hybrid
-- [ ] Compute per-segment validation metrics
-- [ ] Validate improvement vs. original ensemble
+- [x] Re-train with segment-aware hybrid
+- [x] Compute per-segment validation metrics
+- [x] Validate improvement vs. original ensemble
 
 ### Phase 3: Threshold Tuning (2-3 hours)
 
-- [ ] Analyze segment statistics
-- [ ] Iterate thresholds based on metrics
-- [ ] A/B test against production baseline
+- [x] Analyze segment statistics (done in backtest)
+- [x] Iterate thresholds based on metrics (balanced variant achieved Rank #4)
+- [ ] A/B test against production baseline (Shadow Deployment is live)
 
 ### Phase 4: Production (1 hour)
 
-- [ ] Deploy segment-aware ensemble to API
-- [ ] Monitor segment-specific metrics
+- [x] Deploy segment-aware ensemble to API as Shadow Model
+- [x] Monitor segment-specific metrics via `inference_logger.py`
 - [ ] Update dashboard with per-segment panels
 
 ---

@@ -1,5 +1,5 @@
 {
-  "artifact_path": "models\\match_predictor.joblib",
+  "artifact_path": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\models\\match_predictor.joblib",
   "training_rows": 22371,
   "calibration_rows": 3195,
   "test_rows": 6391,
@@ -39,7 +39,7 @@
     "home_elo_form",
     "away_elo_form"
   ],
-  "data_path": "data\\gold\\features_dataset.csv",
+  "data_path": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\data\\gold\\features_dataset.csv",
   "train_date_range": {
     "start": "1990-01-12",
     "end": "2016-03-24"
@@ -176,12 +176,13 @@
       "expected_calibration_error"
     ],
     "candidate_search_space": {
-      "candidate_count": 22,
+      "candidate_count": 26,
       "families": [
         "dummy",
         "hybrid_draw_override_ensemble",
         "logistic_regression",
         "random_forest",
+        "segment_aware_hybrid",
         "two_stage_draw_classifier",
         "xgboost"
       ]
@@ -511,8 +512,8 @@
           "multiclass_brier_score": 5.882925039998647e-15,
           "expected_calibration_error": 0.046410985238389386
         },
-        "selection_rank": 22,
-        "selection_score": 144.0
+        "selection_rank": 26,
+        "selection_score": 172.0
       },
       {
         "model_name": "logistic_c0.5_draw1",
@@ -840,7 +841,7 @@
           "expected_calibration_error": 0.006133463108723315
         },
         "selection_rank": 3,
-        "selection_score": 59.0
+        "selection_score": 69.0
       },
       {
         "model_name": "logistic_c1_draw1",
@@ -1167,8 +1168,8 @@
           "multiclass_brier_score": 0.009103018935309442,
           "expected_calibration_error": 0.007233895481965133
         },
-        "selection_rank": 4,
-        "selection_score": 61.0
+        "selection_rank": 5,
+        "selection_score": 71.0
       },
       {
         "model_name": "logistic_c2_draw1",
@@ -1496,7 +1497,7 @@
           "expected_calibration_error": 0.007115001412088439
         },
         "selection_rank": 2,
-        "selection_score": 57.0
+        "selection_score": 67.0
       },
       {
         "model_name": "logistic_c1_draw1.25",
@@ -1824,7 +1825,7 @@
           "expected_calibration_error": 0.007233895481959694
         },
         "selection_rank": 6,
-        "selection_score": 64.0
+        "selection_score": 74.0
       },
       {
         "model_name": "logistic_c2_draw1.2",
@@ -2152,7 +2153,7 @@
           "expected_calibration_error": 0.007115001412019476
         },
         "selection_rank": 1,
-        "selection_score": 54.0
+        "selection_score": 64.0
       },
       {
         "model_name": "random_forest_n300_dnone_leaf2_draw1",
@@ -2481,8 +2482,8 @@
           "multiclass_brier_score": 0.006128037704835389,
           "expected_calibration_error": 0.008809755522673846
         },
-        "selection_rank": 12,
-        "selection_score": 82.0
+        "selection_rank": 16,
+        "selection_score": 102.0
       },
       {
         "model_name": "random_forest_n400_d12_leaf2_draw1",
@@ -2811,8 +2812,8 @@
           "multiclass_brier_score": 0.0042120693684786605,
           "expected_calibration_error": 0.005817996271542324
         },
-        "selection_rank": 14,
-        "selection_score": 90.0
+        "selection_rank": 18,
+        "selection_score": 114.0
       },
       {
         "model_name": "random_forest_n300_d12_leaf4_draw1.15",
@@ -3141,8 +3142,8 @@
           "multiclass_brier_score": 0.002278623407346894,
           "expected_calibration_error": 0.013033986939142005
         },
-        "selection_rank": 17,
-        "selection_score": 103.0
+        "selection_rank": 21,
+        "selection_score": 127.0
       },
       {
         "model_name": "xgboost_n300_d6_lr0.05_lambda1.0_draw1",
@@ -3472,8 +3473,8 @@
           "multiclass_brier_score": 0.011939727992064048,
           "expected_calibration_error": 0.02774457785201276
         },
-        "selection_rank": 18,
-        "selection_score": 115.0
+        "selection_rank": 24,
+        "selection_score": 147.0
       },
       {
         "model_name": "xgboost_n350_d4_lr0.05_lambda1.0_draw1",
@@ -3803,8 +3804,8 @@
           "multiclass_brier_score": 0.009425055530147967,
           "expected_calibration_error": 0.013625960186194346
         },
-        "selection_rank": 15,
-        "selection_score": 98.0
+        "selection_rank": 20,
+        "selection_score": 126.0
       },
       {
         "model_name": "xgboost_n400_d4_lr0.03_lambda2.0_draw1",
@@ -4134,8 +4135,8 @@
           "multiclass_brier_score": 0.007244643424467827,
           "expected_calibration_error": 0.004074428216217374
         },
-        "selection_rank": 8,
-        "selection_score": 70.0
+        "selection_rank": 12,
+        "selection_score": 90.0
       },
       {
         "model_name": "xgboost_n350_d5_lr0.05_lambda1.5_draw1.15",
@@ -4465,8 +4466,8 @@
           "multiclass_brier_score": 0.009079671354175489,
           "expected_calibration_error": 0.018172021274377177
         },
-        "selection_rank": 16,
-        "selection_score": 99.0
+        "selection_rank": 19,
+        "selection_score": 123.0
       },
       {
         "model_name": "two_stage_s1c2_s2c1_draw1.6_scale1",
@@ -4795,8 +4796,8 @@
           "multiclass_brier_score": 0.004776642447331372,
           "expected_calibration_error": 0.0066507246770522
         },
-        "selection_rank": 19,
-        "selection_score": 115.0
+        "selection_rank": 22,
+        "selection_score": 139.0
       },
       {
         "model_name": "two_stage_s1c2_s2c1_draw1.8_scale1.08",
@@ -5125,8 +5126,8 @@
           "multiclass_brier_score": 0.004298125408419784,
           "expected_calibration_error": 0.010073622681161425
         },
-        "selection_rank": 20,
-        "selection_score": 121.0
+        "selection_rank": 23,
+        "selection_score": 145.0
       },
       {
         "model_name": "two_stage_s1c1_s2c2_draw2_scale1.1",
@@ -5455,8 +5456,8 @@
           "multiclass_brier_score": 0.004721860060992601,
           "expected_calibration_error": 0.01103500479504402
         },
-        "selection_rank": 21,
-        "selection_score": 125.0
+        "selection_rank": 25,
+        "selection_score": 149.0
       },
       {
         "model_name": "hybrid_override_u0.42_d0.5",
@@ -5790,8 +5791,8 @@
           "multiclass_brier_score": 0.008837068733173012,
           "expected_calibration_error": 0.0073293813251725575
         },
-        "selection_rank": 11,
-        "selection_score": 77.0
+        "selection_rank": 14,
+        "selection_score": 96.0
       },
       {
         "model_name": "hybrid_override_u0.42_d0.6",
@@ -6125,8 +6126,8 @@
           "multiclass_brier_score": 0.00880411896625933,
           "expected_calibration_error": 0.007660855833977711
         },
-        "selection_rank": 7,
-        "selection_score": 65.0
+        "selection_rank": 8,
+        "selection_score": 78.0
       },
       {
         "model_name": "hybrid_override_u0.45_d0.5",
@@ -6460,8 +6461,8 @@
           "multiclass_brier_score": 0.0064512773324013825,
           "expected_calibration_error": 0.002723275531815266
         },
-        "selection_rank": 9,
-        "selection_score": 73.0
+        "selection_rank": 10,
+        "selection_score": 89.0
       },
       {
         "model_name": "hybrid_override_u0.45_d0.6",
@@ -6795,8 +6796,8 @@
           "multiclass_brier_score": 0.007975378800534805,
           "expected_calibration_error": 0.008970709716668484
         },
-        "selection_rank": 5,
-        "selection_score": 64.0
+        "selection_rank": 7,
+        "selection_score": 78.0
       },
       {
         "model_name": "hybrid_override_u0.48_d0.5",
@@ -7130,8 +7131,8 @@
           "multiclass_brier_score": 0.005955669752212616,
           "expected_calibration_error": 0.0021785495615315657
         },
-        "selection_rank": 13,
-        "selection_score": 84.0
+        "selection_rank": 17,
+        "selection_score": 104.0
       },
       {
         "model_name": "hybrid_override_u0.48_d0.6",
@@ -7465,8 +7466,1376 @@
           "multiclass_brier_score": 0.0076185030854701696,
           "expected_calibration_error": 0.006578889534922003
         },
-        "selection_rank": 10,
-        "selection_score": 76.0
+        "selection_rank": 13,
+        "selection_score": 95.0
+      },
+      {
+        "model_name": "seg_hybrid_conservative",
+        "model_family": "segment_aware_hybrid",
+        "hyperparameters": {
+          "tag": "conservative",
+          "generalist_c": 2.0,
+          "generalist_draw_boost": 1.2,
+          "specialist_stage1_c": 2.0,
+          "specialist_stage2_c": 1.0,
+          "specialist_draw_weight_multiplier": 1.3333333333333333,
+          "default_unc": 0.45,
+          "default_conv": 0.55,
+          "friendlies_unc": 0.38,
+          "worldcup_unc": 0.52,
+          "continental_unc": 0.44,
+          "qualifiers_unc": 0.48,
+          "friendlies_conv": 0.58,
+          "worldcup_conv": 0.62,
+          "continental_conv": 0.58,
+          "qualifiers_conv": 0.6
+        },
+        "notes": "Segment-aware hybrid [conservative]: overrides conditioned by tournament segment. Friendlies unc=0.38, WC unc=0.52, default unc=0.45",
+        "fold_results": [
+          {
+            "fold_index": 1,
+            "train_rows": 3731,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "1996-02-04"
+            },
+            "validation_date_range": {
+              "start": "1996-02-04",
+              "end": "2000-06-04"
+            },
+            "metrics": {
+              "accuracy": 0.5147532188841202,
+              "macro_f1": 0.46683479561519725,
+              "weighted_f1": 0.513395215918049,
+              "balanced_accuracy": 0.48448807893667745,
+              "matthews_corrcoef": 0.24935803949025684,
+              "cohen_kappa": 0.24410664628220902,
+              "log_loss": 0.9905983679904484,
+              "multiclass_brier_score": 0.5889086686190967,
+              "expected_calibration_error": 0.04532513815546733,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.422283356258597,
+                  "recall": 0.6409185803757829,
+                  "f1-score": 0.5091210613598673,
+                  "support": 958.0
+                },
+                "draw": {
+                  "precision": 0.28653295128939826,
+                  "recall": 0.2244668911335578,
+                  "f1-score": 0.2517306482064191,
+                  "support": 891.0
+                },
+                "home_win": {
+                  "precision": 0.7011421319796954,
+                  "recall": 0.5880787653006918,
+                  "f1-score": 0.6396526772793053,
+                  "support": 1879.0
+                },
+                "accuracy": 0.5147532188841202,
+                "macro avg": {
+                  "precision": 0.46998614650923026,
+                  "recall": 0.48448807893667745,
+                  "f1-score": 0.46683479561519725,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5303901236277998,
+                  "recall": 0.5147532188841202,
+                  "f1-score": 0.513395215918049,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2517306482064191,
+              "draw_recall": 0.2244668911335578
+            }
+          },
+          {
+            "fold_index": 2,
+            "train_rows": 7459,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2000-06-04"
+            },
+            "validation_date_range": {
+              "start": "2000-06-04",
+              "end": "2004-06-13"
+            },
+            "metrics": {
+              "accuracy": 0.5319206008583691,
+              "macro_f1": 0.4895549975674709,
+              "weighted_f1": 0.5342666332616584,
+              "balanced_accuracy": 0.4949172633052921,
+              "matthews_corrcoef": 0.2664937555871789,
+              "cohen_kappa": 0.2652870563957259,
+              "log_loss": 0.9772155583092295,
+              "multiclass_brier_score": 0.5761525325211899,
+              "expected_calibration_error": 0.02570867498213214,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4807692307692308,
+                  "recall": 0.5780346820809249,
+                  "f1-score": 0.5249343832020997,
+                  "support": 1038.0
+                },
+                "draw": {
+                  "precision": 0.2973300970873786,
+                  "recall": 0.28857479387514723,
+                  "f1-score": 0.2928870292887029,
+                  "support": 849.0
+                },
+                "home_win": {
+                  "precision": 0.6871980676328503,
+                  "recall": 0.6181423139598045,
+                  "f1-score": 0.6508435802116099,
+                  "support": 1841.0
+                },
+                "accuracy": 0.5319206008583691,
+                "macro avg": {
+                  "precision": 0.48843246516315325,
+                  "recall": 0.4949172633052921,
+                  "f1-score": 0.4895549975674709,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5409343767375868,
+                  "recall": 0.5319206008583691,
+                  "f1-score": 0.5342666332616584,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2928870292887029,
+              "draw_recall": 0.28857479387514723
+            }
+          },
+          {
+            "fold_index": 3,
+            "train_rows": 11187,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2004-06-13"
+            },
+            "validation_date_range": {
+              "start": "2004-06-13",
+              "end": "2008-06-14"
+            },
+            "metrics": {
+              "accuracy": 0.5308476394849786,
+              "macro_f1": 0.493252823878374,
+              "weighted_f1": 0.5301723277611765,
+              "balanced_accuracy": 0.5035716355085488,
+              "matthews_corrcoef": 0.27890766937067035,
+              "cohen_kappa": 0.2759854043858131,
+              "log_loss": 0.9595202804702713,
+              "multiclass_brier_score": 0.5695857970558188,
+              "expected_calibration_error": 0.023286492364487356,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4885386819484241,
+                  "recall": 0.647673314339981,
+                  "f1-score": 0.5569620253164557,
+                  "support": 1053.0
+                },
+                "draw": {
+                  "precision": 0.2964329643296433,
+                  "recall": 0.2654185022026432,
+                  "f1-score": 0.2800697269029634,
+                  "support": 908.0
+                },
+                "home_win": {
+                  "precision": 0.695194206714944,
+                  "recall": 0.597623089983022,
+                  "f1-score": 0.642726719415703,
+                  "support": 1767.0
+                },
+                "accuracy": 0.5308476394849786,
+                "macro avg": {
+                  "precision": 0.4933886176643371,
+                  "recall": 0.5035716355085488,
+                  "f1-score": 0.493252823878374,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5396997121696118,
+                  "recall": 0.5308476394849786,
+                  "f1-score": 0.5301723277611765,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2800697269029634,
+              "draw_recall": 0.2654185022026432
+            }
+          },
+          {
+            "fold_index": 4,
+            "train_rows": 14915,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2008-06-14"
+            },
+            "validation_date_range": {
+              "start": "2008-06-14",
+              "end": "2012-05-23"
+            },
+            "metrics": {
+              "accuracy": 0.5472103004291845,
+              "macro_f1": 0.5073301030023756,
+              "weighted_f1": 0.5490280287922769,
+              "balanced_accuracy": 0.515947742764435,
+              "matthews_corrcoef": 0.3011568811363984,
+              "cohen_kappa": 0.2982334683739898,
+              "log_loss": 0.9519917169064069,
+              "multiclass_brier_score": 0.5621102685378898,
+              "expected_calibration_error": 0.018442077055549653,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5043290043290043,
+                  "recall": 0.6508379888268156,
+                  "f1-score": 0.5682926829268292,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.30269607843137253,
+                  "recall": 0.2885514018691589,
+                  "f1-score": 0.29545454545454547,
+                  "support": 856.0
+                },
+                "home_win": {
+                  "precision": 0.7169069462647444,
+                  "recall": 0.6084538375973304,
+                  "f1-score": 0.6582430806257521,
+                  "support": 1798.0
+                },
+                "accuracy": 0.5472103004291845,
+                "macro avg": {
+                  "precision": 0.5079773430083737,
+                  "recall": 0.515947742764435,
+                  "f1-score": 0.5073301030023756,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5605568356144356,
+                  "recall": 0.5472103004291845,
+                  "f1-score": 0.5490280287922769,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.29545454545454547,
+              "draw_recall": 0.2885514018691589
+            }
+          },
+          {
+            "fold_index": 5,
+            "train_rows": 18643,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2012-05-23"
+            },
+            "validation_date_range": {
+              "start": "2012-05-23",
+              "end": "2016-03-24"
+            },
+            "metrics": {
+              "accuracy": 0.5375536480686696,
+              "macro_f1": 0.49779917203594665,
+              "weighted_f1": 0.5397698997424242,
+              "balanced_accuracy": 0.5052931693792586,
+              "matthews_corrcoef": 0.28412587512136184,
+              "cohen_kappa": 0.28185408515637966,
+              "log_loss": 0.9580061908722873,
+              "multiclass_brier_score": 0.5670089590022915,
+              "expected_calibration_error": 0.0263367610177569,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5011102886750555,
+                  "recall": 0.6303538175046555,
+                  "f1-score": 0.5583505154639176,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.29106280193236717,
+                  "recall": 0.28319623971797886,
+                  "f1-score": 0.2870756402620607,
+                  "support": 851.0
+                },
+                "home_win": {
+                  "precision": 0.7010974822466107,
+                  "recall": 0.6023294509151415,
+                  "f1-score": 0.6479713603818615,
+                  "support": 1803.0
+                },
+                "accuracy": 0.5375536480686696,
+                "macro avg": {
+                  "precision": 0.49775685761801114,
+                  "recall": 0.5052931693792586,
+                  "f1-score": 0.49779917203594665,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5498834911405829,
+                  "recall": 0.5375536480686696,
+                  "f1-score": 0.5397698997424242,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2870756402620607,
+              "draw_recall": 0.28319623971797886
+            }
+          }
+        ],
+        "mean_metrics": {
+          "macro_f1": 0.49095437841987283,
+          "draw_f1": 0.2814435180229383,
+          "draw_recall": 0.2700415657596972,
+          "balanced_accuracy": 0.5008435779788424,
+          "matthews_corrcoef": 0.27600844414117326,
+          "log_loss": 0.9674664229097287,
+          "multiclass_brier_score": 0.5727532451472573,
+          "expected_calibration_error": 0.02781982871507867
+        },
+        "std_metrics": {
+          "macro_f1": 0.013446270473376662,
+          "draw_f1": 0.015771655432896617,
+          "draw_recall": 0.024321034961769898,
+          "balanced_accuracy": 0.01056409494386128,
+          "matthews_corrcoef": 0.017363844287999038,
+          "log_loss": 0.014298504956916674,
+          "multiclass_brier_score": 0.00926126734350958,
+          "expected_calibration_error": 0.009182436312200868
+        },
+        "selection_rank": 15,
+        "selection_score": 98.0
+      },
+      {
+        "model_name": "seg_hybrid_friendlies_focus",
+        "model_family": "segment_aware_hybrid",
+        "hyperparameters": {
+          "tag": "friendlies_focus",
+          "generalist_c": 2.0,
+          "generalist_draw_boost": 1.2,
+          "specialist_stage1_c": 2.0,
+          "specialist_stage2_c": 1.0,
+          "specialist_draw_weight_multiplier": 1.3333333333333333,
+          "default_unc": 0.48,
+          "default_conv": 0.58,
+          "friendlies_unc": 0.32,
+          "worldcup_unc": 0.55,
+          "continental_unc": 0.46,
+          "qualifiers_unc": 0.5,
+          "friendlies_conv": 0.52,
+          "worldcup_conv": 0.65,
+          "continental_conv": 0.58,
+          "qualifiers_conv": 0.6
+        },
+        "notes": "Segment-aware hybrid [friendlies_focus]: overrides conditioned by tournament segment. Friendlies unc=0.32, WC unc=0.55, default unc=0.48",
+        "fold_results": [
+          {
+            "fold_index": 1,
+            "train_rows": 3731,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "1996-02-04"
+            },
+            "validation_date_range": {
+              "start": "1996-02-04",
+              "end": "2000-06-04"
+            },
+            "metrics": {
+              "accuracy": 0.5158261802575107,
+              "macro_f1": 0.4682861190493342,
+              "weighted_f1": 0.5146837224218813,
+              "balanced_accuracy": 0.48578781271822785,
+              "matthews_corrcoef": 0.2512555516683336,
+              "cohen_kappa": 0.24593939827240585,
+              "log_loss": 0.9903405106529494,
+              "multiclass_brier_score": 0.5886200523084084,
+              "expected_calibration_error": 0.044425809626504824,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4219931271477663,
+                  "recall": 0.6409185803757829,
+                  "f1-score": 0.5089100704517199,
+                  "support": 958.0
+                },
+                "draw": {
+                  "precision": 0.290414878397711,
+                  "recall": 0.22783389450056116,
+                  "f1-score": 0.25534591194968553,
+                  "support": 891.0
+                },
+                "home_win": {
+                  "precision": 0.7026683608640406,
+                  "recall": 0.5886109632783395,
+                  "f1-score": 0.6406023747465972,
+                  "support": 1879.0
+                },
+                "accuracy": 0.5158261802575107,
+                "macro avg": {
+                  "precision": 0.47169212213650596,
+                  "recall": 0.48578781271822785,
+                  "f1-score": 0.4682861190493342,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5320125865138018,
+                  "recall": 0.5158261802575107,
+                  "f1-score": 0.5146837224218813,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.25534591194968553,
+              "draw_recall": 0.22783389450056116
+            }
+          },
+          {
+            "fold_index": 2,
+            "train_rows": 7459,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2000-06-04"
+            },
+            "validation_date_range": {
+              "start": "2000-06-04",
+              "end": "2004-06-13"
+            },
+            "metrics": {
+              "accuracy": 0.5324570815450643,
+              "macro_f1": 0.48921375191372346,
+              "weighted_f1": 0.534449989080661,
+              "balanced_accuracy": 0.49464471209157557,
+              "matthews_corrcoef": 0.2667810133049807,
+              "cohen_kappa": 0.26557273288288996,
+              "log_loss": 0.9759376374344936,
+              "multiclass_brier_score": 0.5752129297068138,
+              "expected_calibration_error": 0.023849660462961747,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4792332268370607,
+                  "recall": 0.5780346820809249,
+                  "f1-score": 0.5240174672489083,
+                  "support": 1038.0
+                },
+                "draw": {
+                  "precision": 0.2972972972972973,
+                  "recall": 0.2850412249705536,
+                  "f1-score": 0.291040288634997,
+                  "support": 849.0
+                },
+                "home_win": {
+                  "precision": 0.6877256317689531,
+                  "recall": 0.6208582292232482,
+                  "f1-score": 0.6525834998572652,
+                  "support": 1841.0
+                },
+                "accuracy": 0.5324570815450643,
+                "macro avg": {
+                  "precision": 0.48808538530110374,
+                  "recall": 0.49464471209157557,
+                  "f1-score": 0.48921375191372346,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5407597593747095,
+                  "recall": 0.5324570815450643,
+                  "f1-score": 0.534449989080661,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.291040288634997,
+              "draw_recall": 0.2850412249705536
+            }
+          },
+          {
+            "fold_index": 3,
+            "train_rows": 11187,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2004-06-13"
+            },
+            "validation_date_range": {
+              "start": "2004-06-13",
+              "end": "2008-06-14"
+            },
+            "metrics": {
+              "accuracy": 0.5311158798283262,
+              "macro_f1": 0.4935038056379671,
+              "weighted_f1": 0.5304599704155811,
+              "balanced_accuracy": 0.5038881913806602,
+              "matthews_corrcoef": 0.2794787258149968,
+              "cohen_kappa": 0.2765140837603738,
+              "log_loss": 0.9592317917137279,
+              "multiclass_brier_score": 0.5693027271838829,
+              "expected_calibration_error": 0.022338999993683235,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.488555078683834,
+                  "recall": 0.6486229819563153,
+                  "f1-score": 0.5573235414116687,
+                  "support": 1053.0
+                },
+                "draw": {
+                  "precision": 0.2964329643296433,
+                  "recall": 0.2654185022026432,
+                  "f1-score": 0.2800697269029634,
+                  "support": 908.0
+                },
+                "home_win": {
+                  "precision": 0.6961107448912327,
+                  "recall": 0.597623089983022,
+                  "f1-score": 0.6431181485992692,
+                  "support": 1767.0
+                },
+                "accuracy": 0.5311158798283262,
+                "macro avg": {
+                  "precision": 0.49369959596823665,
+                  "recall": 0.5038881913806602,
+                  "f1-score": 0.4935038056379671,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5401387649378223,
+                  "recall": 0.5311158798283262,
+                  "f1-score": 0.5304599704155811,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2800697269029634,
+              "draw_recall": 0.2654185022026432
+            }
+          },
+          {
+            "fold_index": 4,
+            "train_rows": 14915,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2008-06-14"
+            },
+            "validation_date_range": {
+              "start": "2008-06-14",
+              "end": "2012-05-23"
+            },
+            "metrics": {
+              "accuracy": 0.5477467811158798,
+              "macro_f1": 0.5072648001316828,
+              "weighted_f1": 0.5492268745186224,
+              "balanced_accuracy": 0.5159104912665783,
+              "matthews_corrcoef": 0.3014172753213256,
+              "cohen_kappa": 0.29853206856328607,
+              "log_loss": 0.9513468237327464,
+              "multiclass_brier_score": 0.5616153986086002,
+              "expected_calibration_error": 0.018929715680471484,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5039653929343908,
+                  "recall": 0.6508379888268156,
+                  "f1-score": 0.568061763510768,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.3032178217821782,
+                  "recall": 0.286214953271028,
+                  "f1-score": 0.29447115384615385,
+                  "support": 856.0
+                },
+                "home_win": {
+                  "precision": 0.7162426614481409,
+                  "recall": 0.610678531701891,
+                  "f1-score": 0.6592614830381267,
+                  "support": 1798.0
+                },
+                "accuracy": 0.5477467811158798,
+                "macro avg": {
+                  "precision": 0.5078086253882366,
+                  "recall": 0.5159104912665783,
+                  "f1-score": 0.5072648001316828,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5602515001987225,
+                  "recall": 0.5477467811158798,
+                  "f1-score": 0.5492268745186224,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.29447115384615385,
+              "draw_recall": 0.286214953271028
+            }
+          },
+          {
+            "fold_index": 5,
+            "train_rows": 18643,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2012-05-23"
+            },
+            "validation_date_range": {
+              "start": "2012-05-23",
+              "end": "2016-03-24"
+            },
+            "metrics": {
+              "accuracy": 0.5370171673819742,
+              "macro_f1": 0.4967671353586851,
+              "weighted_f1": 0.5389688277649192,
+              "balanced_accuracy": 0.504302958304406,
+              "matthews_corrcoef": 0.2828641524926786,
+              "cohen_kappa": 0.2806383615015471,
+              "log_loss": 0.9583440086955678,
+              "multiclass_brier_score": 0.567341451608243,
+              "expected_calibration_error": 0.027082907116893807,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5011102886750555,
+                  "recall": 0.6303538175046555,
+                  "f1-score": 0.5583505154639176,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.2891859052247874,
+                  "recall": 0.2796709753231492,
+                  "f1-score": 0.2843488649940263,
+                  "support": 851.0
+                },
+                "home_win": {
+                  "precision": 0.6994851994851995,
+                  "recall": 0.6028840820854132,
+                  "f1-score": 0.6476020256181114,
+                  "support": 1803.0
+                },
+                "accuracy": 0.5370171673819742,
+                "macro avg": {
+                  "precision": 0.4965937977950141,
+                  "recall": 0.504302958304406,
+                  "f1-score": 0.4967671353586851,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5486752870319523,
+                  "recall": 0.5370171673819742,
+                  "f1-score": 0.5389688277649192,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2843488649940263,
+              "draw_recall": 0.2796709753231492
+            }
+          }
+        ],
+        "mean_metrics": {
+          "macro_f1": 0.49100712241827854,
+          "draw_f1": 0.28105518926556516,
+          "draw_recall": 0.26883591005358703,
+          "balanced_accuracy": 0.5009068331522897,
+          "matthews_corrcoef": 0.2763593437204631,
+          "log_loss": 0.9670401544458971,
+          "multiclass_brier_score": 0.5724185118831897,
+          "expected_calibration_error": 0.027325418576103024
+        },
+        "std_metrics": {
+          "macro_f1": 0.01283108282776038,
+          "draw_f1": 0.013802004861774244,
+          "draw_recall": 0.021793971505614497,
+          "balanced_accuracy": 0.010132431680596582,
+          "matthews_corrcoef": 0.01674447853397059,
+          "log_loss": 0.014177065360985699,
+          "multiclass_brier_score": 0.009192285840578199,
+          "expected_calibration_error": 0.008943324636133862
+        },
+        "selection_rank": 11,
+        "selection_score": 89.0
+      },
+      {
+        "model_name": "seg_hybrid_balanced",
+        "model_family": "segment_aware_hybrid",
+        "hyperparameters": {
+          "tag": "balanced",
+          "generalist_c": 2.0,
+          "generalist_draw_boost": 1.2,
+          "specialist_stage1_c": 2.0,
+          "specialist_stage2_c": 1.0,
+          "specialist_draw_weight_multiplier": 1.3333333333333333,
+          "default_unc": 0.44,
+          "default_conv": 0.55,
+          "friendlies_unc": 0.36,
+          "worldcup_unc": 0.5,
+          "continental_unc": 0.42,
+          "qualifiers_unc": 0.46,
+          "friendlies_conv": 0.55,
+          "worldcup_conv": 0.6,
+          "continental_conv": 0.56,
+          "qualifiers_conv": 0.58
+        },
+        "notes": "Segment-aware hybrid [balanced]: overrides conditioned by tournament segment. Friendlies unc=0.36, WC unc=0.5, default unc=0.44",
+        "fold_results": [
+          {
+            "fold_index": 1,
+            "train_rows": 3731,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "1996-02-04"
+            },
+            "validation_date_range": {
+              "start": "1996-02-04",
+              "end": "2000-06-04"
+            },
+            "metrics": {
+              "accuracy": 0.5158261802575107,
+              "macro_f1": 0.4680513739377559,
+              "weighted_f1": 0.5145251967936515,
+              "balanced_accuracy": 0.48559110055888777,
+              "matthews_corrcoef": 0.25097731380255023,
+              "cohen_kappa": 0.24569452076384712,
+              "log_loss": 0.9900102721519808,
+              "multiclass_brier_score": 0.5884922593012054,
+              "expected_calibration_error": 0.04400159749158316,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.422283356258597,
+                  "recall": 0.6409185803757829,
+                  "f1-score": 0.5091210613598673,
+                  "support": 958.0
+                },
+                "draw": {
+                  "precision": 0.2898134863701578,
+                  "recall": 0.22671156004489337,
+                  "f1-score": 0.25440806045340053,
+                  "support": 891.0
+                },
+                "home_win": {
+                  "precision": 0.7019657577679138,
+                  "recall": 0.5891431612559872,
+                  "f1-score": 0.640625,
+                  "support": 1879.0
+                },
+                "accuracy": 0.5158261802575107,
+                "macro avg": {
+                  "precision": 0.4713542001322229,
+                  "recall": 0.48559110055888777,
+                  "f1-score": 0.4680513739377559,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5315893053909486,
+                  "recall": 0.5158261802575107,
+                  "f1-score": 0.5145251967936515,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.25440806045340053,
+              "draw_recall": 0.22671156004489337
+            }
+          },
+          {
+            "fold_index": 2,
+            "train_rows": 7459,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2000-06-04"
+            },
+            "validation_date_range": {
+              "start": "2000-06-04",
+              "end": "2004-06-13"
+            },
+            "metrics": {
+              "accuracy": 0.5321888412017167,
+              "macro_f1": 0.4897494269237768,
+              "weighted_f1": 0.5346012351980588,
+              "balanced_accuracy": 0.4950983243228551,
+              "matthews_corrcoef": 0.2670043797366526,
+              "cohen_kappa": 0.26579035332592527,
+              "log_loss": 0.9762396434571621,
+              "multiclass_brier_score": 0.5753287818970781,
+              "expected_calibration_error": 0.025282389780123954,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4807692307692308,
+                  "recall": 0.5780346820809249,
+                  "f1-score": 0.5249343832020997,
+                  "support": 1038.0
+                },
+                "draw": {
+                  "precision": 0.296969696969697,
+                  "recall": 0.28857479387514723,
+                  "f1-score": 0.2927120669056153,
+                  "support": 849.0
+                },
+                "home_win": {
+                  "precision": 0.6882175226586102,
+                  "recall": 0.6186854970124932,
+                  "f1-score": 0.6516018306636155,
+                  "support": 1841.0
+                },
+                "accuracy": 0.5321888412017167,
+                "macro avg": {
+                  "precision": 0.4886521501325127,
+                  "recall": 0.4950983243228551,
+                  "f1-score": 0.4897494269237768,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5413557385944838,
+                  "recall": 0.5321888412017167,
+                  "f1-score": 0.5346012351980588,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2927120669056153,
+              "draw_recall": 0.28857479387514723
+            }
+          },
+          {
+            "fold_index": 3,
+            "train_rows": 11187,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2004-06-13"
+            },
+            "validation_date_range": {
+              "start": "2004-06-13",
+              "end": "2008-06-14"
+            },
+            "metrics": {
+              "accuracy": 0.5319206008583691,
+              "macro_f1": 0.4944545046813773,
+              "weighted_f1": 0.5312583172983321,
+              "balanced_accuracy": 0.504683137203433,
+              "matthews_corrcoef": 0.2804286003896349,
+              "cohen_kappa": 0.27752668144554626,
+              "log_loss": 0.9593327048412206,
+              "multiclass_brier_score": 0.5694871218728532,
+              "expected_calibration_error": 0.02477157599483126,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.48923959827833574,
+                  "recall": 0.647673314339981,
+                  "f1-score": 0.5574172456068656,
+                  "support": 1053.0
+                },
+                "draw": {
+                  "precision": 0.2988929889298893,
+                  "recall": 0.26762114537444937,
+                  "f1-score": 0.2823939570017432,
+                  "support": 908.0
+                },
+                "home_win": {
+                  "precision": 0.6955950032873109,
+                  "recall": 0.5987549518958687,
+                  "f1-score": 0.6435523114355232,
+                  "support": 1767.0
+                },
+                "accuracy": 0.5319206008583691,
+                "macro avg": {
+                  "precision": 0.494575863498512,
+                  "recall": 0.504683137203433,
+                  "f1-score": 0.4944545046813773,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5406868298669811,
+                  "recall": 0.5319206008583691,
+                  "f1-score": 0.5312583172983321,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2823939570017432,
+              "draw_recall": 0.26762114537444937
+            }
+          },
+          {
+            "fold_index": 4,
+            "train_rows": 14915,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2008-06-14"
+            },
+            "validation_date_range": {
+              "start": "2008-06-14",
+              "end": "2012-05-23"
+            },
+            "metrics": {
+              "accuracy": 0.5472103004291845,
+              "macro_f1": 0.507750755212295,
+              "weighted_f1": 0.5490771969958441,
+              "balanced_accuracy": 0.5163557766130519,
+              "matthews_corrcoef": 0.301244686153516,
+              "cohen_kappa": 0.29832423762892013,
+              "log_loss": 0.9523456084978517,
+              "multiclass_brier_score": 0.5624712046999032,
+              "expected_calibration_error": 0.017596323560423094,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5046931407942238,
+                  "recall": 0.6508379888268156,
+                  "f1-score": 0.5685237901586011,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.30440097799511,
+                  "recall": 0.2908878504672897,
+                  "f1-score": 0.2974910394265233,
+                  "support": 856.0
+                },
+                "home_win": {
+                  "precision": 0.7160655737704918,
+                  "recall": 0.60734149054505,
+                  "f1-score": 0.6572374360517604,
+                  "support": 1798.0
+                },
+                "accuracy": 0.5472103004291845,
+                "macro avg": {
+                  "precision": 0.5083865641866085,
+                  "recall": 0.5163557766130519,
+                  "f1-score": 0.507750755212295,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5606474173863077,
+                  "recall": 0.5472103004291845,
+                  "f1-score": 0.5490771969958441,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2974910394265233,
+              "draw_recall": 0.2908878504672897
+            }
+          },
+          {
+            "fold_index": 5,
+            "train_rows": 18643,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2012-05-23"
+            },
+            "validation_date_range": {
+              "start": "2012-05-23",
+              "end": "2016-03-24"
+            },
+            "metrics": {
+              "accuracy": 0.5375536480686696,
+              "macro_f1": 0.4975782581148134,
+              "weighted_f1": 0.5396228829645989,
+              "balanced_accuracy": 0.5050863503921459,
+              "matthews_corrcoef": 0.2838727894799956,
+              "cohen_kappa": 0.28162483531598714,
+              "log_loss": 0.9578204489359302,
+              "multiclass_brier_score": 0.5668251271724734,
+              "expected_calibration_error": 0.026718415831033123,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5011102886750555,
+                  "recall": 0.6303538175046555,
+                  "f1-score": 0.5583505154639176,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.2909090909090909,
+                  "recall": 0.282021151586369,
+                  "f1-score": 0.2863961813842482,
+                  "support": 851.0
+                },
+                "home_win": {
+                  "precision": 0.7003865979381443,
+                  "recall": 0.6028840820854132,
+                  "f1-score": 0.6479880774962742,
+                  "support": 1803.0
+                },
+                "accuracy": 0.5375536480686696,
+                "macro avg": {
+                  "precision": 0.4974686591740969,
+                  "recall": 0.5050863503921459,
+                  "f1-score": 0.4975782581148134,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5495045929407512,
+                  "recall": 0.5375536480686696,
+                  "f1-score": 0.5396228829645989,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2863961813842482,
+              "draw_recall": 0.282021151586369
+            }
+          }
+        ],
+        "mean_metrics": {
+          "macro_f1": 0.4915168637740037,
+          "draw_f1": 0.2826802610343061,
+          "draw_recall": 0.27116330026962976,
+          "balanced_accuracy": 0.5013629378180747,
+          "matthews_corrcoef": 0.27670555391246987,
+          "log_loss": 0.967149735576829,
+          "multiclass_brier_score": 0.5725208989887026,
+          "expected_calibration_error": 0.02767406053159892
+        },
+        "std_metrics": {
+          "macro_f1": 0.013135162830816284,
+          "draw_f1": 0.015054591627514402,
+          "draw_recall": 0.023658465696660445,
+          "balanced_accuracy": 0.010369850269528703,
+          "matthews_corrcoef": 0.01687278561138207,
+          "log_loss": 0.0139465715865714,
+          "multiclass_brier_score": 0.009006781135660703,
+          "expected_calibration_error": 0.008754507500747386
+        },
+        "selection_rank": 4,
+        "selection_score": 71.0
+      },
+      {
+        "model_name": "seg_hybrid_narrow_band",
+        "model_family": "segment_aware_hybrid",
+        "hyperparameters": {
+          "tag": "narrow_band",
+          "generalist_c": 2.0,
+          "generalist_draw_boost": 1.2,
+          "specialist_stage1_c": 2.0,
+          "specialist_stage2_c": 1.0,
+          "specialist_draw_weight_multiplier": 1.3333333333333333,
+          "default_unc": 0.48,
+          "default_conv": 0.58,
+          "friendlies_unc": 0.4,
+          "worldcup_unc": 0.55,
+          "continental_unc": 0.48,
+          "qualifiers_unc": 0.5,
+          "friendlies_conv": 0.6,
+          "worldcup_conv": 0.65,
+          "continental_conv": 0.6,
+          "qualifiers_conv": 0.62
+        },
+        "notes": "Segment-aware hybrid [narrow_band]: overrides conditioned by tournament segment. Friendlies unc=0.4, WC unc=0.55, default unc=0.48",
+        "fold_results": [
+          {
+            "fold_index": 1,
+            "train_rows": 3731,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "1996-02-04"
+            },
+            "validation_date_range": {
+              "start": "1996-02-04",
+              "end": "2000-06-04"
+            },
+            "metrics": {
+              "accuracy": 0.5158261802575107,
+              "macro_f1": 0.46826941234191327,
+              "weighted_f1": 0.5146679547964048,
+              "balanced_accuracy": 0.48578781271822785,
+              "matthews_corrcoef": 0.2512694606315527,
+              "cohen_kappa": 0.24593373669493912,
+              "log_loss": 0.9905567663534726,
+              "multiclass_brier_score": 0.5888660532215341,
+              "expected_calibration_error": 0.04402041784436993,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4217032967032967,
+                  "recall": 0.6409185803757829,
+                  "f1-score": 0.5086992543496272,
+                  "support": 958.0
+                },
+                "draw": {
+                  "precision": 0.29083094555873923,
+                  "recall": 0.22783389450056116,
+                  "f1-score": 0.2555066079295154,
+                  "support": 891.0
+                },
+                "home_win": {
+                  "precision": 0.7026683608640406,
+                  "recall": 0.5886109632783395,
+                  "f1-score": 0.6406023747465972,
+                  "support": 1879.0
+                },
+                "accuracy": 0.5158261802575107,
+                "macro avg": {
+                  "precision": 0.4717342010420255,
+                  "recall": 0.48578781271822785,
+                  "f1-score": 0.46826941234191327,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5320375484973517,
+                  "recall": 0.5158261802575107,
+                  "f1-score": 0.5146679547964048,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2555066079295154,
+              "draw_recall": 0.22783389450056116
+            }
+          },
+          {
+            "fold_index": 2,
+            "train_rows": 7459,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2000-06-04"
+            },
+            "validation_date_range": {
+              "start": "2000-06-04",
+              "end": "2004-06-13"
+            },
+            "metrics": {
+              "accuracy": 0.5321888412017167,
+              "macro_f1": 0.4890310635957856,
+              "weighted_f1": 0.5342723639682095,
+              "balanced_accuracy": 0.49446365107401263,
+              "matthews_corrcoef": 0.266532366238343,
+              "cohen_kappa": 0.26531612178859887,
+              "log_loss": 0.976032328261211,
+              "multiclass_brier_score": 0.5753060740312075,
+              "expected_calibration_error": 0.023233635655874045,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.4792332268370607,
+                  "recall": 0.5780346820809249,
+                  "f1-score": 0.5240174672489083,
+                  "support": 1038.0
+                },
+                "draw": {
+                  "precision": 0.2965686274509804,
+                  "recall": 0.2850412249705536,
+                  "f1-score": 0.2906906906906907,
+                  "support": 849.0
+                },
+                "home_win": {
+                  "precision": 0.6879518072289157,
+                  "recall": 0.6203150461705594,
+                  "f1-score": 0.6523850328477577,
+                  "support": 1841.0
+                },
+                "accuracy": 0.5321888412017167,
+                "macro avg": {
+                  "precision": 0.48791788717231893,
+                  "recall": 0.49446365107401263,
+                  "f1-score": 0.4890310635957856,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.540705507315232,
+                  "recall": 0.5321888412017167,
+                  "f1-score": 0.5342723639682095,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2906906906906907,
+              "draw_recall": 0.2850412249705536
+            }
+          },
+          {
+            "fold_index": 3,
+            "train_rows": 11187,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2004-06-13"
+            },
+            "validation_date_range": {
+              "start": "2004-06-13",
+              "end": "2008-06-14"
+            },
+            "metrics": {
+              "accuracy": 0.5313841201716738,
+              "macro_f1": 0.4936848274596631,
+              "weighted_f1": 0.530642290661254,
+              "balanced_accuracy": 0.5040768350328012,
+              "matthews_corrcoef": 0.27974825862872915,
+              "cohen_kappa": 0.2767900341005409,
+              "log_loss": 0.9587431489967729,
+              "multiclass_brier_score": 0.5690083332450463,
+              "expected_calibration_error": 0.023143203888152906,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.488555078683834,
+                  "recall": 0.6486229819563153,
+                  "f1-score": 0.5573235414116687,
+                  "support": 1053.0
+                },
+                "draw": {
+                  "precision": 0.2971639950678175,
+                  "recall": 0.2654185022026432,
+                  "f1-score": 0.2803955788248982,
+                  "support": 908.0
+                },
+                "home_win": {
+                  "precision": 0.695852534562212,
+                  "recall": 0.5981890209394454,
+                  "f1-score": 0.6433353621424224,
+                  "support": 1767.0
+                },
+                "accuracy": 0.5313841201716738,
+                "macro avg": {
+                  "precision": 0.4938572027712878,
+                  "recall": 0.5040768350328012,
+                  "f1-score": 0.4936848274596631,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5401944297068358,
+                  "recall": 0.5313841201716738,
+                  "f1-score": 0.530642290661254,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.2803955788248982,
+              "draw_recall": 0.2654185022026432
+            }
+          },
+          {
+            "fold_index": 4,
+            "train_rows": 14915,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2008-06-14"
+            },
+            "validation_date_range": {
+              "start": "2008-06-14",
+              "end": "2012-05-23"
+            },
+            "metrics": {
+              "accuracy": 0.5480150214592274,
+              "macro_f1": 0.507249970703007,
+              "weighted_f1": 0.5494199483445524,
+              "balanced_accuracy": 0.5158918655176499,
+              "matthews_corrcoef": 0.3016739566581286,
+              "cohen_kappa": 0.2988006894026666,
+              "log_loss": 0.951224897431551,
+              "multiclass_brier_score": 0.5614672579452431,
+              "expected_calibration_error": 0.018931619736482476,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5039653929343908,
+                  "recall": 0.6508379888268156,
+                  "f1-score": 0.568061763510768,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.3027295285359802,
+                  "recall": 0.2850467289719626,
+                  "f1-score": 0.29362214199759323,
+                  "support": 856.0
+                },
+                "home_win": {
+                  "precision": 0.7166123778501629,
+                  "recall": 0.6117908787541713,
+                  "f1-score": 0.6600660066006601,
+                  "support": 1798.0
+                },
+                "accuracy": 0.5480150214592274,
+                "macro avg": {
+                  "precision": 0.5077690997735113,
+                  "recall": 0.5158918655176499,
+                  "f1-score": 0.507249970703007,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5603176941558282,
+                  "recall": 0.5480150214592274,
+                  "f1-score": 0.5494199483445524,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.29362214199759323,
+              "draw_recall": 0.2850467289719626
+            }
+          },
+          {
+            "fold_index": 5,
+            "train_rows": 18643,
+            "validation_rows": 3728,
+            "train_date_range": {
+              "start": "1990-01-12",
+              "end": "2012-05-23"
+            },
+            "validation_date_range": {
+              "start": "2012-05-23",
+              "end": "2016-03-24"
+            },
+            "metrics": {
+              "accuracy": 0.5375536480686696,
+              "macro_f1": 0.497148924915305,
+              "weighted_f1": 0.5394359135323801,
+              "balanced_accuracy": 0.5046727124179204,
+              "matthews_corrcoef": 0.28353606165071155,
+              "cohen_kappa": 0.28131894108726385,
+              "log_loss": 0.9580845231258047,
+              "multiclass_brier_score": 0.5671415089369061,
+              "expected_calibration_error": 0.02644098210095328,
+              "classification_report": {
+                "away_win": {
+                  "precision": 0.5011102886750555,
+                  "recall": 0.6303538175046555,
+                  "f1-score": 0.5583505154639176,
+                  "support": 1074.0
+                },
+                "draw": {
+                  "precision": 0.28989037758830694,
+                  "recall": 0.2796709753231492,
+                  "f1-score": 0.284688995215311,
+                  "support": 851.0
+                },
+                "home_win": {
+                  "precision": 0.6998714652956298,
+                  "recall": 0.6039933444259568,
+                  "f1-score": 0.6484072640666865,
+                  "support": 1803.0
+                },
+                "accuracy": 0.5375536480686696,
+                "macro avg": {
+                  "precision": 0.4969573771863307,
+                  "recall": 0.5046727124179204,
+                  "f1-score": 0.497148924915305,
+                  "support": 3728.0
+                },
+                "weighted avg": {
+                  "precision": 0.5490229112909547,
+                  "recall": 0.5375536480686696,
+                  "f1-score": 0.5394359135323801,
+                  "support": 3728.0
+                }
+              },
+              "draw_f1": 0.284688995215311,
+              "draw_recall": 0.2796709753231492
+            }
+          }
+        ],
+        "mean_metrics": {
+          "macro_f1": 0.49107683980313477,
+          "draw_f1": 0.28098080293160177,
+          "draw_recall": 0.26860226519377395,
+          "balanced_accuracy": 0.5009785753521224,
+          "matthews_corrcoef": 0.276552020761493,
+          "log_loss": 0.9669283328337623,
+          "multiclass_brier_score": 0.5723578454759874,
+          "expected_calibration_error": 0.027153971845166526
+        },
+        "std_metrics": {
+          "macro_f1": 0.01288103977184981,
+          "draw_f1": 0.013543361192464864,
+          "draw_recall": 0.021611906566454422,
+          "balanced_accuracy": 0.01018681101247954,
+          "matthews_corrcoef": 0.01690979450098803,
+          "log_loss": 0.014373542996531324,
+          "multiclass_brier_score": 0.009362128715446337,
+          "expected_calibration_error": 0.008764105483854725
+        },
+        "selection_rank": 9,
+        "selection_score": 83.0
       }
     ],
     "calibration_variant_selection": {
@@ -7689,10 +9058,10 @@
       }
     },
     "report_artifacts": {
-      "report_json": "models\\match_predictor_evaluation_report.json",
-      "report_markdown": "models\\match_predictor_evaluation_report.md",
-      "confusion_matrix_png": "models\\match_predictor_confusion_matrix.png",
-      "calibration_curves_png": "models\\match_predictor_calibration_curves.png"
+      "report_json": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\models\\match_predictor_evaluation_report.json",
+      "report_markdown": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\models\\match_predictor_evaluation_report.md",
+      "confusion_matrix_png": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\models\\match_predictor_confusion_matrix.png",
+      "calibration_curves_png": "C:\\Users\\restr\\Desktop\\worldcup-2026-prediction\\models\\match_predictor_calibration_curves.png"
     }
   }
 }

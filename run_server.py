@@ -8,7 +8,6 @@ import sys
 import uvicorn
 
 from src.api.main import app
-from src.database.connection import get_db_session
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +17,14 @@ def ensure_dbt_tables_exist():
     try:
         logger.info("🔍 Checking if dbt analytics tables exist...")
 
-        session = get_db_session()
-        result = session.execute(
-            "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='analytics_gold' AND table_name='gold_latest_team_snapshots')"
-        )
-        table_exists = result.scalar()
-        session.close()
+        engine = get_sqlalchemy_engine()
+        with engine.connect() as connection:
+            result = connection.execute(
+                text(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='analytics_gold' AND table_name='gold_latest_team_snapshots')"
+                )
+            )
+            table_exists = result.scalar()
 
         if table_exists:
             logger.info("✅ Analytics tables found. Skipping initialization.")
@@ -32,8 +33,6 @@ def ensure_dbt_tables_exist():
         logger.warning(
             "⚠️  Analytics tables not found. Running initialization pipeline..."
         )
-
-        # Import here to avoid circular imports
 
         logger.info("📂 Loading data...")
         try:
@@ -51,6 +50,8 @@ def ensure_dbt_tables_exist():
                 )
                 if result.returncode != 0:
                     logger.error(f"load_data.py failed: {result.stderr}")
+                else:
+                    logger.info("✅ Data loaded successfully")
 
             # Run dbt
             if Path("run_dbt.py").exists():
@@ -59,7 +60,7 @@ def ensure_dbt_tables_exist():
                     [sys.executable, "run_dbt.py", "run"],
                     capture_output=True,
                     text=True,
-                    timeout=300,
+                    timeout=600,
                 )
                 if result.returncode != 0:
                     logger.error(f"dbt run failed: {result.stderr}")
@@ -78,6 +79,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
+
+    logger = logging.getLogger(__name__)
 
     # Ensure dbt tables exist before starting the server
     ensure_dbt_tables_exist()

@@ -2,11 +2,42 @@
 
 ## Table of Contents
 
+0. [Environment Setup (uv + pyproject.toml)](#environment)
 1. [Pandas / Polars Pipeline](#pandas-polars)
 2. [PySpark Pipeline](#pyspark)
 3. [dbt Model Pattern](#dbt)
 4. [Airflow DAG Template](#airflow)
 5. [Data Validation with Pandera / Great Expectations](#validation)
+
+---
+
+## 0. Environment Setup (uv + pyproject.toml) {#environment}
+
+All data engineering projects use `uv` for environment and dependency management.
+Never use `pip`, `conda`, or `requirements.txt`.
+
+```bash
+# Initialize project
+uv init etl_project && cd etl_project
+uv python pin 3.12
+
+# Create .venv
+uv venv .venv --python 3.12
+source .venv/bin/activate
+
+# Add ETL-specific dependencies
+uv add pandas polars sqlalchemy pandera great-expectations \
+       apache-airflow pyspark dbt-core pydantic pyyaml httpx
+
+# Add dev tools (Ruff + mypy mandatory)
+uv add --dev ruff mypy pytest pytest-cov ipykernel
+
+# Sync all dependencies
+uv sync
+```
+
+**Standard `pyproject.toml` for ETL projects** — include `[tool.ruff]` and `[tool.mypy]`
+sections as defined in the main SKILL.md Code Quality & Environment Standards section.
 
 ---
 

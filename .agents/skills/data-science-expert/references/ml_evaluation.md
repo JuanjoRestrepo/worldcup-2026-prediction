@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+0. [Environment Setup (uv)](#environment)
 1. [Classification Metrics](#classification)
 2. [Regression Metrics](#regression)
 3. [Clustering Metrics](#clustering)
@@ -9,6 +10,26 @@
 5. [Evaluation Checklist](#checklist)
 
 ---
+
+## 0. Environment Setup (uv) {#environment}
+
+```bash
+uv init ml_project && cd ml_project
+uv python pin 3.12
+uv venv .venv --python 3.12 && source .venv/bin/activate
+
+# ML evaluation stack
+uv add scikit-learn xgboost lightgbm shap lime \
+       matplotlib seaborn plotly pandas numpy scipy
+
+# Deep learning (add as needed)
+uv add torch torchvision          # PyTorch
+uv add tensorflow                 # TensorFlow / Keras
+
+# Dev tools
+uv add --dev ruff mypy pytest
+uv sync
+```
 
 ## 1. Classification Metrics {#classification}
 

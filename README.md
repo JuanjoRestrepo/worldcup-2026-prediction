@@ -190,14 +190,16 @@ docker compose up --build api
 - Configuration: `/config`
 
 **Infrastructure:**
+
 - Hosting: Render.com (Free tier)
 - Database: Render PostgreSQL (Oregon, US West)
 - Auto-deployment: GitHub Actions trigger on `git push main`
 - Auto-retraining: Release task retains model and retrains with fresh data on each deploy
 
 **Deployment Pipeline:**
+
 ```
-git push main 
+git push main
   → GitHub Actions validates (pytest 114/114 ✅, mypy ✅, ruff ✅)
   → Render auto-detects changes
   → Installs dependencies (pip)
@@ -207,6 +209,7 @@ git push main
 ```
 
 **Example Production Request:**
+
 ```bash
 curl -X 'POST' \
   'https://worldcup-2026-prediction.onrender.com/predict' \
@@ -219,6 +222,7 @@ curl -X 'POST' \
 ```
 
 Expected response includes:
+
 - `predicted_outcome` (home_win/draw/away_win)
 - `class_probabilities`
 - `match_segment` (worldcup/continental/qualifiers/friendlies)

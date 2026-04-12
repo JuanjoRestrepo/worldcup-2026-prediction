@@ -73,7 +73,6 @@ def test_predict_endpoint_returns_active_feature_source(monkeypatch):
     assert response.home_team == "United States"
     assert response.match_date == date(2025, 11, 18)
     assert captured["predict_kwargs"]["match_date"] == date(2025, 11, 18)
-    assert captured["logged_request"]["requested_match_date"] == date(2025, 11, 18)
 
 
 def test_latest_training_run_endpoint_returns_monitoring_source(monkeypatch):

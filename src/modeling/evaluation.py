@@ -387,8 +387,24 @@ def evaluate_candidates_with_backtesting(
     target_column: str,
     outcome_to_encoded: dict[int, int],
     n_splits: int,
+    metadata_columns: list[str] | None = None,
 ) -> tuple[list[dict[str, object]], str]:
-    """Evaluate candidate models with rolling temporal validation and rank them."""
+    """Evaluate candidate models with rolling temporal validation and rank them.
+
+    Args:
+        candidate_specs: Mapping of candidate name → CandidateSpec.
+        train_df: Full training DataFrame with date, target, features, and metadata.
+        feature_columns: Numeric feature columns used for model training.
+        target_column: Column containing the multiclass target variable.
+        outcome_to_encoded: Mapping from raw outcome to encoded class labels.
+        n_splits: Number of rolling temporal folds for backtesting.
+        metadata_columns: Optional non-feature columns (e.g., ``tournament``)
+            passed to estimators during ``predict_proba``/``predict`` but
+            **excluded** from training.  Enables segment-aware ensembles to
+            detect tournament context without leaking non-numeric data into
+            the model.  Callers that omit this parameter get identical
+            behavior to the previous interface.
+    """
     if n_splits < 3:
         raise ValueError("n_splits must be at least 3 for temporal backtesting.")
 
@@ -396,11 +412,18 @@ def evaluate_candidates_with_backtesting(
     y = train_df[target_column].reset_index(drop=True)
     dates = train_df["date"].reset_index(drop=True)
 
+    # Metadata columns ride alongside X during prediction but are NOT trained on.
+    # The segment-aware ensemble strips them via feature_names_in_ internally.
+    X_metadata: pd.DataFrame | None = None
+    if metadata_columns:
+        X_metadata = train_df[metadata_columns].reset_index(drop=True)
+
     splitter = TimeSeriesSplit(n_splits=n_splits)
     candidate_summaries: list[dict[str, object]] = []
 
     for candidate_name, candidate_spec in candidate_specs.items():
         fold_results: list[dict[str, object]] = []
+        needs_metadata = candidate_spec.family == "segment_aware_hybrid"
         for fold_index, (train_idx, valid_idx) in enumerate(splitter.split(X), start=1):
             X_train = X.iloc[train_idx].copy()
             X_valid = X.iloc[valid_idx].copy()
@@ -418,8 +441,16 @@ def evaluate_candidates_with_backtesting(
                 sample_weight,
             )
 
-            probabilities = predict_proba_aligned(estimator, X_valid)
-            predicted = estimator.predict(X_valid).astype(np.int64)
+            # Append metadata columns for segment-aware prediction if applicable
+            X_valid_for_predict = X_valid
+            if needs_metadata and X_metadata is not None:
+                X_valid_for_predict = pd.concat(
+                    [X_valid, X_metadata.iloc[valid_idx].copy()],
+                    axis=1,
+                )
+
+            probabilities = predict_proba_aligned(estimator, X_valid_for_predict)
+            predicted = estimator.predict(X_valid_for_predict).astype(np.int64)
             metrics = evaluate_multiclass_predictions(
                 y_true=y_valid,
                 y_true_encoded=y_valid_encoded,

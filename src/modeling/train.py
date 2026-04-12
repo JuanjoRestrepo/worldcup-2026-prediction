@@ -41,7 +41,15 @@ from src.modeling.evaluation import (
 from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
 from src.modeling.features import select_model_feature_columns
 from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
+from src.modeling.hybrid_ensemble_segment_aware import (
+    SegmentAwareHybridDrawOverrideEnsemble,
+    SegmentConfig,
+)
 from src.modeling.reporting import generate_evaluation_report
+from src.modeling.segment_routing import (
+    SEGMENT_METADATA_COLUMNS,
+    tournament_segment_detector,
+)
 from src.modeling.two_stage import TwoStageDrawClassifier
 from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
@@ -55,6 +63,46 @@ DEFAULT_BACKTEST_SPLITS = 5
 OUTCOME_TO_ENCODED = {-1: 0, 0: 1, 1: 2}
 ENCODED_TO_OUTCOME = {value: key for key, value in OUTCOME_TO_ENCODED.items()}
 SPECIALIST_DRAW_WEIGHT_MULTIPLIER = 4 / 3
+
+
+def _build_segment_configs(
+    *,
+    friendlies_unc: float,
+    friendlies_conv: float,
+    worldcup_unc: float,
+    worldcup_conv: float,
+    continental_unc: float,
+    continental_conv: float,
+    qualifiers_unc: float,
+    qualifiers_conv: float,
+) -> dict[str, SegmentConfig]:
+    """Build segment configuration dict with per-segment thresholds."""
+    return {
+        "friendlies": SegmentConfig(
+            segment_id="friendlies",
+            uncertainty_threshold=friendlies_unc,
+            draw_conviction_threshold=friendlies_conv,
+            description="Friendly matches — generalist often uncertain, specialist can help",
+        ),
+        "worldcup": SegmentConfig(
+            segment_id="worldcup",
+            uncertainty_threshold=worldcup_unc,
+            draw_conviction_threshold=worldcup_conv,
+            description="World Cup matches — generalist strong, minimal specialist use",
+        ),
+        "continental": SegmentConfig(
+            segment_id="continental",
+            uncertainty_threshold=continental_unc,
+            draw_conviction_threshold=continental_conv,
+            description="Continental tournaments — medium selectivity",
+        ),
+        "qualifiers": SegmentConfig(
+            segment_id="qualifiers",
+            uncertainty_threshold=qualifiers_unc,
+            draw_conviction_threshold=qualifiers_conv,
+            description="Qualification fixtures — moderate structure",
+        ),
+    }
 
 
 def _build_pipeline(model: object) -> Pipeline:
@@ -356,6 +404,140 @@ def _build_candidate_specs() -> dict[str, CandidateSpec]:
             ),
         )
 
+    # ════════════════════════════════════════════════════════════════════════
+    # Segment-Aware Hybrid Ensemble variants
+    # ════════════════════════════════════════════════════════════════════════
+    # These compete head-to-head against the global hybrid and the standalone
+    # generalist champion under the same multicriteria ranking.
+    #
+    # Key insight from the 0.45 global threshold analysis:
+    #   - 0.45 was too broad → the specialist fired on strong predictions too
+    #   - Solution: narrower, segment-specific bands that only activate the
+    #     specialist in segments where the generalist actually struggles
+    #   - Friendlies → aggressive specialist (low threshold)
+    #   - World Cup → very conservative (high threshold, almost no overrides)
+    #   - Qualifiers / Continental → middle ground, leaning conservative
+    # ────────────────────────────────────────────────────────────────────────
+
+    segment_aware_variants: list[dict[str, float | str]] = [
+        {
+            "tag": "conservative",
+            "friendlies_unc": 0.38, "friendlies_conv": 0.58,
+            "worldcup_unc": 0.52, "worldcup_conv": 0.62,
+            "continental_unc": 0.44, "continental_conv": 0.58,
+            "qualifiers_unc": 0.48, "qualifiers_conv": 0.60,
+            "default_unc": 0.45, "default_conv": 0.55,
+        },
+        {
+            "tag": "friendlies_focus",
+            "friendlies_unc": 0.32, "friendlies_conv": 0.52,
+            "worldcup_unc": 0.55, "worldcup_conv": 0.65,
+            "continental_unc": 0.46, "continental_conv": 0.58,
+            "qualifiers_unc": 0.50, "qualifiers_conv": 0.60,
+            "default_unc": 0.48, "default_conv": 0.58,
+        },
+        {
+            "tag": "balanced",
+            "friendlies_unc": 0.36, "friendlies_conv": 0.55,
+            "worldcup_unc": 0.50, "worldcup_conv": 0.60,
+            "continental_unc": 0.42, "continental_conv": 0.56,
+            "qualifiers_unc": 0.46, "qualifiers_conv": 0.58,
+            "default_unc": 0.44, "default_conv": 0.55,
+        },
+        {
+            "tag": "narrow_band",
+            "friendlies_unc": 0.40, "friendlies_conv": 0.60,
+            "worldcup_unc": 0.55, "worldcup_conv": 0.65,
+            "continental_unc": 0.48, "continental_conv": 0.60,
+            "qualifiers_unc": 0.50, "qualifiers_conv": 0.62,
+            "default_unc": 0.48, "default_conv": 0.58,
+        },
+    ]
+
+    for variant in segment_aware_variants:
+        tag = str(variant["tag"])
+        default_unc = float(variant["default_unc"])
+        default_conv = float(variant["default_conv"])
+        segment_configs = _build_segment_configs(
+            friendlies_unc=float(variant["friendlies_unc"]),
+            friendlies_conv=float(variant["friendlies_conv"]),
+            worldcup_unc=float(variant["worldcup_unc"]),
+            worldcup_conv=float(variant["worldcup_conv"]),
+            continental_unc=float(variant["continental_unc"]),
+            continental_conv=float(variant["continental_conv"]),
+            qualifiers_unc=float(variant["qualifiers_unc"]),
+            qualifiers_conv=float(variant["qualifiers_conv"]),
+        )
+        name = f"seg_hybrid_{tag}"
+        candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=cast(
+                ProbabilisticEstimator,
+                SegmentAwareHybridDrawOverrideEnsemble(
+                    generalist_estimator=_build_scaled_pipeline(
+                        LogisticRegression(
+                            C=2.0,
+                            max_iter=2500,
+                            class_weight="balanced",
+                            random_state=RANDOM_STATE,
+                        )
+                    ),
+                    specialist_estimator=cast(
+                        ProbabilisticEstimator,
+                        TwoStageDrawClassifier(
+                            stage1_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=2.0,
+                                    max_iter=2500,
+                                    class_weight="balanced",
+                                    random_state=RANDOM_STATE,
+                                )
+                            ),
+                            stage2_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=1.0,
+                                    max_iter=2500,
+                                    class_weight="balanced",
+                                    random_state=RANDOM_STATE,
+                                )
+                            ),
+                            draw_probability_scale=1.0,
+                        ),
+                    ),
+                    default_uncertainty_threshold=default_unc,
+                    default_draw_conviction_threshold=default_conv,
+                    segment_configs=segment_configs,
+                    segment_detector_fn=tournament_segment_detector,
+                    specialist_draw_weight_multiplier=SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                ),
+            ),
+            sample_weight_builder=_make_sample_weight_builder(1.2),
+            family="segment_aware_hybrid",
+            hyperparameters={
+                "tag": tag,
+                "generalist_c": 2.0,
+                "generalist_draw_boost": 1.2,
+                "specialist_stage1_c": 2.0,
+                "specialist_stage2_c": 1.0,
+                "specialist_draw_weight_multiplier": SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                "default_unc": default_unc,
+                "default_conv": default_conv,
+                **{
+                    f"{seg_id}_unc": cfg.uncertainty_threshold
+                    for seg_id, cfg in segment_configs.items()
+                },
+                **{
+                    f"{seg_id}_conv": cfg.draw_conviction_threshold
+                    for seg_id, cfg in segment_configs.items()
+                },
+            },
+            notes=(
+                f"Segment-aware hybrid [{tag}]: overrides conditioned by tournament "
+                f"segment. Friendlies unc={variant['friendlies_unc']}, "
+                f"WC unc={variant['worldcup_unc']}, default unc={default_unc}"
+            ),
+        )
+
     return candidate_specs
 
 
@@ -541,6 +723,7 @@ def train_and_export_model(
         target_column=TARGET_COLUMN,
         outcome_to_encoded=OUTCOME_TO_ENCODED,
         n_splits=backtest_splits,
+        metadata_columns=SEGMENT_METADATA_COLUMNS,
     )
     logger.info("Selected candidate after backtesting: %s", selected_model_name)
 
@@ -736,6 +919,41 @@ def train_and_export_model(
         training_summary["metrics"]["weighted_f1"],
         training_summary["metrics"]["log_loss"],
     )
+
+    # ============================================================================
+    # Shadow Deployment Export
+    # ============================================================================
+    shadow_candidates = [
+        c for c in candidate_backtests if c["family"] == "segment_aware_hybrid"
+    ]
+    if shadow_candidates:
+        shadow_candidates.sort(key=lambda c: cast(float, c["overall_rank"]))
+        shadow_model_name = cast(str, shadow_candidates[0]["name"])
+        logger.info("Training and exporting shadow candidate: %s", shadow_model_name)
+
+        shadow_spec = candidate_specs[shadow_model_name]
+        final_shadow_model = _fit_pipeline(
+            shadow_spec.pipeline,
+            X=X_pretest,
+            y_encoded=y_pretest,
+            sample_weight_builder=shadow_spec.sample_weight_builder,
+        )
+
+        shadow_artifact_path = output_path.with_name(f"{output_path.stem}_shadow.joblib")
+        shadow_artifact: ModelArtifactBundle = {
+            "model": final_shadow_model,
+            "feature_columns": feature_columns,
+            "target_column": TARGET_COLUMN,
+            "outcome_to_encoded": OUTCOME_TO_ENCODED,
+            "encoded_to_outcome": ENCODED_TO_OUTCOME,
+            "outcome_labels": OUTCOME_LABELS,
+            "selected_model_name": shadow_model_name,
+            "deployed_model_variant": "uncalibrated",
+            "calibration_method": "none",
+            "training_summary": training_summary,
+        }
+        joblib.dump(shadow_artifact, shadow_artifact_path)
+        logger.info("Shadow model artifact exported to %s", shadow_artifact_path)
 
     return training_summary
 

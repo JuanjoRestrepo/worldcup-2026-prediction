@@ -108,6 +108,10 @@ class PredictionResult(TypedDict):
     model_artifact_path: str
     match_segment: str | None
     is_override_triggered: bool
+    shadow_predicted_outcome: NotRequired[str | None]
+    shadow_class_probabilities: NotRequired[dict[str, float] | None]
+    shadow_is_override_triggered: NotRequired[bool | None]
+    shadow_model_name: NotRequired[str | None]
 
 
 class LatestTrainingRunSummary(TypedDict):

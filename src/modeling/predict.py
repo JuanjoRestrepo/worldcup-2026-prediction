@@ -39,48 +39,7 @@ def load_model_bundle(artifact_path: Path | None = None) -> ModelArtifactBundle:
     return _load_model_bundle_cached(str(resolved_path))
 
 
-def _detect_match_segment(tournament: str | None) -> str | None:
-    """
-    Detect which segment a match belongs to based on tournament.
-
-    Used for Segment-Aware Hybrid Ensemble routing.
-
-    Args:
-        tournament: Tournament name from match data
-
-    Returns:
-        Segment ID (e.g., "worldcup", "friendlies") or None if unmatched
-    """
-    if not tournament:
-        return None
-
-    tournament_lower = tournament.lower()
-
-    if "world cup" in tournament_lower or "fifa world cup" in tournament_lower:
-        return "worldcup"
-    elif "friendly" in tournament_lower or "international friendly" in tournament_lower:
-        return "friendlies"
-    elif any(
-        keyword in tournament_lower
-        for keyword in [
-            "copa america",
-            "euro",
-            "africa cup",
-            "asian cup",
-            "confederations",
-        ]
-    ):
-        return "continental"
-
-    # Other official tournaments
-    if any(
-        keyword in tournament_lower
-        for keyword in ["qualifier", "qualification", "playoff", "repechage"]
-    ):
-        return "qualifiers"
-
-    return None
-
+from src.modeling.segment_routing import detect_match_segment
 
 def predict_match_outcome(
     home_team: str,
@@ -186,13 +145,55 @@ def predict_match_outcome(
     # separate generalist/specialist estimators are available in the artifact.
     # For now, we capture segment for observability and logging.
 
-    match_segment = _detect_match_segment(tournament)
+    match_segment = detect_match_segment(tournament)
     is_override_triggered: bool = (
-        False  # Default: no specialist override in current version
+        False  # Default: no specialist override in primary model
     )
 
     # ============================================================================
-    # Log prediction with segment-aware telemetry
+    # Shadow Deployment Inference
+    # ============================================================================
+    shadow_predicted_outcome = None
+    shadow_class_probabilities = None
+    shadow_model_name = None
+    shadow_is_override_triggered = False
+
+    try:
+        default_artifact = Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
+        shadow_artifact_path = default_artifact.with_name(f"{default_artifact.stem}_shadow.joblib")
+        
+        if shadow_artifact_path.exists():
+            shadow_bundle = load_model_bundle(artifact_path=shadow_artifact_path)
+            shadow_model = shadow_bundle["model"]
+            
+            shadow_predicted_encoded = int(shadow_model.predict(feature_frame)[0])
+            shadow_probabilities = predict_proba_aligned(shadow_model, feature_frame)[0]
+            
+            shadow_class_probs = {}
+            for encoded_class, probability in zip(encoded_classes, shadow_probabilities):
+                outcome = int(encoded_to_outcome[encoded_class])
+                shadow_class_probs[outcome_labels[outcome]] = float(probability)
+                
+            shadow_predicted_outcome = outcome_labels[int(encoded_to_outcome[shadow_predicted_encoded])]
+            shadow_class_probabilities = shadow_class_probs
+            shadow_model_name = shadow_bundle["selected_model_name"]
+            
+            if hasattr(shadow_model, "_compute_override_mask"):
+                override_frame = feature_frame.copy()
+                override_frame["tournament"] = tournament
+                
+                gen_probs = predict_proba_aligned(shadow_model.generalist_model_, feature_frame)
+                spec_probs = predict_proba_aligned(shadow_model.specialist_model_, feature_frame)
+                shadow_is_override_triggered = bool(
+                    shadow_model._compute_override_mask(override_frame, gen_probs, spec_probs)[0]
+                )
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Shadow inference failed: {exc}")
+
+    # ============================================================================
+    # Log prediction with segment-aware telemetry and shadow deployment
     # ============================================================================
     try:
         logger_instance = InferenceLogger()
@@ -215,6 +216,10 @@ def predict_match_outcome(
             requested_match_date=match_date,
             match_segment=match_segment,
             is_override_triggered=is_override_triggered,
+            shadow_predicted_outcome=shadow_predicted_outcome,
+            shadow_class_probabilities=shadow_class_probabilities,
+            shadow_model_name=shadow_model_name,
+            shadow_is_override_triggered=shadow_is_override_triggered,
         )
     except Exception as e:
         import logging
@@ -242,4 +247,8 @@ def predict_match_outcome(
         "model_artifact_path": str(Path(artifact_path or settings.MODEL_ARTIFACT_PATH)),
         "match_segment": match_segment,
         "is_override_triggered": is_override_triggered,
+        "shadow_predicted_outcome": shadow_predicted_outcome,
+        "shadow_class_probabilities": shadow_class_probabilities,
+        "shadow_is_override_triggered": shadow_is_override_triggered,
+        "shadow_model_name": shadow_model_name,
     }

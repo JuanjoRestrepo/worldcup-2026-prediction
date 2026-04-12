@@ -1,7 +1,7 @@
 # World Cup 2026 Prediction System - Executive Status
 
-**Date:** April 2, 2026  
-**Status:** 🟢 MVP + Phase 1 Production Hardening (Logging & Monitoring Implemented)  
+**Date:** April 2026  
+**Status:** 🟢 MVP + Phase 1 Production Hardening + Shadow Deployment (Live)  
 **Architecture:** End-to-end data pipeline with production-grade observability
 
 ---
@@ -36,6 +36,7 @@ Ingestion (APIs/CSV)
 - ✅ **Schema**: Indexed PostgreSQL table with JSONB support
 - ✅ **Error Resilience**: Logging failures don't block predictions
 - ✅ **Testing**: Unit tests + manual test guide included
+- ✅ **Shadow Deployment**: Running `seg_hybrid_balanced` alongside production `logistic_c2_draw1.2` for live validation
 
 ---
 
@@ -72,9 +73,14 @@ curl -X POST http://localhost:8000/predict \
     "draw": 0.13
   },
   "feature_source": "dbt_latest_team_snapshots",
-  "feature_snapshot_dates": {...}
+  "feature_snapshot_dates": {...},
+  "shadow_predicted_outcome": "draw",
+  "shadow_class_probabilities": {...},
+  "shadow_is_override_triggered": true,
+  "shadow_model_name": "seg_hybrid_balanced",
+  "match_segment": "worldcup"
 }
-# ✅ Automatically logged to monitoring.inference_logs
+# ✅ Automatically logged to monitoring.inference_logs along with shadow info
 ```
 
 ### Example: Check Prediction Statistics
@@ -109,18 +115,9 @@ curl "http://localhost:8000/monitoring/inference-stats?hours=24"
 
 ## 🚀 Remaining High-Priority Work
 
-### Tier 1: Solidify /predict Endpoint (2-3 hours)
+### Tier 1: Solidify /predict Endpoint (Done)
 
 - [x] Accept `match_date` param for historical predictions
-- [ ] Handle team name aliases ("USA" → "United States")
-- [ ] Validate feature snapshots aren't stale (warn if >30d old)
-- [ ] Better error messages for missing teams
-
-### Tier 2: CI/CD Pipeline (2-3 hours)
-
-- [ ] GitHub workflow: pytest on push/PR
-- [ ] Add `dbt parse` validation step
-- [ ] Optional: ephemeral PostgreSQL for dbt test
 - [ ] Block merge if tests fail
 
 ### Tier 3: Model Evaluation (4-5 hours)

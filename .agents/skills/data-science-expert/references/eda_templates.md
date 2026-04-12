@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+0. [Environment Setup (uv)](#environment)
 1. [Tabular / Flat File EDA](#tabular)
 2. [Time Series EDA](#time-series)
 3. [Text / NLP EDA](#nlp)
@@ -9,6 +10,23 @@
 5. [SQL-Based EDA](#sql)
 
 ---
+
+## 0. Environment Setup (uv) {#environment}
+
+```bash
+uv init eda_project && cd eda_project
+uv python pin 3.12
+uv venv .venv --python 3.12 && source .venv/bin/activate
+
+# Core EDA stack
+uv add pandas polars numpy scipy statsmodels \
+       matplotlib seaborn plotly bokeh altair \
+       ydata-profiling scikit-learn ipykernel jupyterlab
+
+# Dev tools
+uv add --dev ruff mypy pytest
+uv sync
+```
 
 ## 1. Tabular / Flat File EDA {#tabular}
 

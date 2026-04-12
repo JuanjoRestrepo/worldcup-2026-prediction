@@ -114,6 +114,20 @@ class InferenceLogger:
                 ADD COLUMN IF NOT EXISTS is_override_triggered BOOLEAN DEFAULT FALSE
                 """
             )
+            # Add shadow deployment columns
+            shadow_columns = [
+                "shadow_predicted_outcome VARCHAR(50)",
+                "shadow_class_probabilities_json JSONB",
+                "shadow_is_override_triggered BOOLEAN DEFAULT FALSE",
+                "shadow_model_name VARCHAR(255)"
+            ]
+            for col_def in shadow_columns:
+                connection.exec_driver_sql(
+                    f"""
+                    ALTER TABLE "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
+                    ADD COLUMN IF NOT EXISTS {col_def}
+                    """
+                )
             connection.exec_driver_sql(
                 f"""
                 ALTER TABLE "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
@@ -138,6 +152,10 @@ class InferenceLogger:
         request_timestamp_utc: datetime | None = None,
         match_segment: str | None = None,
         is_override_triggered: bool | None = None,
+        shadow_predicted_outcome: str | None = None,
+        shadow_class_probabilities: dict[str, float] | None = None,
+        shadow_is_override_triggered: bool | None = None,
+        shadow_model_name: str | None = None,
     ) -> None:
         """
         Log a single prediction to PostgreSQL.
@@ -181,6 +199,10 @@ class InferenceLogger:
             "model_version": model_version or "unknown",
             "match_segment": match_segment,
             "is_override_triggered": is_override_triggered or False,
+            "shadow_predicted_outcome": shadow_predicted_outcome,
+            "shadow_class_probabilities_json": json.dumps(shadow_class_probabilities) if shadow_class_probabilities else None,
+            "shadow_is_override_triggered": shadow_is_override_triggered,
+            "shadow_model_name": shadow_model_name,
             "persisted_at_utc": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -236,6 +258,9 @@ class InferenceLogger:
             SUM(CASE WHEN predicted_outcome = 'home_win' THEN 1 ELSE 0 END) as home_wins_predicted,
             SUM(CASE WHEN predicted_outcome = 'away_win' THEN 1 ELSE 0 END) as away_wins_predicted,
             SUM(CASE WHEN predicted_outcome = 'draw' THEN 1 ELSE 0 END) as draws_predicted,
+            SUM(CASE WHEN shadow_predicted_outcome IS NOT NULL AND predicted_outcome = shadow_predicted_outcome THEN 1 ELSE 0 END) as shadow_agreement_count,
+            SUM(CASE WHEN shadow_predicted_outcome = 'draw' THEN 1 ELSE 0 END) as shadow_draws_predicted,
+            SUM(CASE WHEN shadow_is_override_triggered = TRUE THEN 1 ELSE 0 END) as shadow_overrides_triggered,
             COUNT(DISTINCT tournament) as tournaments_predicted,
             MIN(timestamp_utc) as earliest_request,
             MAX(timestamp_utc) as latest_request
@@ -294,7 +319,9 @@ class InferenceLogger:
             predicted_outcome,
             class_probabilities_json,
             feature_source,
-            model_version
+            model_version,
+            shadow_predicted_outcome,
+            shadow_is_override_triggered
         FROM "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
         ORDER BY timestamp_utc DESC
         LIMIT {limit}

@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -58,6 +58,18 @@ class PredictionResponse(BaseModel):
     is_override_triggered: bool = Field(
         False,
         description="Whether specialist ensemble override was triggered for this prediction",
+    )
+    shadow_predicted_outcome: str | None = Field(
+        None, description="Shadow model's predicted outcome"
+    )
+    shadow_class_probabilities: dict[str, float] | None = Field(
+        None, description="Shadow model's probability distribution"
+    )
+    shadow_is_override_triggered: bool | None = Field(
+        None, description="Whether shadow model triggered an override"
+    )
+    shadow_model_name: str | None = Field(
+        None, description="Name of the shadow model candidate"
     )
     feature_freshness: dict[str, Any] = Field(
         default_factory=dict, description="Feature age alerts (empty if fresh)"
@@ -222,29 +234,16 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             model_artifact_path=prediction["model_artifact_path"],
             match_segment=prediction.get("match_segment"),
             is_override_triggered=prediction.get("is_override_triggered", False),
+            shadow_predicted_outcome=prediction.get("shadow_predicted_outcome"),
+            shadow_class_probabilities=prediction.get("shadow_class_probabilities"),
+            shadow_is_override_triggered=prediction.get("shadow_is_override_triggered"),
+            shadow_model_name=prediction.get("shadow_model_name"),
             feature_freshness=freshness,
         )
 
-        # Log the prediction for observability
-        inference_logger = get_inference_logger()
-        inference_logger.log_prediction(
-            home_team=normalized_home,
-            away_team=normalized_away,
-            predicted_class=prediction["predicted_class"],
-            predicted_outcome=prediction["predicted_outcome"],
-            class_probabilities=prediction["class_probabilities"],
-            neutral=request.neutral,
-            tournament=request.tournament,
-            feature_snapshot_dates=prediction["feature_snapshot_dates"],
-            feature_source=prediction["feature_source"],
-            model_artifact_path=prediction["model_artifact_path"],
-            model_version=None,
-            requested_match_date=request.match_date,
-            request_timestamp_utc=datetime.now(timezone.utc),
-            match_segment=prediction.get("match_segment"),
-            is_override_triggered=prediction.get("is_override_triggered", False),
-        )
-
+        # We can append it in the route but wait, I can just return the response object! Fastapi lets you inject Response.
+        # It's cleaner to just include them in the response body.
+        
         return response
 
     except ValueError as exc:
