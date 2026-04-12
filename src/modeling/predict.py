@@ -39,6 +39,14 @@ def load_model_bundle(artifact_path: Path | None = None) -> ModelArtifactBundle:
     return _load_model_bundle_cached(str(resolved_path))
 
 
+_USE_SHADOW_AS_PRIMARY = False
+
+def toggle_shadow_mode(enable: bool) -> None:
+    """Dynamically toggle whether the shadow artifact should be used as the primary model."""
+    global _USE_SHADOW_AS_PRIMARY
+    _USE_SHADOW_AS_PRIMARY = enable
+
+
 from src.modeling.segment_routing import detect_match_segment
 
 def predict_match_outcome(
@@ -67,7 +75,17 @@ def predict_match_outcome(
     Returns:
         Dictionary with the predicted class, probabilities, and snapshot metadata
     """
-    bundle = load_model_bundle(artifact_path=artifact_path)
+    default_artifact = Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
+    shadow_artifact = default_artifact.with_name(f"{default_artifact.stem}_shadow.joblib")
+    
+    if _USE_SHADOW_AS_PRIMARY and shadow_artifact.exists():
+        primary_path = shadow_artifact
+        alt_path = default_artifact
+    else:
+        primary_path = default_artifact
+        alt_path = shadow_artifact
+
+    bundle = load_model_bundle(artifact_path=primary_path)
     model = bundle["model"]
     feature_columns = bundle["feature_columns"]
     encoded_to_outcome = bundle["encoded_to_outcome"]
@@ -159,11 +177,8 @@ def predict_match_outcome(
     shadow_is_override_triggered = False
 
     try:
-        default_artifact = Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
-        shadow_artifact_path = default_artifact.with_name(f"{default_artifact.stem}_shadow.joblib")
-        
-        if shadow_artifact_path.exists():
-            shadow_bundle = load_model_bundle(artifact_path=shadow_artifact_path)
+        if alt_path.exists():
+            shadow_bundle = load_model_bundle(artifact_path=alt_path)
             shadow_model = shadow_bundle["model"]
             
             shadow_predicted_encoded = int(shadow_model.predict(feature_frame)[0])

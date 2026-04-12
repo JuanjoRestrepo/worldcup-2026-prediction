@@ -285,6 +285,24 @@ class InferenceLogger:
                     stats[key] = (
                         round(float(stats[key]), 4) if stats[key] is not None else None
                     )
+                    
+            # Segment-level shadow performance
+            segment_query = f"""
+            SELECT 
+                match_segment,
+                COUNT(*) as segment_inferences,
+                SUM(CASE WHEN shadow_predicted_outcome IS NOT NULL AND predicted_outcome = shadow_predicted_outcome THEN 1 ELSE 0 END) as shadow_agreement_count,
+                SUM(CASE WHEN shadow_predicted_outcome = 'draw' THEN 1 ELSE 0 END) as shadow_draws_predicted,
+                SUM(CASE WHEN shadow_is_override_triggered = TRUE THEN 1 ELSE 0 END) as shadow_overrides_triggered
+            FROM "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}"
+            WHERE timestamp_utc > NOW() - INTERVAL '{hours} hours'
+                AND match_segment IS NOT NULL
+            GROUP BY match_segment
+            ORDER BY segment_inferences DESC
+            """
+            segment_df = pd.read_sql_query(segment_query, con=self.engine)
+            stats["segment_performance"] = segment_df.to_dict(orient="records") if not segment_df.empty else []
+
             return {
                 "status": "ok",
                 "period_hours": hours,

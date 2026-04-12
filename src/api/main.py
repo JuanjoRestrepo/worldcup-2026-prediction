@@ -138,7 +138,48 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
     """Simple readiness endpoint for container and local checks."""
-    return {"status": "ok", "service": "worldcup-api"}
+    import src.modeling.predict as predict_module
+    
+    return {
+        "status": "ok", 
+        "service": "worldcup-api",
+        "shadow_as_primary": getattr(predict_module, "_USE_SHADOW_AS_PRIMARY", False)
+    }
+
+from fastapi import Depends
+from fastapi.security import APIKeyHeader
+import os
+from src.modeling.predict import toggle_shadow_mode, _USE_SHADOW_AS_PRIMARY
+
+API_KEY_NAME = "X-Admin-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+def get_admin_key(api_key: str = Depends(api_key_header)):
+    # Simple hardcoded key for P4 admin
+    expected_key = os.getenv("ADMIN_API_KEY", "worldcup-admin-secret")
+    if api_key != expected_key:
+        raise HTTPException(status_code=403, detail="Could not validate admin credentials")
+    return api_key
+
+class ToggleShadowRequest(BaseModel):
+    enable: bool
+    
+class ToggleShadowResponse(BaseModel):
+    status: str
+    message: str
+    shadow_as_primary: bool
+    
+@app.post("/admin/toggle-shadow", response_model=ToggleShadowResponse)
+def toggle_shadow(request: ToggleShadowRequest, api_key: str = Depends(get_admin_key)) -> ToggleShadowResponse:
+    """Admin endpoint to hot-swap the primary model with the shadow model."""
+    toggle_shadow_mode(request.enable)
+    state_str = "ENABLED" if request.enable else "DISABLED"
+    logger.info(f"Admin action: Shadow model as primary has been {state_str}")
+    return ToggleShadowResponse(
+        status="success",
+        message=f"Shadow model as primary is now {state_str}",
+        shadow_as_primary=request.enable,
+    )
 
 
 @app.get("/config")

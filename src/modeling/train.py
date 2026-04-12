@@ -143,7 +143,9 @@ def _make_sample_weight_builder(
     return _builder
 
 
-def _build_candidate_specs() -> dict[str, CandidateSpec]:
+def _build_candidate_specs(
+    tuned_segment_configs: dict[str, SegmentConfig] | None = None,
+) -> dict[str, CandidateSpec]:
     """Create a compact temporal hyperparameter search space."""
     candidate_specs: dict[str, CandidateSpec] = {
         "dummy_prior": CandidateSpec(
@@ -419,57 +421,108 @@ def _build_candidate_specs() -> dict[str, CandidateSpec]:
     #   - Qualifiers / Continental → middle ground, leaning conservative
     # ────────────────────────────────────────────────────────────────────────
 
-    segment_aware_variants: list[dict[str, float | str]] = [
-        {
-            "tag": "conservative",
-            "friendlies_unc": 0.38, "friendlies_conv": 0.58,
-            "worldcup_unc": 0.52, "worldcup_conv": 0.62,
-            "continental_unc": 0.44, "continental_conv": 0.58,
-            "qualifiers_unc": 0.48, "qualifiers_conv": 0.60,
-            "default_unc": 0.45, "default_conv": 0.55,
-        },
-        {
-            "tag": "friendlies_focus",
-            "friendlies_unc": 0.32, "friendlies_conv": 0.52,
-            "worldcup_unc": 0.55, "worldcup_conv": 0.65,
-            "continental_unc": 0.46, "continental_conv": 0.58,
-            "qualifiers_unc": 0.50, "qualifiers_conv": 0.60,
-            "default_unc": 0.48, "default_conv": 0.58,
-        },
-        {
-            "tag": "balanced",
-            "friendlies_unc": 0.36, "friendlies_conv": 0.55,
-            "worldcup_unc": 0.50, "worldcup_conv": 0.60,
-            "continental_unc": 0.42, "continental_conv": 0.56,
-            "qualifiers_unc": 0.46, "qualifiers_conv": 0.58,
-            "default_unc": 0.44, "default_conv": 0.55,
-        },
-        {
-            "tag": "narrow_band",
-            "friendlies_unc": 0.40, "friendlies_conv": 0.60,
-            "worldcup_unc": 0.55, "worldcup_conv": 0.65,
-            "continental_unc": 0.48, "continental_conv": 0.60,
-            "qualifiers_unc": 0.50, "qualifiers_conv": 0.62,
-            "default_unc": 0.48, "default_conv": 0.58,
-        },
-    ]
-
-    for variant in segment_aware_variants:
-        tag = str(variant["tag"])
-        default_unc = float(variant["default_unc"])
-        default_conv = float(variant["default_conv"])
-        segment_configs = _build_segment_configs(
-            friendlies_unc=float(variant["friendlies_unc"]),
-            friendlies_conv=float(variant["friendlies_conv"]),
-            worldcup_unc=float(variant["worldcup_unc"]),
-            worldcup_conv=float(variant["worldcup_conv"]),
-            continental_unc=float(variant["continental_unc"]),
-            continental_conv=float(variant["continental_conv"]),
-            qualifiers_unc=float(variant["qualifiers_unc"]),
-            qualifiers_conv=float(variant["qualifiers_conv"]),
-        )
-        name = f"seg_hybrid_{tag}"
+    if tuned_segment_configs is not None:
+        name = "seg_hybrid_auto_tuned"
         candidate_specs[name] = CandidateSpec(
+            name=name,
+            pipeline=cast(
+                ProbabilisticEstimator,
+                SegmentAwareHybridDrawOverrideEnsemble(
+                    generalist_estimator=_build_scaled_pipeline(
+                        LogisticRegression(
+                            C=2.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+                        )
+                    ),
+                    specialist_estimator=cast(
+                        ProbabilisticEstimator,
+                        TwoStageDrawClassifier(
+                            stage1_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=2.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+                                )
+                            ),
+                            stage2_estimator=_build_scaled_pipeline(
+                                LogisticRegression(
+                                    C=1.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+                                )
+                            ),
+                            draw_probability_scale=1.0,
+                        ),
+                    ),
+                    default_uncertainty_threshold=0.0,
+                    default_draw_conviction_threshold=1.0,
+                    segment_configs=tuned_segment_configs,
+                    segment_detector_fn=tournament_segment_detector,
+                    specialist_draw_weight_multiplier=SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                ),
+            ),
+            sample_weight_builder=_make_sample_weight_builder(1.2),
+            family="segment_aware_hybrid",
+            hyperparameters={
+                "tag": "auto_tuned",
+                "generalist_c": 2.0,
+                "generalist_draw_boost": 1.2,
+                "specialist_stage1_c": 2.0,
+                "specialist_stage2_c": 1.0,
+                "specialist_draw_weight_multiplier": SPECIALIST_DRAW_WEIGHT_MULTIPLIER,
+                **{f"{seg}_unc": cfg.uncertainty_threshold for seg, cfg in tuned_segment_configs.items()},
+                **{f"{seg}_conv": cfg.draw_conviction_threshold for seg, cfg in tuned_segment_configs.items()},
+            },
+            notes="Segment-aware hybrid [auto_tuned]: generated via post-datos OOF temporal validation search.",
+        )
+    else:
+        # Fallback to hand-crafted variants if no auto-tuning dictionary is passed.
+        segment_aware_variants: list[dict[str, float | str]] = [
+            {
+                "tag": "conservative",
+                "friendlies_unc": 0.38, "friendlies_conv": 0.58,
+                "worldcup_unc": 0.52, "worldcup_conv": 0.62,
+                "continental_unc": 0.44, "continental_conv": 0.58,
+                "qualifiers_unc": 0.48, "qualifiers_conv": 0.60,
+                "default_unc": 0.45, "default_conv": 0.55,
+            },
+            {
+                "tag": "friendlies_focus",
+                "friendlies_unc": 0.32, "friendlies_conv": 0.52,
+                "worldcup_unc": 0.55, "worldcup_conv": 0.65,
+                "continental_unc": 0.46, "continental_conv": 0.58,
+                "qualifiers_unc": 0.50, "qualifiers_conv": 0.60,
+                "default_unc": 0.48, "default_conv": 0.58,
+            },
+            {
+                "tag": "balanced",
+                "friendlies_unc": 0.36, "friendlies_conv": 0.55,
+                "worldcup_unc": 0.50, "worldcup_conv": 0.60,
+                "continental_unc": 0.42, "continental_conv": 0.56,
+                "qualifiers_unc": 0.46, "qualifiers_conv": 0.58,
+                "default_unc": 0.44, "default_conv": 0.55,
+            },
+            {
+                "tag": "narrow_band",
+                "friendlies_unc": 0.40, "friendlies_conv": 0.60,
+                "worldcup_unc": 0.55, "worldcup_conv": 0.65,
+                "continental_unc": 0.48, "continental_conv": 0.60,
+                "qualifiers_unc": 0.50, "qualifiers_conv": 0.62,
+                "default_unc": 0.48, "default_conv": 0.58,
+            },
+        ]
+    
+        for variant in segment_aware_variants:
+            tag = str(variant["tag"])
+            default_unc = float(variant["default_unc"])
+            default_conv = float(variant["default_conv"])
+            segment_configs = _build_segment_configs(
+                friendlies_unc=float(variant["friendlies_unc"]),
+                friendlies_conv=float(variant["friendlies_conv"]),
+                worldcup_unc=float(variant["worldcup_unc"]),
+                worldcup_conv=float(variant["worldcup_conv"]),
+                continental_unc=float(variant["continental_unc"]),
+                continental_conv=float(variant["continental_conv"]),
+                qualifiers_unc=float(variant["qualifiers_unc"]),
+                qualifiers_conv=float(variant["qualifiers_conv"]),
+            )
+            name = f"seg_hybrid_{tag}"
+            candidate_specs[name] = CandidateSpec(
             name=name,
             pipeline=cast(
                 ProbabilisticEstimator,
@@ -709,8 +762,49 @@ def train_and_export_model(
     X_test = test_df[feature_columns].copy()
     y_train = train_df[TARGET_COLUMN].map(OUTCOME_TO_ENCODED)
     y_test = test_df[TARGET_COLUMN]
-    candidate_specs = _build_candidate_specs()
+    from src.modeling.tuning import auto_tune_segment_thresholds
+    
+    logger.info("Auto-tuning segment thresholds using OOF prior to evaluating candidates...")
+    
+    auto_tune_gen_pipe = _build_scaled_pipeline(
+        LogisticRegression(
+            C=2.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+        )
+    )
+    auto_tune_spec_pipe = TwoStageDrawClassifier(
+        stage1_estimator=_build_scaled_pipeline(
+            LogisticRegression(
+                C=2.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+            )
+        ),
+        stage2_estimator=_build_scaled_pipeline(
+            LogisticRegression(
+                C=1.0, max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE
+            )
+        ),
+        draw_probability_scale=1.0,
+    )
+    
+    def specialist_weight_fn(y_encoded: pd.Series) -> NDArray[np.float64]:
+        base_w = _make_sample_weight_builder(1.2)(y_encoded)
+        draw_mask = (y_encoded.to_numpy() == 1)
+        base_w[draw_mask] *= SPECIALIST_DRAW_WEIGHT_MULTIPLIER
+        base_w *= len(base_w) / base_w.sum()
+        return base_w
 
+    tuned_configs = auto_tune_segment_thresholds(
+        X=train_df[feature_columns].copy(),
+        y_encoded=train_df[TARGET_COLUMN].map(OUTCOME_TO_ENCODED),
+        metadata_df=train_df[["tournament"]],
+        segment_detector_fn=tournament_segment_detector,
+        generalist_pipeline=cast(ProbabilisticEstimator, auto_tune_gen_pipe),
+        generalist_sample_weight_fn=_make_sample_weight_builder(1.2),
+        specialist_pipeline=cast(ProbabilisticEstimator, auto_tune_spec_pipe),
+        specialist_sample_weight_fn=specialist_weight_fn,
+        n_splits=backtest_splits,
+    )
+    
+    candidate_specs = _build_candidate_specs(tuned_configs)
     logger.info(
         "Running temporal backtesting with %s splits across %s candidates",
         backtest_splits,
