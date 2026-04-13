@@ -32,6 +32,18 @@ def run_ingestion_pipeline(
     # 1. CSV (histórico)
     logger.info("\n📊 PHASE 1: Loading historical international results from CSV...")
     df = load_historical_data()
+    # Drop future fixture rows (home_score / away_score are NA for upcoming matches
+    # in the martj42 dataset, e.g. upcoming World Cup 2026 fixtures). These rows are
+    # not errors — they simply have no result yet and must be excluded from training.
+    pre_drop_len = len(df)
+    df = df.dropna(subset=["home_score", "away_score"])
+    dropped = pre_drop_len - len(df)
+    if dropped > 0:
+        logger.info(
+            "Dropped %s future-fixture rows (null scores) before contract validation.",
+            dropped,
+        )
+
     validate_schema(df)
 
     df_csv_standardized = standardize_csv(df)

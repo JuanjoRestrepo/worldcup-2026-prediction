@@ -64,6 +64,16 @@ def _parse_args() -> argparse.Namespace:
         help="Path to the gold feature dataset used for training.",
     )
     parser.add_argument(
+        "--version-tag",
+        type=str,
+        default=None,
+        help=(
+            "Semantic version tag for a named model snapshot written alongside "
+            "the production artifact (e.g. 'v2_apr2026' produces "
+            "'match_predictor_v2_apr2026.joblib'). Optional."
+        ),
+    )
+    parser.add_argument(
         "--test-size",
         type=float,
         default=0.2,
@@ -88,6 +98,7 @@ def run_full_pipeline(
     artifact_path: Path | None = None,
     gold_data_path: Path | None = None,
     test_size: float = 0.2,
+    version_tag: str | None = None,
 ) -> dict[str, object]:
     """
     Execute the full pipeline with optional stage skipping.
@@ -169,6 +180,7 @@ def run_full_pipeline(
             test_size=test_size,
             persist_to_db=persist_to_db,
             pipeline_run_id=pipeline_run_id,
+            version_tag=version_tag,
         )
         summary["stages"]["training"] = {
             "status": "completed",
@@ -210,5 +222,6 @@ if __name__ == "__main__":
         artifact_path=args.artifact_path,
         gold_data_path=args.gold_data_path,
         test_size=args.test_size,
+        version_tag=args.version_tag,
     )
     print(json.dumps(pipeline_summary, indent=2))

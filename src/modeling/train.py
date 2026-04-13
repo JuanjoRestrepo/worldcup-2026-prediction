@@ -792,6 +792,7 @@ def train_and_export_model(
     calibration_selection_size: float = DEFAULT_CALIBRATION_SELECTION_SIZE,
     persist_to_db: bool = False,
     pipeline_run_id: str | None = None,
+    version_tag: str | None = None,
 ) -> TrainingSummary:
     """
     Train the production model from the gold feature dataset and export it.
@@ -805,6 +806,11 @@ def train_and_export_model(
         calibration_selection_size: Fraction of calibration data reserved to choose deployment variant
         persist_to_db: Whether to persist training metadata to PostgreSQL
         pipeline_run_id: Optional orchestrator run identifier for lineage
+        version_tag: Optional semantic version tag (e.g. 'v2_apr2026'). When
+            provided, an additional snapshot artifact is written alongside the
+            main production file, e.g. ``match_predictor_v2_apr2026.joblib``.
+            The production artifact at ``artifact_path`` is always written
+            regardless of this parameter.
 
     Returns:
         Dictionary with training metadata and evaluation metrics
@@ -1118,6 +1124,22 @@ def train_and_export_model(
     metrics_path.write_text(json.dumps(training_summary, indent=2), encoding="utf-8")
     logger.info("Model artifact exported to %s", output_path)
     logger.info("Training metrics exported to %s", metrics_path)
+
+    # Write a semantic version snapshot alongside the production artifact.
+    # This preserves an immutable, date-tagged copy for model lineage and
+    # rollback, independent of the production file that gets overwritten each
+    # retrain cycle.
+    if version_tag is not None:
+        snapshot_name = f"{output_path.stem}_{version_tag}.joblib"
+        snapshot_path = output_path.with_name(snapshot_name)
+        joblib.dump(artifact, snapshot_path)
+        training_summary["version_tag"] = version_tag  # type: ignore[typeddict-unknown-key]
+        training_summary["snapshot_path"] = str(snapshot_path)  # type: ignore[typeddict-unknown-key]
+        logger.info(
+            "Semantic version snapshot exported to %s (tag=%s)",
+            snapshot_path,
+            version_tag,
+        )
     if persist_to_db:
         persist_training_run(
             training_summary,

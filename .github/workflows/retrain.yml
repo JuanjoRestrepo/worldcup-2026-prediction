@@ -1,0 +1,157 @@
+name: Scheduled Model Retrain
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Triggers:
+#   • schedule — runs on the 1st of every month at 03:00 UTC, catching major
+#     international windows (qualifiers, Nations League, friendlies) that are
+#     typically played and committed to martj42's dataset within 48–72 hours.
+#   • workflow_dispatch — allows a manual trigger from the GitHub Actions UI
+#     at any time (e.g. after a major tournament window or data correction).
+#
+# Architecture note:
+#   This workflow downloads fresh data and retrains on the CI runner. It does
+#   NOT push artifacts to main automatically — artifacts are uploaded to the
+#   workflow run for human review. This maintains the artifact promotion gate:
+#   no silent model drift reaches production without explicit approval.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # 03:00 UTC on the 1st of every month
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Semantic version tag for the model snapshot (e.g. v2_may2026)"
+        required: false
+        default: "retrain_manual"
+      skip_ingestion:
+        description: "Skip ingestion (reuse existing raw/bronze data)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+jobs:
+  retrain:
+    name: Download → Process → Train → Compare
+    runs-on: ubuntu-latest
+
+    env:
+      # Suppress DB persistence during scheduled retrains — artifacts are the
+      # source of truth; DB persistence is opt-in for local dev only.
+      PERSIST_TO_DB: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Cache uv package store
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync
+
+      # ── Resolve version tag ──────────────────────────────────────────────
+      # For scheduled runs, auto-generate a date-based tag (e.g. v_2026_05).
+      # For manual dispatch, use the user-supplied input.
+      - name: Resolve version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            TAG="v_$(date -u +'%Y_%m')"
+          else
+            TAG="${{ github.event.inputs.version_tag }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version tag: ${TAG}"
+
+      # ── Stage 1: Ingestion (downloads fresh CSV from martj42 GitHub) ────
+      - name: Run ingestion pipeline
+        if: ${{ github.event.inputs.skip_ingestion != 'true' }}
+        run: |
+          uv run python run_pipeline.py \
+            --skip-processing \
+            --skip-training \
+            --no-api-data
+
+      # ── Stage 2: Processing (ELO + rolling features) ─────────────────────
+      - name: Run processing pipeline
+        run: |
+          uv run python run_pipeline.py \
+            --skip-ingestion \
+            --skip-training \
+            --no-api-data
+
+      # ── Stage 3: Training ────────────────────────────────────────────────
+      - name: Run training pipeline
+        run: |
+          uv run python run_pipeline.py \
+            --skip-ingestion \
+            --skip-processing \
+            --no-api-data \
+            --version-tag "${{ steps.version.outputs.tag }}"
+
+      # ── Stage 4: Generate comparison report ─────────────────────────────
+      - name: Generate model comparison report
+        run: |
+          uv run python -c "
+          from pathlib import Path
+          from src.modeling.reporting_comparison import generate_comparison_report
+          result = generate_comparison_report(
+              v1_report_path=Path('models/match_predictor_evaluation_report_v1.json'),
+              v2_report_path=Path('models/match_predictor_evaluation_report.json'),
+              output_path=Path('models/model_comparison_report.md'),
+              v2_label='${{ steps.version.outputs.tag }}',
+          )
+          print('Decision:', result['decision'])
+          print('v1 Log-Loss:', result['v1_metrics']['log_loss'])
+          print('v2 Log-Loss:', result['v2_metrics']['log_loss'])
+          print('v1 Macro F1:', result['v1_metrics']['macro_f1'])
+          print('v2 Macro F1:', result['v2_metrics']['macro_f1'])
+          "
+
+      # ── Upload artifacts for human review ───────────────────────────────
+      # Artifacts are uploaded but NOT committed back to main. A human must
+      # review the comparison report and manually promote the new model by
+      # replacing the production .joblib in a follow-up PR.
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts-${{ steps.version.outputs.tag }}
+          path: |
+            models/match_predictor.joblib
+            models/match_predictor_${{ steps.version.outputs.tag }}.joblib
+            models/match_predictor_evaluation_report.json
+            models/match_predictor_evaluation_report.md
+            models/match_predictor_confusion_matrix.png
+            models/match_predictor_calibration_curves.png
+            models/model_comparison_report.md
+          retention-days: 30
+
+      - name: Upload gold dataset snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-dataset-${{ steps.version.outputs.tag }}
+          path: data/gold/features_dataset.csv
+          retention-days: 30
+
+      # ── Summary ──────────────────────────────────────────────────────────
+      - name: Print comparison report
+        run: |
+          echo "=== Model Comparison Report ==="
+          cat models/model_comparison_report.md
