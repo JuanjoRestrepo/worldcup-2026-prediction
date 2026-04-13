@@ -11,7 +11,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 DBT_DIR = BASE_DIR / "dbt"
 DEFAULT_PROFILE = DBT_DIR / "profiles.yml"
 PROFILE_TEMPLATE = DBT_DIR / "profiles.yml.example"
