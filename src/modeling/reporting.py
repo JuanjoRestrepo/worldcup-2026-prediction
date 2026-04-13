@@ -225,7 +225,9 @@ def _plot_calibration_curves(
     actual = prediction_frame["actual_outcome"].to_numpy(dtype=np.int64, copy=False)
 
     fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
-    for axis, outcome, encoded_index in zip(axes, OUTCOME_ORDER, ENCODED_CLASS_ORDER, strict=False):
+    for axis, outcome, encoded_index in zip(
+        axes, OUTCOME_ORDER, ENCODED_CLASS_ORDER, strict=False
+    ):
         binary_target = (actual == outcome).astype(np.int64)
         prob_true, prob_pred = calibration_curve(
             binary_target,
