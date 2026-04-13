@@ -22,7 +22,7 @@ class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):
         X: pd.DataFrame,
         y: pd.Series,
         sample_weight: NDArray[np.float64] | None = None,
-    ) -> "FixedProbabilityEstimator":
+    ) -> FixedProbabilityEstimator:
         self.classes_ = np.array([0, 1, 2], dtype=np.int64)
         self._fitted_probabilities = np.asarray(self.probabilities, dtype=np.float64)
         return self

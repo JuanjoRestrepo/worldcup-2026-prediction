@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
 import logging
+from datetime import date
 from functools import lru_cache
 from typing import Literal, cast
 
@@ -183,7 +183,9 @@ def _load_team_snapshots_as_of_date_from_dbt_cached(
     return df.sort_values(["team", "team_role", "snapshot_date"]).reset_index(drop=True)
 
 
-def load_team_snapshots_as_of_date_from_dbt(match_date: date) -> tuple[pd.DataFrame, str]:
+def load_team_snapshots_as_of_date_from_dbt(
+    match_date: date,
+) -> tuple[pd.DataFrame, str]:
     """Load team snapshots as of a historical match date from the dbt serving model."""
     snapshots = _load_team_snapshots_as_of_date_from_dbt_cached(
         settings.DB_HOST,
@@ -200,7 +202,7 @@ def _serialize_training_run_value(value: object) -> str | int | float | None:
     if isinstance(value, pd.Timestamp):
         return value.isoformat()
     if hasattr(value, "isoformat") and not isinstance(value, str):
-        iso_value = getattr(value, "isoformat")()
+        iso_value = value.isoformat()
         return str(iso_value)
     if value is None:
         return None

@@ -8,7 +8,6 @@ TEAM_ALIASES = {
     "us": "United States",
     "united_states": "United States",
     "usmnt": "United States",  # US Men's National Team
-    
     # Europe
     "england": "England",
     "uk": "England",
@@ -18,7 +17,6 @@ TEAM_ALIASES = {
     "czechia": "Czech Republic",
     "holland": "Netherlands",
     "netherlands": "Netherlands",
-    
     # Asia
     "korea": "South Korea",
     "south_korea": "South Korea",
@@ -27,12 +25,10 @@ TEAM_ALIASES = {
     "ksa": "Saudi Arabia",
     "saudi": "Saudi Arabia",
     "saudi_arabia": "Saudi Arabia",
-    
     # Africa
     "ivory_coast": "Côte d'Ivoire",
     "cote_d_ivoire": "Côte d'Ivoire",
     "coted_ivoire": "Côte d'Ivoire",
-    
     # South America
     "brasil": "Brazil",
     "br": "Brazil",
@@ -46,7 +42,6 @@ TEAM_ALIASES = {
     "uruguay": "Uruguay",
     "paraguay": "Paraguay",
     "par": "Paraguay",
-    
     # Oceania
     "australia": "Australia",
     "aus": "Australia",
@@ -58,16 +53,16 @@ TEAM_ALIASES = {
 def normalize_team_name(team_name: str) -> str:
     """
     Normalize team name using alias mapping.
-    
+
     Converts common abbreviations and variations to canonical team names.
     Case-insensitive matching. Returns original if no alias found.
-    
+
     Args:
         team_name: Raw team name from request
-        
+
     Returns:
         Normalized team name (or original if no alias matches)
-        
+
     Examples:
         >>> normalize_team_name("USA")
         "United States"

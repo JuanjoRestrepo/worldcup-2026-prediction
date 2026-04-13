@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import cast
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,7 +77,9 @@ def build_prediction_frame(
     prediction_frame["predicted_outcome"] = np.vectorize(ENCODED_TO_OUTCOME.get)(
         y_pred_encoded.astype(np.int64)
     )
-    prediction_frame["actual_label"] = prediction_frame["actual_outcome"].map(OUTCOME_LABELS)
+    prediction_frame["actual_label"] = prediction_frame["actual_outcome"].map(
+        OUTCOME_LABELS
+    )
     prediction_frame["predicted_label"] = prediction_frame["predicted_outcome"].map(
         OUTCOME_LABELS
     )
@@ -96,12 +99,17 @@ def build_prediction_frame(
         get_team_confederation
     )
     prediction_frame["confederation_segment"] = np.where(
-        prediction_frame["home_confederation"] == prediction_frame["away_confederation"],
+        prediction_frame["home_confederation"]
+        == prediction_frame["away_confederation"],
         prediction_frame["home_confederation"],
         np.where(
             (
-                prediction_frame["home_confederation"].isin(["Unknown", "Regional/NonFIFA"])
-                | prediction_frame["away_confederation"].isin(["Unknown", "Regional/NonFIFA"])
+                prediction_frame["home_confederation"].isin(
+                    ["Unknown", "Regional/NonFIFA"]
+                )
+                | prediction_frame["away_confederation"].isin(
+                    ["Unknown", "Regional/NonFIFA"]
+                )
             ),
             "Unknown/Regional Mix",
             "Inter-confederation",
@@ -113,9 +121,13 @@ def build_prediction_frame(
 def _evaluate_segment(segment_df: pd.DataFrame) -> dict[str, object]:
     y_true = segment_df["actual_outcome"].astype("int64")
     y_true_encoded = y_true.map(OUTCOME_TO_ENCODED).astype("int64")
-    y_pred_encoded = segment_df["predicted_outcome"].map(OUTCOME_TO_ENCODED).to_numpy(
-        dtype=np.int64,
-        copy=False,
+    y_pred_encoded = (
+        segment_df["predicted_outcome"]
+        .map(OUTCOME_TO_ENCODED)
+        .to_numpy(
+            dtype=np.int64,
+            copy=False,
+        )
     )
     probabilities = segment_df[
         ["away_win_probability", "draw_probability", "home_win_probability"]
@@ -169,7 +181,9 @@ def _plot_confusion_matrix(
     output_path: Path,
 ) -> None:
     actual = prediction_frame["actual_outcome"].to_numpy(dtype=np.int64, copy=False)
-    predicted = prediction_frame["predicted_outcome"].to_numpy(dtype=np.int64, copy=False)
+    predicted = prediction_frame["predicted_outcome"].to_numpy(
+        dtype=np.int64, copy=False
+    )
     matrix = confusion_matrix(actual, predicted, labels=OUTCOME_ORDER, normalize="true")
 
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -211,7 +225,7 @@ def _plot_calibration_curves(
     actual = prediction_frame["actual_outcome"].to_numpy(dtype=np.int64, copy=False)
 
     fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
-    for axis, outcome, encoded_index in zip(axes, OUTCOME_ORDER, ENCODED_CLASS_ORDER):
+    for axis, outcome, encoded_index in zip(axes, OUTCOME_ORDER, ENCODED_CLASS_ORDER, strict=False):
         binary_target = (actual == outcome).astype(np.int64)
         prob_true, prob_pred = calibration_curve(
             binary_target,
@@ -233,7 +247,9 @@ def _plot_calibration_curves(
     plt.close(fig)
 
 
-def _top_confident_errors(prediction_frame: pd.DataFrame, limit: int = 15) -> list[dict[str, object]]:
+def _top_confident_errors(
+    prediction_frame: pd.DataFrame, limit: int = 15
+) -> list[dict[str, object]]:
     errors = prediction_frame.loc[
         prediction_frame["actual_outcome"] != prediction_frame["predicted_outcome"]
     ].copy()
@@ -256,7 +272,9 @@ def _top_confident_errors(prediction_frame: pd.DataFrame, limit: int = 15) -> li
     ]
 
 
-def _serialize_candidate_table(candidate_backtests: list[dict[str, object]]) -> list[dict[str, object]]:
+def _serialize_candidate_table(
+    candidate_backtests: list[dict[str, object]],
+) -> list[dict[str, object]]:
     summary_rows: list[dict[str, object]] = []
     for candidate in candidate_backtests:
         mean_metrics = cast(dict[str, float], candidate["mean_metrics"])
@@ -271,7 +289,9 @@ def _serialize_candidate_table(candidate_backtests: list[dict[str, object]]) -> 
                 "draw_recall": mean_metrics["draw_recall"],
                 "balanced_accuracy": mean_metrics["balanced_accuracy"],
                 "log_loss": mean_metrics["log_loss"],
-                "expected_calibration_error": mean_metrics["expected_calibration_error"],
+                "expected_calibration_error": mean_metrics[
+                    "expected_calibration_error"
+                ],
                 "hyperparameters": candidate.get("hyperparameters", {}),
             }
         )
@@ -308,7 +328,9 @@ def generate_evaluation_report(
     )
     confederation_segments = build_segment_analysis(
         prediction_frame.loc[
-            ~prediction_frame["home_confederation"].isin(["Unknown", "Regional/NonFIFA"])
+            ~prediction_frame["home_confederation"].isin(
+                ["Unknown", "Regional/NonFIFA"]
+            )
         ],
         group_column="home_confederation",
         min_rows=80,
@@ -352,7 +374,9 @@ def generate_evaluation_report(
                 (~prediction_frame["home_confederation"].isin(["Unknown"])).mean()
             ),
             "regional_or_unknown_ratio": float(
-                prediction_frame["home_confederation"].isin(["Unknown", "Regional/NonFIFA"]).mean()
+                prediction_frame["home_confederation"]
+                .isin(["Unknown", "Regional/NonFIFA"])
+                .mean()
             ),
         },
         "draw_diagnostics": {
@@ -371,7 +395,9 @@ def generate_evaluation_report(
     }
     report_json_path.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
 
-    top_candidates = cast(list[dict[str, object]], report_payload["candidate_search_summary"])[:5]
+    top_candidates = cast(
+        list[dict[str, object]], report_payload["candidate_search_summary"]
+    )[:5]
     competition_lines = [
         f"- `{segment['segment_value']}`: rows={segment['rows']}, macro_f1={cast(dict[str, object], segment['metrics'])['macro_f1']:.4f}, log_loss={cast(dict[str, object], segment['metrics'])['log_loss']:.4f}"
         for segment in competition_segments[:5]
@@ -386,7 +412,9 @@ def generate_evaluation_report(
     ]
     error_lines = [
         f"- {row['date']} | {row['home_team']} vs {row['away_team']} | actual={row['actual']} predicted={row['predicted']} conf={cast(float, row['confidence']):.2f}"
-        for row in cast(list[dict[str, object]], report_payload["top_confident_errors"])[:10]
+        for row in cast(
+            list[dict[str, object]], report_payload["top_confident_errors"]
+        )[:10]
     ]
     draw_diagnostics = cast(dict[str, float], report_payload["draw_diagnostics"])
 

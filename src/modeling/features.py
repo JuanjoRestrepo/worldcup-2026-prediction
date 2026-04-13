@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
 import logging
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, cast
@@ -95,9 +95,7 @@ def _normalize_feature_source(source: str) -> FeatureDatasetSource:
 def _load_feature_dataset_from_csv(dataset_path: Path) -> pd.DataFrame:
     resolved_path = dataset_path.resolve()
     if not resolved_path.exists():
-        raise FileNotFoundError(
-            f"Gold feature dataset not found at '{resolved_path}'."
-        )
+        raise FileNotFoundError(f"Gold feature dataset not found at '{resolved_path}'.")
     return _load_feature_dataset_from_csv_cached(str(resolved_path))
 
 
@@ -223,7 +221,9 @@ def _resolve_team_name(df: pd.DataFrame, team_name: str) -> str:
             team_map[normalized_team.casefold()] = normalized_team
 
     if normalized not in team_map:
-        raise ValueError(f"Team '{team_name}' was not found in the gold feature dataset.")
+        raise ValueError(
+            f"Team '{team_name}' was not found in the gold feature dataset."
+        )
 
     return team_map[normalized]
 
@@ -249,9 +249,7 @@ def _extract_overall_snapshot(row: pd.Series, team_name: str) -> OverallSnapshot
     return {
         "elo": _safe_value(row, "elo_away"),
         "global_avg_goals_last5": _safe_value(row, "away_global_avg_goals_last5"),
-        "global_avg_conceded_last5": _safe_value(
-            row, "away_global_avg_conceded_last5"
-        ),
+        "global_avg_conceded_last5": _safe_value(row, "away_global_avg_conceded_last5"),
         "global_win_rate_last5": _safe_value(row, "away_global_win_rate_last5"),
         "date": row["date"],
     }
@@ -262,7 +260,9 @@ def _build_team_context(df: pd.DataFrame, team_name: str) -> TeamContext:
         df, (df["homeTeam"] == team_name) | (df["awayTeam"] == team_name)
     )
     if overall_row is None:
-        raise ValueError(f"Team '{team_name}' was not found in the gold feature dataset.")
+        raise ValueError(
+            f"Team '{team_name}' was not found in the gold feature dataset."
+        )
 
     snapshot = _extract_overall_snapshot(overall_row, team_name)
     return {
@@ -297,7 +297,9 @@ def build_match_feature_frame(
     if home_team.strip().casefold() == away_team.strip().casefold():
         raise ValueError("Home team and away team must be different teams.")
 
-    df = feature_history_df if feature_history_df is not None else load_feature_dataset()
+    df = (
+        feature_history_df if feature_history_df is not None else load_feature_dataset()
+    )
     if match_date is not None:
         requested_timestamp = pd.Timestamp(match_date)
         df = df.loc[df["date"] <= requested_timestamp].copy()
@@ -384,8 +386,12 @@ def build_match_feature_frame(
     snapshot_dates: TeamSnapshotMetadata = {
         "home_team": resolved_home_team,
         "away_team": resolved_away_team,
-        "home_snapshot_date": pd.Timestamp(home_context["snapshot_date"]).date().isoformat(),
-        "away_snapshot_date": pd.Timestamp(away_context["snapshot_date"]).date().isoformat(),
+        "home_snapshot_date": pd.Timestamp(home_context["snapshot_date"])
+        .date()
+        .isoformat(),
+        "away_snapshot_date": pd.Timestamp(away_context["snapshot_date"])
+        .date()
+        .isoformat(),
     }
     return feature_frame, snapshot_dates
 
@@ -543,12 +549,12 @@ def build_match_feature_frame_from_team_snapshots(
     snapshot_dates: TeamSnapshotMetadata = {
         "home_team": resolved_home_team,
         "away_team": resolved_away_team,
-        "home_snapshot_date": pd.Timestamp(
-            home_overall_row["snapshot_date"]
-        ).date().isoformat(),
-        "away_snapshot_date": pd.Timestamp(
-            away_overall_row["snapshot_date"]
-        ).date().isoformat(),
+        "home_snapshot_date": pd.Timestamp(home_overall_row["snapshot_date"])
+        .date()
+        .isoformat(),
+        "away_snapshot_date": pd.Timestamp(away_overall_row["snapshot_date"])
+        .date()
+        .isoformat(),
     }
     return feature_frame, snapshot_dates
 

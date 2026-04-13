@@ -24,18 +24,62 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 
 # Comprehensive team list (all major World Cup 2026 participants + more)
-ALL_TEAMS = sorted([
-    "Argentina", "France", "Brazil", "England", "Spain", "Portugal",
-    "Colombia", "Uruguay", "Mexico", "United States", "Germany", "Italy",
-    "Netherlands", "Belgium", "Croatia", "Denmark", "Switzerland",
-    "Morocco", "Senegal", "Nigeria", "Cameroon", "Ghana", "Algeria",
-    "Japan", "South Korea", "Australia", "Iran", "Saudi Arabia",
-    "Ecuador", "Chile", "Peru", "Venezuela", "Bolivia", "Paraguay",
-    "Canada", "Costa Rica", "Panama", "Jamaica",
-    "Poland", "Czech Republic", "Serbia", "Hungary", "Romania",
-    "Turkey", "Ukraine", "Austria", "Scotland", "Wales",
-    "Tunisia", "Egypt", "South Africa", "Ivory Coast",
-])
+ALL_TEAMS = sorted(
+    [
+        "Argentina",
+        "France",
+        "Brazil",
+        "England",
+        "Spain",
+        "Portugal",
+        "Colombia",
+        "Uruguay",
+        "Mexico",
+        "United States",
+        "Germany",
+        "Italy",
+        "Netherlands",
+        "Belgium",
+        "Croatia",
+        "Denmark",
+        "Switzerland",
+        "Morocco",
+        "Senegal",
+        "Nigeria",
+        "Cameroon",
+        "Ghana",
+        "Algeria",
+        "Japan",
+        "South Korea",
+        "Australia",
+        "Iran",
+        "Saudi Arabia",
+        "Ecuador",
+        "Chile",
+        "Peru",
+        "Venezuela",
+        "Bolivia",
+        "Paraguay",
+        "Canada",
+        "Costa Rica",
+        "Panama",
+        "Jamaica",
+        "Poland",
+        "Czech Republic",
+        "Serbia",
+        "Hungary",
+        "Romania",
+        "Turkey",
+        "Ukraine",
+        "Austria",
+        "Scotland",
+        "Wales",
+        "Tunisia",
+        "Egypt",
+        "South Africa",
+        "Ivory Coast",
+    ]
+)
 
 
 def get_prediction(
@@ -259,21 +303,41 @@ if predict_btn:
 
             st.markdown("#### 📡 Raw API Payload")
             meta_cols = st.columns(2)
-            meta_cols[0].markdown(f"**Feature source:** `{result.get('feature_source', 'N/A')}`")
-            meta_cols[1].markdown(f"**Segment:** `{result.get('match_segment', 'N/A')}`")
-            meta_cols[0].markdown(f"**Specialist override:** `{result.get('is_override_triggered', False)}`")
-            meta_cols[1].markdown(f"**Model:** `{result.get('model_artifact_path', 'N/A').split(chr(92))[-1].split('/')[-1]}`")
+            meta_cols[0].markdown(
+                f"**Feature source:** `{result.get('feature_source', 'N/A')}`"
+            )
+            meta_cols[1].markdown(
+                f"**Segment:** `{result.get('match_segment', 'N/A')}`"
+            )
+            meta_cols[0].markdown(
+                f"**Specialist override:** `{result.get('is_override_triggered', False)}`"
+            )
+            meta_cols[1].markdown(
+                f"**Model:** `{result.get('model_artifact_path', 'N/A').split(chr(92))[-1].split('/')[-1]}`"
+            )
 
             if result.get("shadow_predicted_outcome"):
                 st.markdown("#### 🕵️ Shadow Model Comparison")
                 shadow_probs = result.get("shadow_class_probabilities", {})
-                sh_home = shadow_probs.get("home_win", shadow_probs.get("Home Win", 0.0)) * 100
+                sh_home = (
+                    shadow_probs.get("home_win", shadow_probs.get("Home Win", 0.0))
+                    * 100
+                )
                 sh_draw = shadow_probs.get("draw", shadow_probs.get("Draw", 0.0)) * 100
-                sh_away = shadow_probs.get("away_win", shadow_probs.get("Away Win", 0.0)) * 100
+                sh_away = (
+                    shadow_probs.get("away_win", shadow_probs.get("Away Win", 0.0))
+                    * 100
+                )
                 sh1, sh2, sh3 = st.columns(3)
-                sh1.metric(f"🏠 {home}", f"{sh_home:.1f}%", delta=f"{sh_home - win_home:+.1f}%")
-                sh2.metric("🤝 Draw", f"{sh_draw:.1f}%", delta=f"{sh_draw - draw_pct:+.1f}%")
-                sh3.metric(f"✈️ {away}", f"{sh_away:.1f}%", delta=f"{sh_away - win_away:+.1f}%")
+                sh1.metric(
+                    f"🏠 {home}", f"{sh_home:.1f}%", delta=f"{sh_home - win_home:+.1f}%"
+                )
+                sh2.metric(
+                    "🤝 Draw", f"{sh_draw:.1f}%", delta=f"{sh_draw - draw_pct:+.1f}%"
+                )
+                sh3.metric(
+                    f"✈️ {away}", f"{sh_away:.1f}%", delta=f"{sh_away - win_away:+.1f}%"
+                )
 
             st.markdown("#### 🗄️ Full Response JSON")
             st.json(result)

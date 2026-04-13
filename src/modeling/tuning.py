@@ -105,11 +105,15 @@ def auto_tune_segment_thresholds(
 
         baseline_pred = seg_gen_probs.argmax(axis=1)
         baseline_draw_f1 = float(
-            f1_score(seg_y_true, baseline_pred, labels=[DRAW_CLASS], average="macro", zero_division=0)
+            f1_score(
+                seg_y_true,
+                baseline_pred,
+                labels=[DRAW_CLASS],
+                average="macro",
+                zero_division=0,
+            )
         )
-        baseline_log_loss = float(
-            log_loss(seg_y_true, seg_gen_probs, labels=[0, 1, 2])
-        )
+        baseline_log_loss = float(log_loss(seg_y_true, seg_gen_probs, labels=[0, 1, 2]))
 
         best_unc = 0.0
         best_conv = 1.0
@@ -132,18 +136,26 @@ def auto_tune_segment_thresholds(
 
                 blended_probs = seg_gen_probs.copy()
                 blended_probs[override_mask] = seg_spec_probs[override_mask]
-                
+
                 # Safe row normalization in case specialist predicted 0s for a class
                 row_sums = blended_probs.sum(axis=1, keepdims=True)
                 # Fallback to avoid div zero by ignoring 0 sums
                 nonzero_rows = row_sums.squeeze(axis=1) > 0
                 if np.any(nonzero_rows):
-                    blended_probs[nonzero_rows] = blended_probs[nonzero_rows] / row_sums[nonzero_rows]
+                    blended_probs[nonzero_rows] = (
+                        blended_probs[nonzero_rows] / row_sums[nonzero_rows]
+                    )
 
                 blended_pred = blended_probs.argmax(axis=1)
 
                 draw_f1 = float(
-                    f1_score(seg_y_true, blended_pred, labels=[DRAW_CLASS], average="macro", zero_division=0)
+                    f1_score(
+                        seg_y_true,
+                        blended_pred,
+                        labels=[DRAW_CLASS],
+                        average="macro",
+                        zero_division=0,
+                    )
                 )
 
                 if draw_f1 > best_draw_f1:

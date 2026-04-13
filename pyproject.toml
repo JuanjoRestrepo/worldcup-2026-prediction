@@ -67,6 +67,8 @@ select = [
 ]
 ignore = [
   "E501",   # line too long — formatter handles wrapping; long strings in Field() descriptions are acceptable
+  "S608",   # possible SQL injection
+  "E402",   # module level import not at top of file
   "N803",   # argument name should be lowercase (conflicts with X in sklearn)
   "N806",   # variable in function should be lowercase (conflicts with X in sklearn)
   "S101",   # assert used in tests — pytest relies on assert

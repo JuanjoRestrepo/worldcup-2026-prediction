@@ -20,8 +20,8 @@ def test_load_latest_training_run_summary_with_source_prefers_dbt(monkeypatch):
         lambda: pytest.fail("raw postgres fallback should not be used"),
     )
 
-    training_run, active_source = serving_store.load_latest_training_run_summary_with_source(
-        source="auto"
+    training_run, active_source = (
+        serving_store.load_latest_training_run_summary_with_source(source="auto")
     )
 
     assert active_source == "dbt_latest_training_run"
@@ -42,8 +42,8 @@ def test_load_latest_training_run_summary_with_source_falls_back_to_postgres(
         lambda: {"artifact_path": "models/raw.joblib"},
     )
 
-    training_run, active_source = serving_store.load_latest_training_run_summary_with_source(
-        source="auto"
+    training_run, active_source = (
+        serving_store.load_latest_training_run_summary_with_source(source="auto")
     )
 
     assert active_source == "postgres_training_runs"
@@ -56,7 +56,10 @@ def test_load_team_snapshots_as_of_date_from_dbt_returns_historical_source(monke
             "snapshot_date": ["2025-11-15", "2025-11-15"],
             "team": ["United States", "Argentina"],
             "team_role": ["overall", "overall"],
-            "persisted_at_utc": ["2026-04-02T00:00:00+00:00", "2026-04-02T00:00:00+00:00"],
+            "persisted_at_utc": [
+                "2026-04-02T00:00:00+00:00",
+                "2026-04-02T00:00:00+00:00",
+            ],
         }
     )
     monkeypatch.setattr(serving_store, "_read_relation", lambda query: sample_df.copy())

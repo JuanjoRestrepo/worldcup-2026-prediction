@@ -82,6 +82,7 @@ def test_predict_match_outcome_supports_models_without_named_steps(monkeypatch):
     assert result["class_probabilities"]["home_win"] == 0.55
     assert result["feature_source"] == "dbt_latest_team_snapshots"
 
+
 class _WrappedShadowModel:
     classes_ = np.array([0, 1, 2], dtype=np.int64)
 
@@ -103,6 +104,7 @@ class _WrappedShadowModel:
     @property
     def specialist_model_(self):
         return self
+
 
 def test_predict_match_outcome_shadow_deployment(monkeypatch):
     def mock_load_model_bundle(artifact_path=None):
@@ -134,13 +136,16 @@ def test_predict_match_outcome_shadow_deployment(monkeypatch):
         }
 
     monkeypatch.setattr(predict_module, "load_model_bundle", mock_load_model_bundle)
-    
+
     import pathlib
+
     original_exists = pathlib.Path.exists
+
     def mock_exists(self):
         if "shadow.joblib" in str(self):
             return True
         return original_exists(self)
+
     monkeypatch.setattr(pathlib.Path, "exists", mock_exists)
 
     monkeypatch.setattr(
@@ -163,7 +168,9 @@ def test_predict_match_outcome_shadow_deployment(monkeypatch):
                 "opponent_elo_form": [15.0] * 4,
                 "elo_form": [20.0] * 4,
                 "home_advantage_effect": [0.0] * 4,
-                "persisted_at_utc": pd.to_datetime(["2026-01-03T00:00:00Z"] * 4, utc=True),
+                "persisted_at_utc": pd.to_datetime(
+                    ["2026-01-03T00:00:00Z"] * 4, utc=True
+                ),
             }
         ),
     )

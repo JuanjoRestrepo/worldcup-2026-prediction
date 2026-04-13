@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 import pytest
@@ -18,8 +18,8 @@ def inference_logger(engine_fixture):
 
 def test_log_prediction(inference_logger):
     """Test que una predicción se loguea correctamente."""
-    timestamp = datetime.now(timezone.utc)
-    
+    timestamp = datetime.now(UTC)
+
     inference_logger.log_prediction(
         home_team="Brazil",
         away_team="Argentina",
@@ -32,10 +32,10 @@ def test_log_prediction(inference_logger):
         feature_source="dbt_latest_team_snapshots",
         model_artifact_path="/models/match_predictor.joblib",
         model_version="v1.0",
-        requested_match_date=datetime(2026, 6, 12, tzinfo=timezone.utc).date(),
+        requested_match_date=datetime(2026, 6, 12, tzinfo=UTC).date(),
         request_timestamp_utc=timestamp,
     )
-    
+
     # Verify log was persisted
     stats = inference_logger.get_inference_statistics(hours=1)
     assert stats["status"] == "ok"
@@ -63,9 +63,9 @@ def test_get_recent_inferences(inference_logger):
         feature_snapshot_dates={"France": "2026-04-01", "England": "2026-04-01"},
         feature_source="dbt_latest_team_snapshots",
         model_artifact_path="/models/match_predictor.joblib",
-        request_timestamp_utc=datetime.now(timezone.utc),
+        request_timestamp_utc=datetime.now(UTC),
     )
-    
+
     # Retrieve recent inferences
     recent = inference_logger.get_recent_inferences(limit=10)
     assert isinstance(recent, list)
@@ -92,8 +92,8 @@ def test_log_prediction_includes_requested_match_date(monkeypatch):
         feature_snapshot_dates={"home_team": "2025-11-15", "away_team": "2025-11-16"},
         feature_source="dbt_team_snapshots_as_of_date",
         model_artifact_path="/models/match_predictor.joblib",
-        requested_match_date=datetime(2025, 11, 18, tzinfo=timezone.utc).date(),
-        request_timestamp_utc=datetime.now(timezone.utc),
+        requested_match_date=datetime(2025, 11, 18, tzinfo=UTC).date(),
+        request_timestamp_utc=datetime.now(UTC),
     )
 
     assert captured["frame"].loc[0, "requested_match_date"] == "2025-11-18"
@@ -148,8 +148,8 @@ def test_log_prediction_with_none_tournament(inference_logger):
         feature_snapshot_dates={"Germany": "2026-04-01", "Italy": "2026-04-01"},
         feature_source="postgres_training_runs",
         model_artifact_path="/models/match_predictor.joblib",
-        request_timestamp_utc=datetime.now(timezone.utc),
+        request_timestamp_utc=datetime.now(UTC),
     )
-    
+
     stats = inference_logger.get_inference_statistics(hours=1)
     assert stats["status"] in ["ok", "no_data"]

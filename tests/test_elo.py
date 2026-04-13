@@ -1,11 +1,12 @@
 """Unit tests for ELO rating module."""
 
 import pandas as pd
+
 from src.processing.transformers.elo import (
     INITIAL_ELO,
+    compute_elo,
     expected_score,
     update_elo,
-    compute_elo,
 )
 
 
@@ -49,25 +50,27 @@ def test_update_elo_draw():
 
 def test_compute_elo_basic():
     """Test compute_elo with a simple dataset."""
-    df = pd.DataFrame({
-        "date": pd.date_range("2023-01-01", periods=3),
-        "homeTeam": ["Brazil", "Brazil", "Argentina"],
-        "awayTeam": ["Argentina", "Uruguay", "Brazil"],
-        "homeGoals": [2, 1, 0],
-        "awayGoals": [0, 2, 1],
-    })
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2023-01-01", periods=3),
+            "homeTeam": ["Brazil", "Brazil", "Argentina"],
+            "awayTeam": ["Argentina", "Uruguay", "Brazil"],
+            "homeGoals": [2, 1, 0],
+            "awayGoals": [0, 2, 1],
+        }
+    )
 
     result = compute_elo(df)
-    
+
     # Check that ELO columns are added
     assert "elo_home" in result.columns
     assert "elo_away" in result.columns
     assert "elo_diff" in result.columns
-    
+
     # Check that first row has initial ELO
     assert result.loc[0, "elo_home"] == INITIAL_ELO
     assert result.loc[0, "elo_away"] == INITIAL_ELO
-    
+
     # Check that ELO values are reasonable
     assert result["elo_home"].min() > 1000
     assert result["elo_home"].max() < 2000
@@ -77,23 +80,29 @@ def test_compute_elo_basic():
 
 def test_compute_elo_consistency():
     """Test that ELO is computed consistently with expected behavior."""
-    df = pd.DataFrame({
-        "date": pd.date_range("2023-01-01", periods=5),
-        "homeTeam": ["A", "A", "A", "B", "B"],
-        "awayTeam": ["B", "C", "D", "A", "C"],
-        "homeGoals": [2, 1, 3, 0, 2],
-        "awayGoals": [1, 1, 0, 2, 0],
-    })
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2023-01-01", periods=5),
+            "homeTeam": ["A", "A", "A", "B", "B"],
+            "awayTeam": ["B", "C", "D", "A", "C"],
+            "homeGoals": [2, 1, 3, 0, 2],
+            "awayGoals": [1, 1, 0, 2, 0],
+        }
+    )
 
     result = compute_elo(df)
-    
+
     # Team A should have higher ELO after winning most matches
-    final_elo_a = result.loc[result["homeTeam"] == "A", "elo_home"].iloc[-1] if len(result[result["homeTeam"] == "A"]) > 0 else None
+    final_elo_a = (
+        result.loc[result["homeTeam"] == "A", "elo_home"].iloc[-1]
+        if len(result[result["homeTeam"] == "A"]) > 0
+        else None
+    )
     initial_elo = INITIAL_ELO
-    
+
     if final_elo_a:
         # A won multiple games, should have ELO increase
         assert final_elo_a > initial_elo or final_elo_a == initial_elo
-    
+
     # Check elo_diff is calculated correctly
     assert (result["elo_diff"] == result["elo_home"] - result["elo_away"]).all()

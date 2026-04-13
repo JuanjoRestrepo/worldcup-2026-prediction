@@ -145,9 +145,7 @@ class TestCandidateSpecsContainSegmentAware:
             "seg_hybrid_balanced",
             "seg_hybrid_narrow_band",
         }
-        actual_seg_names = {
-            name for name in specs if name.startswith("seg_hybrid_")
-        }
+        actual_seg_names = {name for name in specs if name.startswith("seg_hybrid_")}
         assert actual_seg_names == expected_names
 
     def test_segment_aware_family_label(self) -> None:
@@ -279,9 +277,9 @@ class TestMetadataPassThrough:
         self, synthetic_train_df: pd.DataFrame
     ) -> None:
         """Non-segment candidates should work unchanged with metadata_columns=None."""
+        from sklearn.impute import SimpleImputer
         from sklearn.linear_model import LogisticRegression
         from sklearn.pipeline import Pipeline
-        from sklearn.impute import SimpleImputer
         from sklearn.preprocessing import StandardScaler
 
         pipeline = Pipeline(

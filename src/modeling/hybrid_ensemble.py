@@ -71,7 +71,7 @@ class HybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):
         X: pd.DataFrame,
         y: pd.Series,
         sample_weight: NDArray[np.float64] | None = None,
-    ) -> "HybridDrawOverrideEnsemble":
+    ) -> HybridDrawOverrideEnsemble:
         if not 0.0 < self.uncertainty_threshold < 1.0:
             raise ValueError("uncertainty_threshold must be between 0 and 1.")
         if not 0.0 < self.draw_conviction_threshold < 1.0:

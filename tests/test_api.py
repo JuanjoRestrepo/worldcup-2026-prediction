@@ -38,7 +38,9 @@ def test_predict_endpoint_returns_active_feature_source(monkeypatch):
             },
             "neutral": kwargs["neutral"],
             "tournament": kwargs["tournament"],
-            "match_date": kwargs["match_date"].isoformat() if kwargs["match_date"] else None,
+            "match_date": kwargs["match_date"].isoformat()
+            if kwargs["match_date"]
+            else None,
             "feature_snapshot_dates": {
                 "home_team": "2026-03-25",
                 "away_team": "2026-03-26",
@@ -56,7 +58,11 @@ def test_predict_endpoint_returns_active_feature_source(monkeypatch):
     monkeypatch.setattr(
         api_main,
         "validate_feature_freshness",
-        lambda feature_dates, max_age_days: {"is_fresh": True, "warning": None, "age_days": {}},
+        lambda feature_dates, max_age_days: {
+            "is_fresh": True,
+            "warning": None,
+            "age_days": {},
+        },
     )
 
     response = api_main.predict(

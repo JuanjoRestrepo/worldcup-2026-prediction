@@ -124,7 +124,7 @@ class SegmentAwareHybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):
         X: pd.DataFrame,
         y: pd.Series,
         sample_weight: NDArray[np.float64] | None = None,
-    ) -> "SegmentAwareHybridDrawOverrideEnsemble":
+    ) -> SegmentAwareHybridDrawOverrideEnsemble:
         """Fit both generalist and specialist models."""
         if not 0.0 <= self.default_uncertainty_threshold <= 1.0:
             raise ValueError("default_uncertainty_threshold must be between 0 and 1.")

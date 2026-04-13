@@ -19,10 +19,10 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 INITIAL_ELO: float = 1500.0
-ELO_MEAN: float = 1500.0          # Global mean for regression target
+ELO_MEAN: float = 1500.0  # Global mean for regression target
 K_FACTOR: float = 20.0
-ELO_DECAY_FACTOR: float = 0.97    # Per-90-day decay multiplier
-ELO_DECAY_PERIOD_DAYS: int = 90   # Decay reference period (≈ one international window)
+ELO_DECAY_FACTOR: float = 0.97  # Per-90-day decay multiplier
+ELO_DECAY_PERIOD_DAYS: int = 90  # Decay reference period (≈ one international window)
 
 
 def expected_score(rating_a: float, rating_b: float) -> float:
@@ -70,7 +70,7 @@ def _apply_inactivity_decay(
     if days_since_last_match <= 0:
         return rating
     periods = days_since_last_match / ELO_DECAY_PERIOD_DAYS
-    decay_multiplier = ELO_DECAY_FACTOR ** periods
+    decay_multiplier = ELO_DECAY_FACTOR**periods
     return ELO_MEAN + (rating - ELO_MEAN) * decay_multiplier
 
 

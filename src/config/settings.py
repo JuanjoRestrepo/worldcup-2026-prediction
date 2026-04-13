@@ -31,22 +31,28 @@ class Settings:
             "yes",
             "on",
         }
-        self.PREDICTION_FEATURE_SOURCE: str = os.getenv(
-            "PREDICTION_FEATURE_SOURCE",
-            "auto",
-        ).strip().lower()
+        self.PREDICTION_FEATURE_SOURCE: str = (
+            os.getenv(
+                "PREDICTION_FEATURE_SOURCE",
+                "auto",
+            )
+            .strip()
+            .lower()
+        )
         if self.PREDICTION_FEATURE_SOURCE not in {"auto", "dbt", "postgres", "csv"}:
             raise ValueError(
                 "PREDICTION_FEATURE_SOURCE must be one of: auto, dbt, postgres, csv."
             )
-        self.MONITORING_SOURCE: str = os.getenv(
-            "MONITORING_SOURCE",
-            "auto",
-        ).strip().lower()
-        if self.MONITORING_SOURCE not in {"auto", "dbt", "postgres"}:
-            raise ValueError(
-                "MONITORING_SOURCE must be one of: auto, dbt, postgres."
+        self.MONITORING_SOURCE: str = (
+            os.getenv(
+                "MONITORING_SOURCE",
+                "auto",
             )
+            .strip()
+            .lower()
+        )
+        if self.MONITORING_SOURCE not in {"auto", "dbt", "postgres"}:
+            raise ValueError("MONITORING_SOURCE must be one of: auto, dbt, postgres.")
 
         self.FOOTBALL_API_KEY: str | None = os.getenv("FOOTBALL_API_KEY")
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")

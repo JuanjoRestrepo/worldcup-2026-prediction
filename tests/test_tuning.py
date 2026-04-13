@@ -2,9 +2,7 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
-from src.modeling.hybrid_ensemble_segment_aware import SegmentConfig
 from src.modeling.tuning import auto_tune_segment_thresholds
 
 
@@ -12,10 +10,10 @@ class MockEstimator:
     def __init__(self, probabilities: np.ndarray, classes: np.ndarray):
         self.probabilities = probabilities
         self.classes_ = classes
-        
+
     def get_params(self, deep=True):
         return {"probabilities": self.probabilities, "classes": self.classes_}
-        
+
     def fit(self, X, y, sample_weight=None):
         return self
 
@@ -29,7 +27,7 @@ def test_auto_tune_segment_thresholds_fallback():
     n_samples = 100
     X = pd.DataFrame({"dummy": np.arange(n_samples)})
     y_encoded = pd.Series(np.zeros(n_samples, dtype=int))  # All 0
-    
+
     metadata_df = pd.DataFrame({"tournament": ["FIFA World Cup"] * n_samples})
 
     def segment_detector_fn(row):
@@ -74,12 +72,12 @@ def test_auto_tune_segment_thresholds_improves():
     # specialist draw predictions explicitly increases F1 Draw without destroying log loss.
     n_samples = 30
     X = pd.DataFrame({"dummy": np.arange(n_samples)})
-    
+
     # 20 samples class 0, 10 samples class 1 (Draw)
     y_arr = np.zeros(n_samples, dtype=int)
-    y_arr[20:] = 1 
+    y_arr[20:] = 1
     y_encoded = pd.Series(y_arr)
-    
+
     metadata_df = pd.DataFrame({"tournament": ["Friendly"] * n_samples})
 
     def segment_detector_fn(row):
@@ -87,22 +85,22 @@ def test_auto_tune_segment_thresholds_improves():
 
     gen_probs = np.zeros((n_samples, 3))
     spec_probs = np.zeros((n_samples, 3))
-    
+
     # First 20: Generalist perfectly confident & correct
     gen_probs[:20, 0] = 0.9
     gen_probs[:20, 1] = 0.05
     gen_probs[:20, 2] = 0.05
-    
+
     # Last 10: Generalist is UNCERTAIN (0.45) but predicts class 0
     gen_probs[20:, 0] = 0.45
     gen_probs[20:, 1] = 0.35  # Misses the draw
     gen_probs[20:, 2] = 0.20
-    
+
     # Specialist correctly detects draw for the uncertain cases with conviction > 0.50
     spec_probs[20:, 0] = 0.1
     spec_probs[20:, 1] = 0.60
     spec_probs[20:, 2] = 0.3
-    
+
     # Make sure specialist is ignored for the confident cases just in case
     spec_probs[:20] = gen_probs[:20]
 
@@ -122,7 +120,7 @@ def test_auto_tune_segment_thresholds_improves():
         specialist_pipeline=spec_estimator,
         specialist_sample_weight_fn=weight_fn,
         n_splits=3,
-        max_log_loss_degradation=0.5, # Allow large degradation for the sake of the test
+        max_log_loss_degradation=0.5,  # Allow large degradation for the sake of the test
     )
 
     assert "friendlies" in tuned_configs

@@ -15,9 +15,9 @@ from sklearn.metrics import (
     balanced_accuracy_score,
     classification_report,
     cohen_kappa_score,
+    f1_score,
     log_loss,
     matthews_corrcoef,
-    f1_score,
 )
 from sklearn.model_selection import TimeSeriesSplit
 
@@ -106,7 +106,9 @@ def predict_proba_aligned(
     except ValueError:
         return raw_probabilities
 
-    aligned = np.zeros((raw_probabilities.shape[0], len(ENCODED_CLASS_ORDER)), dtype=np.float64)
+    aligned = np.zeros(
+        (raw_probabilities.shape[0], len(ENCODED_CLASS_ORDER)), dtype=np.float64
+    )
     for column_index, class_label in enumerate(estimator_classes):
         class_position = int(np.where(ENCODED_CLASS_ORDER == int(class_label))[0][0])
         aligned[:, class_position] = raw_probabilities[:, column_index]
@@ -136,7 +138,7 @@ def _expected_calibration_error(
 
     bin_edges = np.linspace(0.0, 1.0, bins + 1)
     ece = 0.0
-    for lower, upper in zip(bin_edges[:-1], bin_edges[1:]):
+    for lower, upper in zip(bin_edges[:-1], bin_edges[1:], strict=False):
         if upper == 1.0:
             mask = (confidences >= lower) & (confidences <= upper)
         else:
@@ -171,12 +173,8 @@ def evaluate_multiclass_predictions(
         "weighted_f1": float(
             f1_score(y_true_array, y_pred_array, average="weighted", zero_division=0)
         ),
-        "balanced_accuracy": float(
-            balanced_accuracy_score(y_true_array, y_pred_array)
-        ),
-        "matthews_corrcoef": float(
-            matthews_corrcoef(y_true_array, y_pred_array)
-        ),
+        "balanced_accuracy": float(balanced_accuracy_score(y_true_array, y_pred_array)),
+        "matthews_corrcoef": float(matthews_corrcoef(y_true_array, y_pred_array)),
         "cohen_kappa": float(cohen_kappa_score(y_true_array, y_pred_array)),
         "log_loss": float(
             log_loss(y_true_encoded_array, probabilities, labels=[0, 1, 2])
@@ -279,8 +277,7 @@ def select_deployment_variant(
             and draw_recall_delta >= -max_draw_recall_drop
         )
         improves_probability_quality = (
-            log_loss_improvement >= min_log_loss_gain
-            or ece_improvement >= min_ece_gain
+            log_loss_improvement >= min_log_loss_gain or ece_improvement >= min_ece_gain
         )
         is_viable = variant_name == baseline_variant or (
             preserves_class_balance and improves_probability_quality
@@ -477,8 +474,7 @@ def evaluate_candidates_with_backtesting(
 
         metric_keys = PRIMARY_SELECTION_METRICS
         fold_metric_maps = [
-            cast(dict[str, object], fold["metrics"])
-            for fold in fold_results
+            cast(dict[str, object], fold["metrics"]) for fold in fold_results
         ]
         mean_metrics = {
             metric_name: float(
@@ -576,7 +572,11 @@ def evaluate_candidates_with_backtesting(
     ranking_lookup = ranking_frame.set_index("model_name").to_dict(orient="index")
     for summary in candidate_summaries:
         model_name = str(summary["model_name"])
-        summary["selection_rank"] = int(ranking_frame.index[ranking_frame["model_name"] == model_name][0] + 1)
-        summary["selection_score"] = float(ranking_lookup[model_name]["selection_score"])
+        summary["selection_rank"] = int(
+            ranking_frame.index[ranking_frame["model_name"] == model_name][0] + 1
+        )
+        summary["selection_score"] = float(
+            ranking_lookup[model_name]["selection_score"]
+        )
 
     return candidate_summaries, best_model_name

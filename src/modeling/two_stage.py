@@ -40,13 +40,15 @@ class TwoStageDrawClassifier(ClassifierMixin, BaseEstimator):
         X: pd.DataFrame,
         y: pd.Series,
         sample_weight: NDArray[np.float64] | None = None,
-    ) -> "TwoStageDrawClassifier":
+    ) -> TwoStageDrawClassifier:
         y_series = pd.Series(y, index=X.index, dtype="int64")
         is_draw = (y_series == 1).astype("int64")
         non_draw_mask = y_series != 1
 
         if not non_draw_mask.any():
-            raise ValueError("TwoStageDrawClassifier requires at least one non-draw sample.")
+            raise ValueError(
+                "TwoStageDrawClassifier requires at least one non-draw sample."
+            )
 
         self.stage1_model_ = clone(self.stage1_estimator)
         if sample_weight is None:
@@ -69,14 +71,24 @@ class TwoStageDrawClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba(self, X: pd.DataFrame) -> NDArray[np.float64]:
-        stage1_probabilities = cast(NDArray[np.float64], self.stage1_model_.predict_proba(X))
-        stage1_classes = cast(NDArray[np.int64], np.asarray(self.stage1_model_.classes_, dtype=np.int64))
+        stage1_probabilities = cast(
+            NDArray[np.float64], self.stage1_model_.predict_proba(X)
+        )
+        stage1_classes = cast(
+            NDArray[np.int64], np.asarray(self.stage1_model_.classes_, dtype=np.int64)
+        )
         draw_column = int(np.where(stage1_classes == 1)[0][0])
         draw_probability = stage1_probabilities[:, draw_column]
-        draw_probability = np.clip(draw_probability * self.draw_probability_scale, 0.0, 0.999)
+        draw_probability = np.clip(
+            draw_probability * self.draw_probability_scale, 0.0, 0.999
+        )
 
-        stage2_probabilities = cast(NDArray[np.float64], self.stage2_model_.predict_proba(X))
-        stage2_classes = cast(NDArray[np.int64], np.asarray(self.stage2_model_.classes_, dtype=np.int64))
+        stage2_probabilities = cast(
+            NDArray[np.float64], self.stage2_model_.predict_proba(X)
+        )
+        stage2_classes = cast(
+            NDArray[np.int64], np.asarray(self.stage2_model_.classes_, dtype=np.int64)
+        )
         away_column = int(np.where(stage2_classes == 0)[0][0])
         home_column = int(np.where(stage2_classes == 1)[0][0])
 

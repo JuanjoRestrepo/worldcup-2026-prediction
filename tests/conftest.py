@@ -1,4 +1,5 @@
 """Pytest configuration and fixtures."""
+
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -29,4 +30,3 @@ def engine_fixture() -> Iterator[Engine]:
         yield engine
     finally:
         engine.dispose()
-

@@ -2,6 +2,7 @@
 
 import json
 import logging
+
 import pandas as pd
 
 from src.config.settings import settings
@@ -14,21 +15,21 @@ API_DATA_DIR = settings.RAW_DIR
 def load_api_data() -> pd.DataFrame:
     """
     Load API JSON data files and convert to standardized DataFrame.
-    
+
     Returns:
         DataFrame with API match data (empty DataFrame if no files found)
     """
     api_files = list(API_DATA_DIR.glob("api_international_matches_*.json"))
-    
+
     if not api_files:
         logger.warning("⚠️  No API data files found in data/raw/")
         return pd.DataFrame()
-    
+
     all_matches = []
-    
+
     for api_file in api_files:
         try:
-            with open(api_file, "r") as f:
+            with open(api_file) as f:
                 data = json.load(f)
                 matches = data.get("matches", [])
                 all_matches.extend(matches)
@@ -36,11 +37,11 @@ def load_api_data() -> pd.DataFrame:
         except Exception as e:
             logger.error(f"❌ Error loading {api_file.name}: {str(e)}")
             continue
-    
+
     if not all_matches:
         logger.warning("⚠️  No matches found in API files")
         return pd.DataFrame()
-    
+
     # Convert API format to standardized DataFrame
     rows = []
     for match in all_matches:
@@ -56,9 +57,9 @@ def load_api_data() -> pd.DataFrame:
             "neutral": False,  # API doesn't explicitly provide neutral
         }
         rows.append(row)
-    
+
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"])
-    
+
     logger.info(f"✅ Converted API data: {len(df)} matches")
     return df

@@ -43,7 +43,14 @@ def test_build_segment_analysis_filters_small_groups():
     prediction_frame = pd.DataFrame(
         {
             "date": pd.date_range("2025-01-01", periods=6, freq="D"),
-            "competition_segment": ["Qualifier", "Qualifier", "Qualifier", "Friendly", "Friendly", "Other"],
+            "competition_segment": [
+                "Qualifier",
+                "Qualifier",
+                "Qualifier",
+                "Friendly",
+                "Friendly",
+                "Other",
+            ],
             "actual_outcome": [1, 0, -1, 1, 0, -1],
             "predicted_outcome": [1, 0, -1, 1, 1, -1],
             "away_win_probability": [0.1, 0.2, 0.7, 0.1, 0.2, 0.8],

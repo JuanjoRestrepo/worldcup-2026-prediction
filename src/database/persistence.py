@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 import pandas as pd
@@ -30,9 +30,7 @@ def ensure_schema(engine: Engine, schema_name: str) -> None:
     """Create a schema if it does not exist yet."""
     validated_schema = _validate_identifier(schema_name)
     with engine.begin() as connection:
-        connection.exec_driver_sql(
-            f'CREATE SCHEMA IF NOT EXISTS "{validated_schema}"'
-        )
+        connection.exec_driver_sql(f'CREATE SCHEMA IF NOT EXISTS "{validated_schema}"')
 
 
 def persist_dataframe(
@@ -56,7 +54,7 @@ def persist_dataframe(
 
     persisted_df = df.copy()
     persisted_df["pipeline_run_id"] = pipeline_run_id
-    persisted_df["persisted_at_utc"] = datetime.now(timezone.utc).isoformat()
+    persisted_df["persisted_at_utc"] = datetime.now(UTC).isoformat()
     validate_persisted_dataframe_contract(
         persisted_df,
         schema_name=validated_schema,
@@ -106,7 +104,7 @@ def build_training_run_frame(
             training_summary["class_distribution_test"]
         ),
         "classification_report_json": json.dumps(metrics["classification_report"]),
-        "trained_at_utc": datetime.now(timezone.utc).isoformat(),
+        "trained_at_utc": datetime.now(UTC).isoformat(),
     }
     return pd.DataFrame([row])
 

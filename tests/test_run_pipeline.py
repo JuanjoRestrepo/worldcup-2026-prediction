@@ -22,7 +22,9 @@ def test_run_full_pipeline_passes_db_persistence_flag(monkeypatch):
         }
         return pd.DataFrame({"col": [1, 2], "target_multiclass": [1, 0]})
 
-    def fake_training(*, data_path, artifact_path, test_size, persist_to_db, pipeline_run_id):
+    def fake_training(
+        *, data_path, artifact_path, test_size, persist_to_db, pipeline_run_id
+    ):
         calls["training"] = {
             "data_path": data_path,
             "artifact_path": artifact_path,

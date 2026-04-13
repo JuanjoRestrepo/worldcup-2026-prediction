@@ -12,7 +12,7 @@ def is_server_running(host="localhost", port=8000):
     try:
         with socket.create_connection((host, port), timeout=1):
             return True
-    except (socket.timeout, ConnectionRefusedError, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         return False
 
 

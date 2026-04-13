@@ -1,8 +1,8 @@
-import requests
-import time
 import logging
-from typing import Dict, Optional
+import time
 from datetime import datetime, timedelta
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class FootballAPIClient:
         self.retries = retries
         self.backoff = backoff
 
-    def _request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
+    def _request(self, endpoint: str, params: dict | None = None) -> dict:
         """
         Internal request handler with retry and rate limit handling.
         """
@@ -52,11 +52,15 @@ class FootballAPIClient:
 
                 # ⚠️ Rate limit (429) or Request limit reached (403)
                 if response.status_code in [429, 403]:
-                    wait_time = self.backoff * (2 ** attempt)  # Exponential backoff
+                    wait_time = self.backoff * (2**attempt)  # Exponential backoff
                     if response.status_code == 403:
-                        logger.warning(f"Request limit reached (403). Waiting {wait_time}s before retry...")
+                        logger.warning(
+                            f"Request limit reached (403). Waiting {wait_time}s before retry..."
+                        )
                     else:
-                        logger.warning(f"Rate limit hit (429). Waiting {wait_time}s before retry...")
+                        logger.warning(
+                            f"Rate limit hit (429). Waiting {wait_time}s before retry..."
+                        )
                     time.sleep(wait_time)
                     continue
 
@@ -64,7 +68,7 @@ class FootballAPIClient:
                 logger.warning(f"API error {response.status_code}: {response.text}")
 
             except requests.RequestException as e:
-                logger.error(f"Request failed (attempt {attempt+1}): {e}")
+                logger.error(f"Request failed (attempt {attempt + 1}): {e}")
 
             time.sleep(self.backoff)
 
@@ -72,13 +76,13 @@ class FootballAPIClient:
 
     def get_matches(
         self,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-        competition: Optional[str] = None,
-    ) -> Dict:
+        date_from: str | None = None,
+        date_to: str | None = None,
+        competition: str | None = None,
+    ) -> dict:
         """
         Fetch matches with optional filters.
-        
+
         Automatically handles date ranges exceeding 10 days by splitting into chunks.
 
         Args:
@@ -129,14 +133,16 @@ class FootballAPIClient:
             return data
 
         # Split into 10-day chunks and fetch all
-        logger.info(f"Date range ({date_diff} days) exceeds API limit ({MAX_DAYS} days). Splitting into chunks...")
-        
+        logger.info(
+            f"Date range ({date_diff} days) exceeds API limit ({MAX_DAYS} days). Splitting into chunks..."
+        )
+
         all_matches = []
         current_date = start_date
 
         while current_date < end_date:
             chunk_end = min(current_date + timedelta(days=MAX_DAYS), end_date)
-            
+
             chunk_from = current_date.strftime("%Y-%m-%d")
             chunk_to = chunk_end.strftime("%Y-%m-%d")
 
@@ -164,6 +170,8 @@ class FootballAPIClient:
         logger.info(f"Fetched total {len(all_matches)} matches from API")
 
         if len(all_matches) == 0:
-            logger.warning("API returned zero matches. Check your filters or API status.")
+            logger.warning(
+                "API returned zero matches. Check your filters or API status."
+            )
 
         return {"matches": all_matches}

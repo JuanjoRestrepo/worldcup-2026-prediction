@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any, cast
 
 import pandas as pd
@@ -34,7 +34,7 @@ def validate_feature_freshness(
     Returns:
         Dict with 'is_fresh' (bool), 'warning' (str or None), 'age_days' (dict)
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ages = {}
     warnings = []
     is_fresh = True
@@ -56,7 +56,10 @@ def validate_feature_freshness(
                 warnings.append(f"{feature_name}: {age_days} days old")
         except (ValueError, TypeError) as exc:
             logger.warning(
-                "Could not parse feature date for %s: %s (%s)", feature_name, date_str, exc
+                "Could not parse feature date for %s: %s (%s)",
+                feature_name,
+                date_str,
+                exc,
             )
 
     return {
@@ -119,7 +122,7 @@ class InferenceLogger:
                 "shadow_predicted_outcome VARCHAR(50)",
                 "shadow_class_probabilities_json JSONB",
                 "shadow_is_override_triggered BOOLEAN DEFAULT FALSE",
-                "shadow_model_name VARCHAR(255)"
+                "shadow_model_name VARCHAR(255)",
             ]
             for col_def in shadow_columns:
                 connection.exec_driver_sql(
@@ -176,7 +179,7 @@ class InferenceLogger:
             match_segment: Optional segment detected by ensemble (friendlies, worldcup, etc.)
             is_override_triggered: Optional flag indicating specialist override
         """
-        timestamp = request_timestamp_utc or datetime.now(timezone.utc)
+        timestamp = request_timestamp_utc or datetime.now(UTC)
 
         log_row = {
             "request_id": f"{home_team}_{away_team}_{timestamp.timestamp()}",
@@ -200,10 +203,12 @@ class InferenceLogger:
             "match_segment": match_segment,
             "is_override_triggered": is_override_triggered or False,
             "shadow_predicted_outcome": shadow_predicted_outcome,
-            "shadow_class_probabilities_json": json.dumps(shadow_class_probabilities) if shadow_class_probabilities else None,
+            "shadow_class_probabilities_json": json.dumps(shadow_class_probabilities)
+            if shadow_class_probabilities
+            else None,
             "shadow_is_override_triggered": shadow_is_override_triggered,
             "shadow_model_name": shadow_model_name,
-            "persisted_at_utc": datetime.now(timezone.utc).isoformat(),
+            "persisted_at_utc": datetime.now(UTC).isoformat(),
         }
 
         df = pd.DataFrame([log_row])
@@ -212,6 +217,7 @@ class InferenceLogger:
     def _persist_log(self, df: pd.DataFrame) -> None:
         """Persist a log DataFrame to PostgreSQL."""
         import os  # noqa: PLC0415
+
         if os.getenv("SKIP_INFERENCE_LOGGING") == "1":
             return
 
@@ -292,7 +298,7 @@ class InferenceLogger:
                     stats[key] = (
                         round(float(stats[key]), 4) if stats[key] is not None else None
                     )
-                    
+
             # Segment-level shadow performance
             segment_query = f"""
             SELECT 
@@ -308,7 +314,9 @@ class InferenceLogger:
             ORDER BY segment_inferences DESC
             """
             segment_df = pd.read_sql_query(segment_query, con=self.engine)
-            stats["segment_performance"] = segment_df.to_dict(orient="records") if not segment_df.empty else []
+            stats["segment_performance"] = (
+                segment_df.to_dict(orient="records") if not segment_df.empty else []
+            )
 
             return {
                 "status": "ok",
