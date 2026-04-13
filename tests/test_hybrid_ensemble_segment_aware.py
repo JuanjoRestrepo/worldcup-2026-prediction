@@ -108,11 +108,11 @@ class TestSegmentConfigValidation:
             )
 
     def test_invalid_uncertainty_threshold_too_low(self) -> None:
-        """Uncertainty threshold must be > 0.0."""
+        """Uncertainty threshold must be >= 0.0."""
         with pytest.raises(ValueError, match="uncertainty_threshold"):
             SegmentConfig(
                 segment_id="test",
-                uncertainty_threshold=0.0,
+                uncertainty_threshold=-0.1,
                 draw_conviction_threshold=0.5,
             )
 

@@ -100,11 +100,11 @@ def test_log_prediction_includes_requested_match_date(monkeypatch):
 
 
 def test_inference_statistics_query_uses_multiclass_labels(monkeypatch):
-    captured = {}
+    captured_queries = []
     inference_logger = InferenceLogger(engine=object())
 
     def fake_read_sql_query(query, con):
-        captured["query"] = query
+        captured_queries.append(query)
         return pd.DataFrame(
             [
                 {
@@ -130,8 +130,8 @@ def test_inference_statistics_query_uses_multiclass_labels(monkeypatch):
 
     stats = inference_logger.get_inference_statistics(hours=24)
 
-    assert "predicted_outcome = 'home_win'" in captured["query"]
-    assert "predicted_outcome = 'away_win'" in captured["query"]
+    assert any("predicted_outcome = 'home_win'" in q for q in captured_queries)
+    assert any("predicted_outcome = 'away_win'" in q for q in captured_queries)
     assert stats["statistics"]["away_wins_predicted"] == 1
 
 
