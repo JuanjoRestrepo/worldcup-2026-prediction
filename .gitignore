@@ -76,15 +76,7 @@ Thumbs.db
 postgres_data/
 db/
 
-# Data — gold layer (features CSV needed for offline inference on Render/free tier)
-# User specifically requested all data folders to be tracked since it's public data
-# data/processed/
-# data/interim/
-# data/raw/*.csv
-# data/raw/*.json
-# data/bronze/*
-# data/silver/*
-# data/gold/*
+# Models
 models/
 !models/.gitkeep
 !models/match_predictor.joblib
