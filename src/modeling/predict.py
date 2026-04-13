@@ -104,10 +104,7 @@ def _decode_probabilities(
 
     assert isinstance(feature_frame, DataFrame)  # noqa: S101
 
-    encoded_classes: list[int] = [
-        int(v)
-        for v in extract_estimator_classes(model)
-    ]
+    encoded_classes: list[int] = [int(v) for v in extract_estimator_classes(model)]
     probabilities: NDArray[np.float64] = predict_proba_aligned(
         model,
         feature_frame,
