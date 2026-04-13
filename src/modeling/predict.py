@@ -194,7 +194,7 @@ def predict_match_outcome(
                     team_snapshots_df=team_snapshots,
                 )
             )
-        except RuntimeError as exc:
+        except Exception as exc:
             if resolved_feature_source == "dbt":
                 raise RuntimeError(
                     "Failed to build serving features from dbt team snapshots."
