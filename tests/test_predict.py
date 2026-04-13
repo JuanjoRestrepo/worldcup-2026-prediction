@@ -20,7 +20,7 @@ class _WrappedModel:
 
 
 def test_predict_match_outcome_supports_models_without_named_steps(monkeypatch):
-    monkeypatch.setattr(settings, "PREDICTION_FEATURE_SOURCE", "postgres")
+    monkeypatch.setattr(settings, "PREDICTION_FEATURE_SOURCE", "dbt")
     monkeypatch.setattr(
         predict_module,
         "load_model_bundle",
@@ -109,7 +109,7 @@ class _WrappedShadowModel:
 
 
 def test_predict_match_outcome_shadow_deployment(monkeypatch):
-    monkeypatch.setattr(settings, "PREDICTION_FEATURE_SOURCE", "postgres")
+    monkeypatch.setattr(settings, "PREDICTION_FEATURE_SOURCE", "dbt")
 
     def mock_load_model_bundle(artifact_path=None):
         path_str = str(artifact_path)
