@@ -276,9 +276,9 @@ if predict_btn:
             fig.update_layout(
                 barmode="stack",
                 height=100,
-                margin=dict(l=0, r=0, t=0, b=0),
-                xaxis=dict(visible=False, range=[0, 100]),
-                yaxis=dict(visible=False),
+                margin={"l": 0, "r": 0, "t": 0, "b": 0},
+                xaxis={"visible": False, "range": [0, 100]},
+                yaxis={"visible": False},
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 showlegend=False,

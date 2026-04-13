@@ -77,18 +77,14 @@ postgres_data/
 db/
 
 # Data — gold layer (features CSV needed for offline inference on Render/free tier)
-data/processed/
-data/interim/
-data/raw/*.csv
-!data/raw/international_results.csv
-data/raw/*.json
-data/bronze/*
-!data/bronze/.gitkeep
-data/silver/*
-!data/silver/.gitkeep
-data/gold/*
-!data/gold/.gitkeep
-!data/gold/features_dataset.csv
+# User specifically requested all data folders to be tracked since it's public data
+# data/processed/
+# data/interim/
+# data/raw/*.csv
+# data/raw/*.json
+# data/bronze/*
+# data/silver/*
+# data/gold/*
 models/
 !models/.gitkeep
 !models/match_predictor.joblib

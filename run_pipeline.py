@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 
@@ -96,17 +96,19 @@ def run_full_pipeline(
         Dictionary summarizing executed stages, output paths, and timings.
     """
     settings.ensure_project_dirs()
-    pipeline_run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    pipeline_run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
     summary: dict[str, object] = {
         "pipeline_run_id": pipeline_run_id,
-        "started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "started_at_utc": datetime.now(UTC).isoformat(),
         "stages": {},
         "artifacts": {
             "raw_dir": str(settings.RAW_DIR),
             "bronze_dir": str(settings.BRONZE_DIR),
             "silver_path": str(settings.SILVER_DIR / "matches_cleaned.csv"),
-            "gold_path": str(gold_data_path or settings.GOLD_DIR / "features_dataset.csv"),
+            "gold_path": str(
+                gold_data_path or settings.GOLD_DIR / "features_dataset.csv"
+            ),
             "model_artifact_path": str(artifact_path or settings.MODEL_ARTIFACT_PATH),
         },
     }
@@ -186,7 +188,7 @@ def run_full_pipeline(
         logger.info("[Stage 3/3] Skipping training pipeline")
         summary["stages"]["training"] = {"status": "skipped"}
 
-    summary["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
+    summary["finished_at_utc"] = datetime.now(UTC).isoformat()
     logger.info("=" * 72)
     logger.info("PIPELINE COMPLETED SUCCESSFULLY")
     logger.info("=" * 72)

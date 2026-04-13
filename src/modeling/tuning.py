@@ -91,7 +91,7 @@ def auto_tune_segment_thresholds(
     unc_grid = np.arange(0.30, 0.65, 0.02)
     conv_grid = np.arange(0.40, 0.65, 0.02)
 
-    unique_segments = set(s for s in full_segments if s is not None)
+    unique_segments = {s for s in full_segments if s is not None}
     tuned_configs: dict[str, SegmentConfig] = {}
 
     for segment in sorted(unique_segments):
