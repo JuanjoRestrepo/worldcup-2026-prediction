@@ -2,16 +2,124 @@
 
 ## Table of Contents
 
-0. [Environment Setup (uv + pyproject.toml)](#environment)
-1. [Pandas / Polars Pipeline](#pandas-polars)
-2. [PySpark Pipeline](#pyspark)
-3. [dbt Model Pattern](#dbt)
-4. [Airflow DAG Template](#airflow)
-5. [Data Validation with Pandera / Great Expectations](#validation)
+0. [PySpark vs. dbt — Architectural Decision Guide](#decision-guide)
+1. [Environment Setup (uv + pyproject.toml)](#environment)
+2. [Pandas / Polars Pipeline](#pandas-polars)
+3. [PySpark Pipeline](#pyspark)
+4. [dbt Model Pattern](#dbt)
+5. [Airflow DAG Template](#airflow)
+6. [Data Validation with Pandera / Great Expectations](#validation)
 
 ---
 
-## 0. Environment Setup (uv + pyproject.toml) {#environment}
+## 0. PySpark vs. dbt — Architectural Decision Guide {#decision-guide}
+
+> **Core premise**: PySpark and dbt are not competing tools — they solve fundamentally
+> different problems at different layers of the data architecture. The engineering decision
+> is not _which one_, but _which one at which layer_, and whether the project warrants both.
+
+### Strengths & Failure Modes
+
+| Dimension             | PySpark                                                                  | dbt                                                                        |
+| --------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **Primary layer**     | Ingestion, raw processing, Data Lake                                     | Transformation, modeling, Data Warehouse                                   |
+| **Data scale**        | Petabyte-scale distributed processing                                    | GB → low-TB structured data in a Warehouse                                 |
+| **Data structure**    | Raw, semi-structured, unstructured, nested JSON, images, text, streaming | Clean, structured, relational data already in the Warehouse                |
+| **Execution engine**  | Distributed cluster (YARN, Kubernetes, Databricks)                       | Delegates to the Warehouse engine (Snowflake, BigQuery, Redshift)          |
+| **Streaming**         | Native (Structured Streaming, Kafka integration)                         | Not designed for streaming or near-real-time                               |
+| **Complex joins**     | Handles multi-TB joins via partitioning and broadcast                    | Struggles with massive cross-table scans — saturates the Warehouse         |
+| **Business logic**    | Low-level; verbose for pure SQL transformations                          | First-class SQL + Jinja; ideal for business rules, metrics, and Data Marts |
+| **Testing & lineage** | Manual; requires custom test harness                                     | Built-in: `dbt test`, DAG lineage, documentation auto-generation           |
+| **Team profile**      | Data engineers, ML engineers (Python/Scala)                              | Analytics engineers, data analysts (SQL-first)                             |
+
+### Data Volume Decision Thresholds
+
+| Zone                     | Data Range                                                     | Recommendation                                                         |
+| ------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 🟢 **dbt Sweet Spot**    | GBs → a few TBs of clean, structured data                      | dbt only — incremental models, warehouse-native execution              |
+| 🟡 **Warning Zone**      | Multi-TB joins, full-table scans, unoptimized models           | Audit dbt model design; consider pre-aggregating with PySpark upstream |
+| 🔴 **PySpark Territory** | Raw TB → PB scale; semi/unstructured; queries exceeding 30 min | PySpark for ingestion and heavy lifting; dbt for downstream modeling   |
+
+**Rule of thumb**: If your dbt model scans billions of rows on every run, you are not
+scaling — you are surviving. Move that computation upstream to PySpark.
+
+### Project-Context Decision Matrix
+
+Apply this logic when assessing a new project or pipeline:
+
+```
+1. Where does the data live?
+   ├── Raw files (S3, GCS, ADLS, HDFS) at scale → PySpark
+   └── Already in a Warehouse (Snowflake, BigQuery, Redshift) → dbt
+
+2. What is the data volume?
+   ├── < a few TBs, structured → dbt
+   └── Multi-TB, raw, or growing rapidly → PySpark → then dbt
+
+3. What is the transformation complexity?
+   ├── Business logic, aggregations, joins on clean data → dbt
+   ├── Heavy parsing, nested JSON flattening, regex, NLP → PySpark
+   └── ML feature engineering at scale → PySpark (or Spark MLlib)
+
+4. Does the pipeline require real-time or near-real-time processing?
+   ├── YES → PySpark Structured Streaming + Kafka (dbt is not viable)
+   └── NO  → Batch pipeline; evaluate volume to choose dbt vs. PySpark
+
+5. Who owns and maintains the pipeline?
+   ├── Data / ML engineering team → PySpark (Python-native, code-first)
+   └── Analytics engineering / SQL-first team → dbt
+```
+
+### Recommended Production Architecture — Combined Pattern
+
+For scalable production pipelines, enforce a strict separation of concerns across layers:
+
+```
+Raw Sources
+    │
+    ▼
+[Bronze Layer]  ← PySpark
+    Raw ingestion, schema inference, format conversion (Parquet/Delta),
+    deduplication, initial quality checks. Output to Data Lake.
+    │
+    ▼
+[Silver Layer]  ← PySpark
+    Heavy transformations: unnesting, joining large datasets, cleaning,
+    ML feature engineering. Output clean, typed tables to the Warehouse.
+    │
+    ▼
+[Gold Layer]    ← dbt
+    Business logic, metric definitions, Data Mart modeling,
+    aggregations, BI-ready tables. Consumed by dashboards and reports.
+    │
+    ▼
+BI / Analytics / ML Feature Store
+```
+
+**Orchestration**: Airflow (or Prefect/Dagster) coordinates the full flow —
+PySpark jobs run first, dbt models run after warehouse load completes.
+
+**Data flow summary**:
+`Data Sources → Data Lake [PySpark] → Warehouse [PySpark load] → dbt transforms → BI / Analytics`
+
+### When to Use Only One Tool
+
+**dbt only** — appropriate when:
+
+- All source data already resides in a mature Warehouse
+- Data volumes are manageable within Warehouse compute budgets
+- The team is SQL-first with no distributed compute infrastructure
+- The project is analytics-focused: reporting, dashboards, Data Marts
+
+**PySpark only** — appropriate when:
+
+- The project is a pure Data Lake / Lakehouse architecture (no Warehouse)
+- All transformations are engineering-heavy (streaming, ML pipelines, unstructured data)
+- The output is consumed directly by ML models or operational systems, not BI tools
+
+---
+
+## 1. Environment Setup (uv + pyproject.toml) {#environment}
 
 All data engineering projects use `uv` for environment and dependency management.
 Never use `pip`, `conda`, or `requirements.txt`.
