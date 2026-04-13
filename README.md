@@ -35,7 +35,9 @@ Built with professional Data Engineering and MLOps practices, the project featur
 - **Draw Specialist**: A secondary binary classifier explicitly trained to correct the habitual under-prediction of ties in classic multinomial logistic environments.
 - **Dynamic Routing**: An inference router that activates the Draw Specialist exclusively when the prediction uncertainty (difference between Home vs Away win probabilities) crosses a calculated threshold.
 
-### 3. MLOps & Observability
+### 3. MLOps, CI/CD & Observability
+- **Automated Retraining**: A GitHub Actions workflow (`retrain.yml`) handles end-to-end model retraining monthly. It fetches real-time updates from `martj42/international_results`, preventing data staleness heading into the summer of 2026.
+- **Promotion Gate (Champion vs. Challenger)**: Models are never blindly promoted. Retrained "Challenger" artifacts are objectively scored against the current "Champion" model via `reporting_comparison.py`. Only models that actively improve Log-Loss and Macro F1 are deployed; regressions are hard-rejected and archived securely. See our generated [MLOps Walkthrough](MLOps_walkthrough.md) and [Comparison Report](models/model_comparison_report.md) for live examples.
 - **Shadow Modeling**: The API runs an experimental model alongside the production model in real-time, capturing telemetry for A/B offline comparison without impacting end-user predictions.
 - **Inference Logging**: Predictions and feature snapshots are persisted to a PostgreSQL database for continuous drift monitoring.
 
