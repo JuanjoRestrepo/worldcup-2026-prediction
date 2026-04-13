@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-import run_dbt
+from scripts import run_dbt
 
 
 def test_ensure_profiles_file_copies_example(monkeypatch):
