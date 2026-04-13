@@ -9,7 +9,8 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-# Install only production dependencies (no dev group)
+# We install exactly the same virtual environment using the lockfile to ensure uniformity
+# However, this microservice will only launch the Streamlit frontend.
 RUN uv sync --no-dev --frozen --no-cache
 
 # ─────────────────────────────────────────────────────────
@@ -18,27 +19,22 @@ FROM python:3.12-slim AS runner
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV API_HOST=0.0.0.0
-ENV API_PORT=8000
 
-# Create non-root user for security (DevOps best practice)
 RUN groupadd --system appgroup && useradd --system --gid appgroup --no-create-home appuser
 
 WORKDIR /app
 
-# Copy installed packages from builder
 COPY --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy source code
-COPY src ./src
+COPY src/frontend ./src/frontend
+COPY src/__init__.py ./src/__init__.py
+COPY .streamlit ./.streamlit
 
-# Data and models are mounted via docker-compose volumes (not baked in)
-RUN mkdir -p /app/data /app/models && chown -R appuser:appgroup /app
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8501
 
-# Use gunicorn with Uvicorn workers for production concurrency
-CMD ["sh", "-c", "gunicorn src.api.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind ${API_HOST:-0.0.0.0}:${API_PORT:-8000}"]
+CMD ["sh", "-c", "streamlit run src/frontend/app.py --server.port=8501 --server.address=0.0.0.0"]

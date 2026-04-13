@@ -50,5 +50,19 @@ services:
       - ./data:/app/data:ro
       - ./models:/app/models:ro
 
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_URL: http://api:8000
+      ADMIN_API_KEY: "${ADMIN_API_KEY:-worldcup2026_super_secret_admin_key}"
+    ports:
+      - "8501:8501"
+
 volumes:
   postgres_data:
