@@ -240,7 +240,7 @@ if predict_btn:
                 showlegend=False,
                 bargap=0,
             )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
         # ── Advanced Analytics (collapsible) ─────────────────────────────
         with st.expander("📊 Advanced Analytics & Model Telemetry"):
@@ -262,7 +262,7 @@ if predict_btn:
             meta_cols[0].markdown(f"**Feature source:** `{result.get('feature_source', 'N/A')}`")
             meta_cols[1].markdown(f"**Segment:** `{result.get('match_segment', 'N/A')}`")
             meta_cols[0].markdown(f"**Specialist override:** `{result.get('is_override_triggered', False)}`")
-            meta_cols[1].markdown(f"**Model path:** `{result.get('model_artifact_path', 'N/A').split('/')[-1]}`")
+            meta_cols[1].markdown(f"**Model:** `{result.get('model_artifact_path', 'N/A').split(chr(92))[-1].split('/')[-1]}`")
 
             if result.get("shadow_predicted_outcome"):
                 st.markdown("#### 🕵️ Shadow Model Comparison")
