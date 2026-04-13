@@ -178,7 +178,8 @@ def load_historical_data(
         raise RuntimeError(f"Failed to parse CSV at {local_path}: {exc}") from exc
 
     pre_drop_len = len(df)
-    df = df.dropna(subset=["home_score", "away_score"])
+    if "home_score" in df.columns and "away_score" in df.columns:
+        df = df.dropna(subset=["home_score", "away_score"])
     dropped = pre_drop_len - len(df)
     if dropped > 0:
         logger.info(
