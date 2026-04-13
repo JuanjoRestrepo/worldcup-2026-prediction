@@ -86,7 +86,9 @@ class TestNetworkFallback:
 
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 2  # noqa: PLR2004 — local fixture rows
-        assert any("falling back" in record.message.lower() for record in caplog.records)
+        assert any(
+            "falling back" in record.message.lower() for record in caplog.records
+        )
 
     def test_falls_back_to_local_on_os_error(self, local_csv: Path) -> None:
         """An OSError (e.g. DNS failure) also triggers the local fallback."""
