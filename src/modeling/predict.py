@@ -7,7 +7,7 @@ import threading
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import joblib
 import numpy as np
@@ -83,8 +83,8 @@ def _is_shadow_primary() -> bool:
 
 
 def _decode_probabilities(
-    model: object,
-    feature_frame: object,
+    model: Any,
+    feature_frame: Any,
     encoded_to_outcome: dict[int, int],
     outcome_labels: dict[int, str],
 ) -> tuple[dict[str, float], str]:
@@ -106,11 +106,11 @@ def _decode_probabilities(
 
     encoded_classes: list[int] = [
         int(v)
-        for v in extract_estimator_classes(cast(object, model))  # type: ignore[arg-type]
+        for v in extract_estimator_classes(model)
     ]
     probabilities: NDArray[np.float64] = predict_proba_aligned(
-        cast(object, model),
-        feature_frame,  # type: ignore[arg-type]
+        model,
+        feature_frame,
     )[0]
 
     class_probabilities: dict[str, float] = {}
@@ -118,7 +118,7 @@ def _decode_probabilities(
         outcome = int(encoded_to_outcome[encoded_class])
         class_probabilities[outcome_labels[outcome]] = float(probability)
 
-    predicted_encoded = int(cast(object, model).predict(feature_frame)[0])  # type: ignore[union-attr]
+    predicted_encoded = int(model.predict(feature_frame)[0])
     predicted_outcome_label = outcome_labels[int(encoded_to_outcome[predicted_encoded])]
 
     return class_probabilities, predicted_outcome_label
@@ -232,7 +232,7 @@ def predict_match_outcome(
     class_probabilities, predicted_outcome_label = _decode_probabilities(
         model, feature_frame, encoded_to_outcome, outcome_labels
     )
-    predicted_encoded_raw = int(model.predict(feature_frame)[0])  # type: ignore[union-attr]
+    predicted_encoded_raw = int(model.predict(feature_frame)[0])
     predicted_outcome_int = int(encoded_to_outcome[predicted_encoded_raw])
 
     # ── Segment-aware telemetry ───────────────────────────────────────────────
@@ -264,14 +264,14 @@ def predict_match_outcome(
                 override_frame["tournament"] = tournament
                 gen_probs = predict_proba_aligned(
                     shadow_model.generalist_model_, feature_frame
-                )  # type: ignore[union-attr]
+                )
                 spec_probs = predict_proba_aligned(
                     shadow_model.specialist_model_, feature_frame
-                )  # type: ignore[union-attr]
+                )
                 shadow_is_override_triggered = bool(
                     shadow_model._compute_override_mask(
                         override_frame, gen_probs, spec_probs
-                    )[0]  # type: ignore[union-attr]
+                    )[0]
                 )
     except Exception as exc:
         logger.warning("Shadow inference failed — continuing without shadow: %s", exc)

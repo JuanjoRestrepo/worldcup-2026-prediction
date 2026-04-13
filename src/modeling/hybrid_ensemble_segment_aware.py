@@ -53,7 +53,7 @@ class SegmentConfig:
             raise ValueError(f"[{self.segment_id}] min_samples_for_override must be ≥1")
 
 
-class SegmentAwareHybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):
+class SegmentAwareHybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     _estimator_type = "classifier"
     """
     Segment-conditional draw override ensemble.
