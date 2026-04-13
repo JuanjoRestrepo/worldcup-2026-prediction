@@ -8,7 +8,8 @@ __pycache__
 *.pyd
 *.log
 .env
-data
-models
+# Allow gold data and models to be baked into the image
+# data (removed from ignore)
+# models (removed from ignore)
 tests
 *.ipynb
