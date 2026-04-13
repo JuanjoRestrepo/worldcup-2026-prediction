@@ -269,3 +269,34 @@ class TestPredictModuleImportLatency:
         assert elapsed < 1.0, (
             f"compute_elo (10k rows, decay=True) took {elapsed:.3f}s — too slow for training"
         )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ENSEMBLE CALIBRATION GUARD
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestEnsembleCalibrationGuard:
+    """Validate that custom rule-based ensembles bypass probability calibration.
+
+    Calibrating hybrid ensembles with isotonic or sigmoid methods native to sklearn
+    interferes with deliberately tuned segment probability thresholds.
+    """
+
+    def test_calibration_graceful_for_custom_ensembles(self) -> None:
+        """Ensure train.py logic evaluates custom ensembles as uncalibrated."""
+
+        # Verify that these specific families are in the protected list in train.py logic.
+        import inspect
+
+        from src.modeling.train import train_and_export_model
+
+        train_source = inspect.getsource(train_and_export_model)
+
+        assert '"segment_aware_hybrid"' in train_source, "Guard missing"
+        assert '"hybrid_draw_override_ensemble"' in train_source, "Guard missing"
+        assert '"two_stage_draw_classifier"' in train_source, "Guard missing"
+        assert "is_custom_ensemble =" in train_source, "Guard condition missing"
+        assert "Skipping calibration for custom ensemble family" in train_source, (
+            "Guard log missing"
+        )
