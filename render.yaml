@@ -65,3 +65,5 @@ services:
       # ── Data directory (maps to the baked-in /app/data inside the image) ──
       - key: DATA_DIR
         value: /app/data
+      - key: WEB_CONCURRENCY
+        value: "1"

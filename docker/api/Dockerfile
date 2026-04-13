@@ -21,8 +21,8 @@ ENV PYTHONUNBUFFERED=1
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8000
 
-# Create non-root user for security (DevOps best practice)
-RUN groupadd --system appgroup && useradd --system --gid appgroup --no-create-home appuser
+# Create non-root user with a home directory (Required by some Python libs/Gunicorn)
+RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 
 WORKDIR /app
 
@@ -43,5 +43,5 @@ USER appuser
 
 EXPOSE 8000
 
-# Use gunicorn with Uvicorn workers for production concurrency
-CMD ["sh", "-c", "gunicorn src.api.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind ${API_HOST:-0.0.0.0}:${API_PORT:-8000}"]
+# Use gunicorn with 1 worker to stay within Render Free Tier 512MB RAM limit
+CMD ["sh", "-c", "gunicorn src.api.main:app --workers ${WEB_CONCURRENCY:-1} --worker-class uvicorn.workers.UvicornWorker --bind ${API_HOST:-0.0.0.0}:${API_PORT:-8000}"]
