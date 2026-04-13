@@ -1,8 +1,15 @@
+"""FastAPI serving layer for World Cup 2026 match prediction."""
+
+from __future__ import annotations
+
 import logging
+import os
+import traceback
 from datetime import date
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from src.config.settings import settings
@@ -11,7 +18,7 @@ from src.modeling.inference_logger import (
     get_inference_logger,
     validate_feature_freshness,
 )
-from src.modeling.predict import predict_match_outcome
+from src.modeling.predict import predict_match_outcome, toggle_shadow_mode
 from src.modeling.serving_store import load_latest_training_run_summary_with_source
 from src.modeling.types import LatestTrainingRunSummary, PredictionResult
 
@@ -20,13 +27,46 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="World Cup 2026 Prediction API",
     version="0.1.0",
-    description="Serving layer scaffold for match prediction workflows.",
+    description=(
+        "Production-grade MLOps serving layer for football match outcome prediction. "
+        "Features: segment-aware hybrid ensemble, shadow deployment, inference telemetry, "
+        "team name aliases, and feature freshness monitoring."
+    ),
 )
+
+# ────────────────────────────────────────────────────────────────────────────
+# Admin authentication
+# ────────────────────────────────────────────────────────────────────────────
+
+API_KEY_NAME = "X-Admin-Key"
+_api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+
+def _get_admin_key(api_key: str = Depends(_api_key_header)) -> str:
+    """Validate the admin API key from the request header."""
+    expected_key = os.getenv("ADMIN_API_KEY")
+    if not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin authentication is not configured on this server.",
+        )
+    if api_key != expected_key:
+        raise HTTPException(
+            status_code=403, detail="Could not validate admin credentials."
+        )
+    return api_key
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Request / Response models
+# ────────────────────────────────────────────────────────────────────────────
 
 
 class PredictionRequest(BaseModel):
+    """Request body for match outcome prediction."""
+
     home_team: str = Field(
-        ..., min_length=1, description="Home team name (aliases supported)"
+        ..., min_length=1, description="Home team name (aliases supported, e.g. 'USA')"
     )
     away_team: str = Field(
         ..., min_length=1, description="Away team name (aliases supported)"
@@ -35,11 +75,24 @@ class PredictionRequest(BaseModel):
     neutral: bool = Field(False, description="Whether match is on neutral ground")
     match_date: date | None = Field(
         None,
-        description="Date for historical predictions (YYYY-MM-DD). Defaults to the latest available feature snapshot.",
+        description=(
+            "Date for historical predictions (YYYY-MM-DD). "
+            "Defaults to the latest available feature snapshot."
+        ),
     )
 
 
+class HealthResponse(BaseModel):
+    """Health check response."""
+
+    status: str
+    service: str
+    shadow_as_primary: bool
+
+
 class PredictionResponse(BaseModel):
+    """Match outcome prediction with ensemble telemetry."""
+
     home_team: str
     away_team: str
     predicted_class: int
@@ -53,7 +106,7 @@ class PredictionResponse(BaseModel):
     model_artifact_path: str
     match_segment: str | None = Field(
         None,
-        description="Tournament segment detected by ensemble (worldcup, continental, friendlies, qualifiers)",
+        description="Tournament segment detected by ensemble (worldcup/continental/friendlies/qualifiers)",
     )
     is_override_triggered: bool = Field(
         False,
@@ -77,6 +130,8 @@ class PredictionResponse(BaseModel):
 
 
 class LatestTrainingRunResponse(BaseModel):
+    """Latest training run metadata for monitoring."""
+
     pipeline_run_id: str | None = None
     artifact_path: str
     data_path: str
@@ -97,6 +152,8 @@ class LatestTrainingRunResponse(BaseModel):
 
 
 class InferenceStatisticsResponse(BaseModel):
+    """Aggregated inference statistics for monitoring dashboard."""
+
     status: str
     period_hours: int | None = None
     statistics: dict[str, Any] | None = None
@@ -104,6 +161,8 @@ class InferenceStatisticsResponse(BaseModel):
 
 
 class RecentInferenceRecord(BaseModel):
+    """Single inference log record for auditing."""
+
     request_id: str
     timestamp_utc: str
     requested_match_date: str | None = None
@@ -118,67 +177,56 @@ class RecentInferenceRecord(BaseModel):
 
 
 class RecentInferencesResponse(BaseModel):
+    """List of recent prediction records for debugging."""
+
     status: str
     count: int
     inferences: list[RecentInferenceRecord]
 
 
+class ToggleShadowRequest(BaseModel):
+    """Request body to hot-swap the shadow model."""
+
+    enable: bool
+
+
+class ToggleShadowResponse(BaseModel):
+    """Response after toggling shadow deployment mode."""
+
+    status: str
+    message: str
+    shadow_as_primary: bool
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Endpoints
+# ────────────────────────────────────────────────────────────────────────────
+
+
 @app.get("/")
 def root() -> dict[str, str]:
-    """Root endpoint with API information."""
+    """Root endpoint with API navigation links."""
     return {
         "message": "World Cup 2026 Prediction API",
         "docs": "/docs",
         "health": "/health",
         "config": "/config",
         "predict": "/predict (POST)",
+        "live_api": "https://worldcup-2026-prediction.onrender.com",
     }
 
 
-@app.get("/health")
-def healthcheck() -> dict[str, str]:
-    """Simple readiness endpoint for container and local checks."""
-    import src.modeling.predict as predict_module
-    
-    return {
-        "status": "ok", 
-        "service": "worldcup-api",
-        "shadow_as_primary": getattr(predict_module, "_USE_SHADOW_AS_PRIMARY", False)
-    }
+@app.get("/health", response_model=HealthResponse)
+def healthcheck() -> HealthResponse:
+    """Readiness probe for container orchestration and uptime monitoring."""
+    import src.modeling.predict as predict_module  # noqa: PLC0415 (local import for runtime state)
 
-from fastapi import Depends
-from fastapi.security import APIKeyHeader
-import os
-from src.modeling.predict import toggle_shadow_mode, _USE_SHADOW_AS_PRIMARY
-
-API_KEY_NAME = "X-Admin-Key"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
-
-def get_admin_key(api_key: str = Depends(api_key_header)):
-    # Simple hardcoded key for P4 admin
-    expected_key = os.getenv("ADMIN_API_KEY", "worldcup-admin-secret")
-    if api_key != expected_key:
-        raise HTTPException(status_code=403, detail="Could not validate admin credentials")
-    return api_key
-
-class ToggleShadowRequest(BaseModel):
-    enable: bool
-    
-class ToggleShadowResponse(BaseModel):
-    status: str
-    message: str
-    shadow_as_primary: bool
-    
-@app.post("/admin/toggle-shadow", response_model=ToggleShadowResponse)
-def toggle_shadow(request: ToggleShadowRequest, api_key: str = Depends(get_admin_key)) -> ToggleShadowResponse:
-    """Admin endpoint to hot-swap the primary model with the shadow model."""
-    toggle_shadow_mode(request.enable)
-    state_str = "ENABLED" if request.enable else "DISABLED"
-    logger.info(f"Admin action: Shadow model as primary has been {state_str}")
-    return ToggleShadowResponse(
-        status="success",
-        message=f"Shadow model as primary is now {state_str}",
-        shadow_as_primary=request.enable,
+    return HealthResponse(
+        status="ok",
+        service="worldcup-api",
+        shadow_as_primary=bool(
+            getattr(predict_module, "_USE_SHADOW_AS_PRIMARY", False)
+        ),
     )
 
 
@@ -196,6 +244,22 @@ def runtime_config() -> dict[str, str]:
     }
 
 
+@app.post("/admin/toggle-shadow", response_model=ToggleShadowResponse)
+def toggle_shadow(
+    request: ToggleShadowRequest,
+    api_key: str = Depends(_get_admin_key),
+) -> ToggleShadowResponse:
+    """Admin endpoint to hot-swap the primary model with the shadow model."""
+    toggle_shadow_mode(request.enable)
+    state_str = "ENABLED" if request.enable else "DISABLED"
+    logger.info("Admin action: Shadow model as primary has been %s", state_str)
+    return ToggleShadowResponse(
+        status="success",
+        message=f"Shadow model as primary is now {state_str}",
+        shadow_as_primary=request.enable,
+    )
+
+
 @app.get("/monitoring/latest-training-run", response_model=LatestTrainingRunResponse)
 def latest_training_run() -> LatestTrainingRunResponse:
     """Expose the latest curated training summary for lightweight monitoring."""
@@ -209,7 +273,7 @@ def latest_training_run() -> LatestTrainingRunResponse:
             **typed_training_run,
         )
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -221,28 +285,32 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     - Team name aliases (USA → United States)
     - Historical predictions via match_date
     - Stale feature warnings
+    - Segment-aware ensemble telemetry
+    - Shadow deployment comparison
 
     Args:
-        request: PredictionRequest with home_team, away_team, and optional tournament, neutral, match_date
+        request: PredictionRequest with home_team, away_team, and optional fields.
 
     Returns:
-        PredictionResponse with prediction, probabilities, and feature freshness info
+        PredictionResponse with prediction, probabilities, and feature freshness info.
 
     Raises:
-        HTTPException 422: Invalid request (team not found, bad date format)
-        HTTPException 503: Service unavailable (model/features unavailable)
+        HTTPException 422: Invalid request (team not found, bad date).
+        HTTPException 503: Service unavailable (model/features unavailable).
+        HTTPException 500: Unexpected internal error.
     """
-    # Normalize team names (handle aliases like USA → United States)
     normalized_home = normalize_team_name(request.home_team)
     normalized_away = normalize_team_name(request.away_team)
 
     try:
         logger.info(
-            f"Prediction request | home={normalized_home} away={normalized_away} "
-            f"tournament={request.tournament} match_date={request.match_date}"
+            "Prediction request | home=%s away=%s tournament=%s match_date=%s",
+            normalized_home,
+            normalized_away,
+            request.tournament,
+            request.match_date,
         )
 
-        # Make prediction using normalized team names
         prediction: PredictionResult = predict_match_outcome(
             home_team=normalized_home,
             away_team=normalized_away,
@@ -251,14 +319,16 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             match_date=request.match_date,
         )
         logger.info(
-            f"Prediction successful | outcome={prediction['predicted_outcome']}"
+            "Prediction successful | outcome=%s segment=%s override=%s",
+            prediction["predicted_outcome"],
+            prediction.get("match_segment"),
+            prediction.get("is_override_triggered", False),
         )
 
-        # Check feature freshness (warn if >30 days old)
         freshness = validate_feature_freshness(
             prediction["feature_snapshot_dates"], max_age_days=30
         )
-        response = PredictionResponse(
+        return PredictionResponse(
             home_team=prediction["home_team"],
             away_team=prediction["away_team"],
             predicted_class=prediction["predicted_class"],
@@ -282,40 +352,39 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             feature_freshness=freshness,
         )
 
-        # We can append it in the route but wait, I can just return the response object! Fastapi lets you inject Response.
-        # It's cleaner to just include them in the response body.
-        
-        return response
-
     except ValueError as exc:
-        # Team not found or other data validation error
         error_msg = str(exc).lower()
         if "not found" in error_msg or "no data" in error_msg:
             raise HTTPException(
                 status_code=422,
-                detail=f"Team not found in feature snapshots: '{request.home_team}' or '{request.away_team}'. "
-                f"Please check team names (aliases like USA → United States are supported). "
-                f"Available teams must have recent ELO and form data.",
-            )
-        raise HTTPException(status_code=422, detail=str(exc))
+                detail=(
+                    f"Team not found in feature snapshots: '{request.home_team}' or '{request.away_team}'. "
+                    "Please check team names (aliases like USA → United States are supported). "
+                    "Available teams must have recent ELO and form data."
+                ),
+            ) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=503,
             detail=f"Model artifact not found. Train the model first: {exc}",
-        )
+        ) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=f"Service unavailable: {exc}")
+        raise HTTPException(
+            status_code=503, detail=f"Service unavailable: {exc}"
+        ) from exc
     except Exception as exc:
-        # Catch unexpected errors and log them with full traceback
-        import traceback
-
         logger.error(
-            f"Unexpected error in /predict for {normalized_home} vs {normalized_away}: {exc}\n{traceback.format_exc()}"
+            "Unexpected error in /predict for %s vs %s: %s\n%s",
+            normalized_home,
+            normalized_away,
+            exc,
+            traceback.format_exc(),
         )
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {type(exc).__name__}: {str(exc)[:200]}",
-        )
+        ) from exc
 
 
 @app.get("/monitoring/inference-stats", response_model=InferenceStatisticsResponse)
@@ -324,13 +393,13 @@ def inference_statistics(hours: int = 24) -> InferenceStatisticsResponse:
     Get inference statistics for the last N hours.
 
     Provides aggregated metrics: total inferences, prediction distribution,
-    feature sources used, and probability statistics.
+    feature sources used, probability statistics, and per-segment shadow performance.
     """
     if hours < 1 or hours > 720:
         raise HTTPException(status_code=422, detail="hours must be between 1 and 720")
 
-    logger = get_inference_logger()
-    stats_dict = logger.get_inference_statistics(hours=hours)
+    inference_logger = get_inference_logger()
+    stats_dict = inference_logger.get_inference_statistics(hours=hours)
     return InferenceStatisticsResponse(**stats_dict)
 
 
@@ -345,8 +414,8 @@ def recent_inferences(limit: int = 50) -> RecentInferencesResponse:
     if limit < 1 or limit > 500:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
 
-    logger = get_inference_logger()
-    records = logger.get_recent_inferences(limit=limit)
+    inference_logger = get_inference_logger()
+    records = inference_logger.get_recent_inferences(limit=limit)
     return RecentInferencesResponse(
         status="ok" if records else "no_data",
         count=len(records),

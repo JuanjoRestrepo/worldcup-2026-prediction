@@ -39,7 +39,8 @@ DRAW_CLASS = 1
 ENCODED_CLASSES = np.array([0, 1, 2], dtype=np.int64)
 
 
-class HybridDrawOverrideEnsemble(BaseEstimator, ClassifierMixin):
+class HybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):
+    _estimator_type = "classifier"
     """
     Delegate uncertain fixtures to a draw specialist.
 

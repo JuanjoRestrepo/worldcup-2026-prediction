@@ -56,7 +56,7 @@ def validate_feature_freshness(
                 warnings.append(f"{feature_name}: {age_days} days old")
         except (ValueError, TypeError) as exc:
             logger.warning(
-                f"Could not parse feature date for {feature_name}: {date_str} ({exc})"
+                "Could not parse feature date for %s: %s (%s)", feature_name, date_str, exc
             )
 
     return {
@@ -211,6 +211,10 @@ class InferenceLogger:
 
     def _persist_log(self, df: pd.DataFrame) -> None:
         """Persist a log DataFrame to PostgreSQL."""
+        import os  # noqa: PLC0415
+        if os.getenv("SKIP_INFERENCE_LOGGING") == "1":
+            return
+
         try:
             self._ensure_inference_log_table()
             df.to_sql(
@@ -223,10 +227,13 @@ class InferenceLogger:
                 chunksize=1000,
             )
             logger.debug(
-                f"Logged {len(df)} inference(s) to {INFERENCE_LOG_SCHEMA}.{INFERENCE_LOG_TABLE}"
+                "Logged %d inference(s) to %s.%s",
+                len(df),
+                INFERENCE_LOG_SCHEMA,
+                INFERENCE_LOG_TABLE,
             )
         except Exception as exc:
-            logger.error(f"Failed to persist inference log: {exc}")
+            logger.error("Failed to persist inference log: %s", exc)
             # Don't raise - inference should not fail due to logging error
             # but we should track this in observability
 
@@ -309,7 +316,7 @@ class InferenceLogger:
                 "statistics": stats,
             }
         except Exception as exc:
-            logger.error(f"Failed to retrieve inference statistics: {exc}")
+            logger.error("Failed to retrieve inference statistics: %s", exc)
             return {
                 "status": "error",
                 "message": str(exc),
@@ -350,7 +357,7 @@ class InferenceLogger:
             records = df.to_dict(orient="records")
             return [cast(dict[str, Any], record) for record in records]
         except Exception as exc:
-            logger.error(f"Failed to retrieve recent inferences: {exc}")
+            logger.error("Failed to retrieve recent inferences: %s", exc)
             return []
 
 

@@ -373,6 +373,9 @@ def build_match_feature_frame(
         "away_opponent_elo_form": _safe_value(away_away_row, "away_opponent_elo_form"),
         "home_elo_form": _safe_value(home_home_row, "home_elo_form"),
         "away_elo_form": _safe_value(away_away_row, "away_elo_form"),
+        # Draw propensity features (position-specific) — direct signal for draw specialist
+        "home_draw_rate_last5": _safe_value(home_home_row, "home_draw_rate_last5"),
+        "away_draw_rate_last5": _safe_value(away_away_row, "away_draw_rate_last5"),
         **flags,
     }
 
@@ -529,6 +532,9 @@ def build_match_feature_frame_from_team_snapshots(
         "away_opponent_elo_form": _safe_value(away_away_row, "opponent_elo_form"),
         "home_elo_form": _safe_value(home_home_row, "elo_form"),
         "away_elo_form": _safe_value(away_away_row, "elo_form"),
+        # Draw propensity features (position-specific) — direct signal for draw specialist
+        "home_draw_rate_last5": _safe_value(home_home_row, "draw_rate_last5"),
+        "away_draw_rate_last5": _safe_value(away_away_row, "draw_rate_last5"),
         **flags,
     }
 

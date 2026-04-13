@@ -1018,11 +1018,12 @@ def train_and_export_model(
     # Shadow Deployment Export
     # ============================================================================
     shadow_candidates = [
-        c for c in candidate_backtests if c["family"] == "segment_aware_hybrid"
+        c for c in candidate_backtests 
+        if candidate_specs[cast(str, c["model_name"])].family == "segment_aware_hybrid"
     ]
     if shadow_candidates:
-        shadow_candidates.sort(key=lambda c: cast(float, c["overall_rank"]))
-        shadow_model_name = cast(str, shadow_candidates[0]["name"])
+        shadow_candidates.sort(key=lambda c: cast(float, c["selection_rank"]))
+        shadow_model_name = cast(str, shadow_candidates[0]["model_name"])
         logger.info("Training and exporting shadow candidate: %s", shadow_model_name)
 
         shadow_spec = candidate_specs[shadow_model_name]

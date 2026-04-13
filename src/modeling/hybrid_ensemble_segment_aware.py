@@ -39,21 +39,22 @@ class SegmentConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration."""
-        if not 0.0 < self.uncertainty_threshold < 1.0:
+        if not 0.0 <= self.uncertainty_threshold <= 1.0:
             raise ValueError(
-                f"[{self.segment_id}] uncertainty_threshold must be in (0,1), "
+                f"[{self.segment_id}] uncertainty_threshold must be in [0,1], "
                 f"got {self.uncertainty_threshold}"
             )
-        if not 0.0 < self.draw_conviction_threshold < 1.0:
+        if not 0.0 <= self.draw_conviction_threshold <= 1.0:
             raise ValueError(
-                f"[{self.segment_id}] draw_conviction_threshold must be in (0,1), "
+                f"[{self.segment_id}] draw_conviction_threshold must be in [0,1], "
                 f"got {self.draw_conviction_threshold}"
             )
         if self.min_samples_for_override < 1:
             raise ValueError(f"[{self.segment_id}] min_samples_for_override must be ≥1")
 
 
-class SegmentAwareHybridDrawOverrideEnsemble(BaseEstimator, ClassifierMixin):
+class SegmentAwareHybridDrawOverrideEnsemble(ClassifierMixin, BaseEstimator):
+    _estimator_type = "classifier"
     """
     Segment-conditional draw override ensemble.
 
@@ -125,9 +126,9 @@ class SegmentAwareHybridDrawOverrideEnsemble(BaseEstimator, ClassifierMixin):
         sample_weight: NDArray[np.float64] | None = None,
     ) -> "SegmentAwareHybridDrawOverrideEnsemble":
         """Fit both generalist and specialist models."""
-        if not 0.0 < self.default_uncertainty_threshold < 1.0:
+        if not 0.0 <= self.default_uncertainty_threshold <= 1.0:
             raise ValueError("default_uncertainty_threshold must be between 0 and 1.")
-        if not 0.0 < self.default_draw_conviction_threshold < 1.0:
+        if not 0.0 <= self.default_draw_conviction_threshold <= 1.0:
             raise ValueError(
                 "default_draw_conviction_threshold must be between 0 and 1."
             )

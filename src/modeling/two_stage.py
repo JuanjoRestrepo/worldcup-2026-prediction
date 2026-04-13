@@ -10,7 +10,8 @@ from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 
 
-class TwoStageDrawClassifier(BaseEstimator, ClassifierMixin):
+class TwoStageDrawClassifier(ClassifierMixin, BaseEstimator):
+    _estimator_type = "classifier"
     """
     Two-stage multiclass classifier:
 

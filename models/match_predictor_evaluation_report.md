@@ -1,7 +1,7 @@
 # Model Evaluation Report
 
 ## Overall
-- Selected model: `logistic_c2_draw1.2` (LogisticRegression)
+- Selected model: `seg_hybrid_auto_tuned` (SegmentAwareHybridDrawOverrideEnsemble)
 - Deployed variant: `uncalibrated`
 - Accuracy: `0.5778`
 - Macro F1: `0.5165`
@@ -17,10 +17,10 @@
 - F1: `0.2475`
 
 ## Top Candidate Search Results
-- `logistic_c2_draw1.2` (logistic_regression): rank=1, macro_f1=0.4912, draw_f1=0.2794, log_loss=0.9642
-- `logistic_c2_draw1` (logistic_regression): rank=2, macro_f1=0.4912, draw_f1=0.2794, log_loss=0.9642
-- `logistic_c0.5_draw1` (logistic_regression): rank=3, macro_f1=0.4912, draw_f1=0.2787, log_loss=0.9643
-- `seg_hybrid_balanced` (segment_aware_hybrid): rank=4, macro_f1=0.4915, draw_f1=0.2827, log_loss=0.9671
+- `seg_hybrid_auto_tuned` (segment_aware_hybrid): rank=1, macro_f1=0.4929, draw_f1=0.2863, log_loss=0.9675
+- `logistic_c2_draw1.2` (logistic_regression): rank=2, macro_f1=0.4912, draw_f1=0.2794, log_loss=0.9642
+- `logistic_c2_draw1` (logistic_regression): rank=3, macro_f1=0.4912, draw_f1=0.2794, log_loss=0.9642
+- `logistic_c0.5_draw1` (logistic_regression): rank=4, macro_f1=0.4912, draw_f1=0.2787, log_loss=0.9643
 - `logistic_c1_draw1` (logistic_regression): rank=5, macro_f1=0.4911, draw_f1=0.2792, log_loss=0.9643
 
 ## Competition Segments
