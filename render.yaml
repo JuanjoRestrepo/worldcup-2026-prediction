@@ -1,0 +1,67 @@
+# Render Blueprint — One-click deploy from GitHub
+# https://docs.render.com/infrastructure-as-code
+#
+# This deploys the FastAPI prediction API as a Docker Web Service.
+# The Streamlit frontend is deployed separately to Streamlit Community Cloud.
+
+services:
+  - type: web
+    name: worldcup-2026-api
+    runtime: docker
+    dockerfilePath: docker/api/Dockerfile
+    # Build from repo root so COPY src ./src works correctly
+    dockerContext: .
+    plan: free          # Render free tier — spins down after 15 min inactivity
+    region: oregon      # US West — lowest latency for Americas
+
+    # Auto-deploy on every push to main
+    branch: main
+    autoDeploy: true
+
+    # Health check — Render uses this to confirm the service is alive
+    healthCheckPath: /health
+
+    # Port the container listens on
+    numInstances: 1
+
+    envVars:
+      # ── Feature serving ────────────────────────────────────────────────────
+      # No PostgreSQL required for core inference; CSV is bundled in the image
+      - key: PREDICTION_FEATURE_SOURCE
+        value: csv
+      - key: MONITORING_SOURCE
+        value: auto           # Falls back gracefully if Supabase is unavailable
+
+      # ── Model artifact ─────────────────────────────────────────────────────
+      - key: MODEL_ARTIFACT_PATH
+        value: /app/models/match_predictor.joblib
+
+      # ── API server ─────────────────────────────────────────────────────────
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: "8000"
+
+      # ── Secrets (set in Render dashboard — never committed) ────────────────
+      - key: ADMIN_API_KEY
+        sync: false           # Render will prompt for this value in the dashboard
+
+      # ── Supabase / PostgreSQL (inference logging — optional) ───────────────
+      # These are set in the Render dashboard after creating your Supabase project.
+      # If not set, inference logging is silently disabled (predictions still work).
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_DB
+        sync: false
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: DBT_BASE_SCHEMA
+        value: analytics
+
+      # ── Data directory (maps to the baked-in /app/data inside the image) ──
+      - key: DATA_DIR
+        value: /app/data

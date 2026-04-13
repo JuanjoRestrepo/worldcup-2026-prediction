@@ -33,7 +33,10 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy source code
 COPY src ./src
 
-# Data and models are mounted via docker-compose volumes (not baked in)
+# Bake in the pre-trained model artifact and gold feature CSV
+# (both are small: ~100KB model, ~14MB CSV — no persistent disk needed on Render)
+COPY models ./models
+COPY data/gold ./data/gold
 RUN mkdir -p /app/data /app/models && chown -R appuser:appgroup /app
 
 USER appuser

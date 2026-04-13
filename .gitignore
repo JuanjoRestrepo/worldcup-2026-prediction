@@ -76,7 +76,7 @@ Thumbs.db
 postgres_data/
 db/
 
-# Data
+# Data — gold layer (features CSV needed for offline inference on Render/free tier)
 data/processed/
 data/interim/
 data/raw/*.csv
@@ -88,17 +88,17 @@ data/silver/*
 !data/silver/.gitkeep
 data/gold/*
 !data/gold/.gitkeep
+!data/gold/features_dataset.csv
 models/
 !models/.gitkeep
 !models/match_predictor.joblib
+!models/match_predictor_shadow.joblib
 !models/match_predictor_metrics.json
 !models/match_predictor_evaluation_report.json
 !models/match_predictor_evaluation_report.md
-!dbt/models/
-!dbt/models/**
 *.pkl
 *.pickle
-*.joblib
+# *.joblib intentionally NOT blocked — pre-trained model artifacts are committed
 
 # Logs
 *.log
@@ -148,10 +148,8 @@ credentials.json
 *.pem
 *.key
 
-# ML models
+# ML model weights (heavy formats only — .joblib is committed above)
 *.h5
-*.pkl
-*.joblib
 .weights/
 checkpoints/
 
