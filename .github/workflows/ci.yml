@@ -77,10 +77,10 @@ jobs:
 
       # ── Code quality checks (lint before tests to fail fast) ──────────────
       - name: Run Ruff lint
-        run: uv run python -m ruff check src tests run_dbt.py run_pipeline.py
+        run: uv run python -m ruff check .
 
       - name: Run Ruff format check
-        run: uv run python -m ruff format --check src tests
+        run: uv run python -m ruff format --check .
 
       - name: Run MyPy type checking
         run: uv run python -m mypy src/api src/modeling src/database src/contracts
@@ -91,7 +91,7 @@ jobs:
 
       # ── dbt validation ────────────────────────────────────────────────────
       - name: Validate dbt project syntax
-        run: uv run python run_dbt.py parse
+        run: uv run python scripts/run_dbt.py parse
 
       # ── Failure notification ──────────────────────────────────────────────
       - name: Comment PR with failure details
