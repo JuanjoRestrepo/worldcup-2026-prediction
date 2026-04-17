@@ -27,7 +27,19 @@ Built with professional Data Engineering and MLOps practices, the project featur
 
 ### 1. Data Schema & Design
 
-<img src="WC_Prediction_Engine_Data_Model.png" alt="Data Model" width="1000">
+<img src="WC_Prediction_Engine_Data_Model.png" alt="Data Model" width="800">
+
+- **Facts (Core Events & Features)**: 
+    - `fact_matches`: Persists granular match results, goal counts, and environmental flags (neutral ground).
+    - `fact_team_form`: A stateful feature store tracking daily ELO ratings and rolling performance metrics used for point-in-time inference.
+- **Dimensions (Standardized Entities)**: 
+    - `dim_teams` & `dim_tournaments`: Decouples historical entity resolution from analytics; incorporates tournament `weight_factors` for dynamic ELO updates.
+    - `dim_date`: Central temporal reference that tracks professional football cycles, identifying `is_fifa_window` for segment-aware behavior.
+- **Monitoring (Inference Telemetry)**: 
+    - `inference_logs`: Captures prediction metadata, including multinomial probabilities, artifact versions, and dynamic routing triggers (e.g., Draw Specialist activation).
+
+> [!NOTE]
+> All entities and events utilize **UUIDs** as surrogate keys. This ensures global uniqueness and decouples the analytical schema from historical name changes (e.g., country name evolution), providing a robust foundation for distributed joins and long-term data integrity.
 
 ### 2. Data Engineering (Medallion Pipeline)
 
