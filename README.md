@@ -25,7 +25,13 @@ Built with professional Data Engineering and MLOps practices, the project featur
 
 ## 🏗 Architecture
 
+### Data Schema & Design
+
+<img src="WC_Prediction_Engine_Data_Model.png" alt="Data Model" width="1000">
+
 ### 1. Data Engineering (Medallion Pipeline)
+
+<img src="WC_Prediction_Engine_Medallion_Arch.png" alt="Medallion Architecture" width="500">
 
 - **Bronze (Raw)**: Historical match data dating back decades.
 - **Silver (Cleaned)**: Type-coercion, missing value imputation, and entity resolution (standardizing country names across historical eras).
