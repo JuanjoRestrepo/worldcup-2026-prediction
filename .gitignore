@@ -149,3 +149,6 @@ dist/
 dmypy.json
 .pyre/
 pytest_tmp/
+
+# Agents
+.agents/
