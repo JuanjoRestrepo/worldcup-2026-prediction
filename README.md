@@ -25,11 +25,11 @@ Built with professional Data Engineering and MLOps practices, the project featur
 
 ## 🏗 Architecture
 
-### Data Schema & Design
+### 1. Data Schema & Design
 
 <img src="WC_Prediction_Engine_Data_Model.png" alt="Data Model" width="1000">
 
-### 1. Data Engineering (Medallion Pipeline)
+### 2. Data Engineering (Medallion Pipeline)
 
 <img src="WC_Prediction_Engine_Medallion_Arch.png" alt="Medallion Architecture" width="500">
 
@@ -37,13 +37,13 @@ Built with professional Data Engineering and MLOps practices, the project featur
 - **Silver (Cleaned)**: Type-coercion, missing value imputation, and entity resolution (standardizing country names across historical eras).
 - **Gold (Feature Store)**: Computes dynamic time-decayed **ELO ratings**, rolling form statistics (Win/Loss/Draw ratios, Goals Scored/Conceded), and explicit neutral-ground flags.
 
-### 2. Modeling Strategy
+### 3. Modeling Strategy
 
 - **Generalist Predictor**: A rigorously calibrated XGBoost baseline.
 - **Draw Specialist**: A secondary binary classifier explicitly trained to correct the habitual under-prediction of ties in classic multinomial logistic environments.
 - **Dynamic Routing**: An inference router that activates the Draw Specialist exclusively when the prediction uncertainty (difference between Home vs Away win probabilities) crosses a calculated threshold.
 
-### 3. MLOps, CI/CD & Observability
+### 4. MLOps, CI/CD & Observability
 
 - **Automated Retraining**: A GitHub Actions workflow (`retrain.yml`) handles end-to-end model retraining monthly. It fetches real-time updates from `martj42/international_results`, preventing data staleness heading into the summer of 2026.
 - **Promotion Gate (Champion vs. Challenger)**: Models are never blindly promoted. Retrained "Challenger" artifacts are objectively scored against the current "Champion" model via `reporting_comparison.py`. Only models that actively improve Log-Loss and Macro F1 are deployed; regressions are hard-rejected and archived securely. See our generated [MLOps Walkthrough](MLOps_walkthrough.md) and [Comparison Report](models/model_comparison_report.md) for live examples.
