@@ -17,7 +17,7 @@
 
 ## 🧩 Overview
 
-The **World Cup 2026 Prediction Engine** is an end-to-end Machine Learning ecosystem designed to accurately forecast international football fixtures. Moving beyond naive generalist classifiers, this project implements a **Segment-Aware Hybrid Ensemble**, integrating specialized sub-models (such as a *Draw-Specialist*) specifically tuned to predict high-uncertainty matchups.
+The **World Cup 2026 Prediction Engine** is an end-to-end Machine Learning ecosystem designed to accurately forecast international football fixtures. Moving beyond naive generalist classifiers, this project implements a **Segment-Aware Hybrid Ensemble**, integrating specialized sub-models (such as a _Draw-Specialist_) specifically tuned to predict high-uncertainty matchups.
 
 Built with professional Data Engineering and MLOps practices, the project features a `dbt`-powered medallion data architecture and a completely containerized deployment pipeline ready for cloud hosting.
 
@@ -26,16 +26,19 @@ Built with professional Data Engineering and MLOps practices, the project featur
 ## 🏗 Architecture
 
 ### 1. Data Engineering (Medallion Pipeline)
+
 - **Bronze (Raw)**: Historical match data dating back decades.
 - **Silver (Cleaned)**: Type-coercion, missing value imputation, and entity resolution (standardizing country names across historical eras).
 - **Gold (Feature Store)**: Computes dynamic time-decayed **ELO ratings**, rolling form statistics (Win/Loss/Draw ratios, Goals Scored/Conceded), and explicit neutral-ground flags.
 
 ### 2. Modeling Strategy
+
 - **Generalist Predictor**: A rigorously calibrated XGBoost baseline.
 - **Draw Specialist**: A secondary binary classifier explicitly trained to correct the habitual under-prediction of ties in classic multinomial logistic environments.
 - **Dynamic Routing**: An inference router that activates the Draw Specialist exclusively when the prediction uncertainty (difference between Home vs Away win probabilities) crosses a calculated threshold.
 
 ### 3. MLOps, CI/CD & Observability
+
 - **Automated Retraining**: A GitHub Actions workflow (`retrain.yml`) handles end-to-end model retraining monthly. It fetches real-time updates from `martj42/international_results`, preventing data staleness heading into the summer of 2026.
 - **Promotion Gate (Champion vs. Challenger)**: Models are never blindly promoted. Retrained "Challenger" artifacts are objectively scored against the current "Champion" model via `reporting_comparison.py`. Only models that actively improve Log-Loss and Macro F1 are deployed; regressions are hard-rejected and archived securely. See our generated [MLOps Walkthrough](MLOps_walkthrough.md) and [Comparison Report](models/model_comparison_report.md) for live examples.
 - **Shadow Modeling**: The API runs an experimental model alongside the production model in real-time, capturing telemetry for A/B offline comparison without impacting end-user predictions.
@@ -46,6 +49,7 @@ Built with professional Data Engineering and MLOps practices, the project featur
 ## 🚀 Quick Start (Local Development)
 
 ### Prerequisites
+
 - Install `uv` (the lightning-fast Python package manager written in Rust).
 - No Docker or PostgreSQL is strictly required for the prediction engine to run locally (offline-first architecture).
 
@@ -79,8 +83,15 @@ Interested in the engineering decisions, leakage fixes, and the evolution from J
 ## ☁️ Deployment
 
 This project is fully automated for zero-cost cloud deployments:
+
 - **API Backend**: Dockerized FastAPI deployed to [Render](https://render.com) using the included `render.yaml` blueprint.
 - **Dashboard UI**: Deployed to [Streamlit Community Cloud](https://share.streamlit.io).
 - **Telemetry DB**: [Supabase](https://supabase.com) PostgreSQL footprint for storing `inference_logs`.
 
-*For detailed deployment instructions, see the provided `DEPLOYMENT.md` available in your artifact history.*
+_For detailed deployment instructions, see the provided `DEPLOYMENT.md` available in your artifact history._
+
+---
+
+## 📸 Final Verification
+
+![Deployment Success](final_deployment_verification_1776047117562.webp)
