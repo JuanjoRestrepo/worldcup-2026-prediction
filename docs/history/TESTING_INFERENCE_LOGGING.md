@@ -3,9 +3,6 @@
 ## Prerequisites
 
 ```bash
-# Activate venv
-.venv\Scripts\activate
-
 # Ensure dependencies installed
 uv sync
 
@@ -41,13 +38,13 @@ WHERE table_schema = 'monitoring';
 
 ```bash
 # Run inference logger tests
-pytest tests/test_inference_logger.py -v
+uv run pytest tests/test_inference_logger.py -v
 
 # Run all API tests
-pytest tests/test_api.py -v
+uv run pytest tests/test_api.py -v
 
 # Check coverage
-pytest tests/test_inference_logger.py --cov=src.modeling.inference_logger
+uv run pytest tests/test_inference_logger.py --cov=src.modeling.inference_logger
 ```
 
 ## Test 3: Manual API Testing
@@ -56,7 +53,7 @@ pytest tests/test_inference_logger.py --cov=src.modeling.inference_logger
 
 ```bash
 # Terminal 1: Start uvicorn
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Test Endpoints (Terminal 2)

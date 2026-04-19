@@ -24,27 +24,30 @@ it adds:
 1. Run the Python pipeline with DB persistence:
 
 ```bash
-.venv\Scripts\python run_pipeline.py --persist-to-db
+uv sync
+uv run python run_pipeline.py --persist-to-db
 ```
 
 2. Validate the connection:
 
 ```bash
-.venv\Scripts\python run_dbt.py debug
-.venv\Scripts\python run_dbt.py source freshness
+uv run python run_dbt.py debug
+uv run python run_dbt.py source freshness
 ```
 
 3. Build the dbt models:
 
 ```bash
-.venv\Scripts\python run_dbt.py run
-.venv\Scripts\python run_dbt.py test
+uv run python run_dbt.py run
+uv run python run_dbt.py test
 ```
 
 `run_dbt.py` loads the same `.env` file used by the Python pipeline and will
 auto-create `dbt/profiles.yml` from `dbt/profiles.yml.example` if it is missing.
 It also defaults to `DBT_THREADS=1`, which keeps dbt compatible with this local
 Windows workflow and avoids multiprocessing issues in constrained environments.
+Use `uv run` rather than `.venv\Scripts\activate`; this repo standardizes local
+Python execution on `uv`.
 
 ## Initial Models
 

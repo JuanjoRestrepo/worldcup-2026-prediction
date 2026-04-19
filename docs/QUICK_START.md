@@ -29,11 +29,11 @@ psql -U worldcup -h localhost -d worldcup_db -c "\dn"
 ## Step 3: Run Unit Tests
 
 ```bash
-# Activate venv
-.venv\Scripts\activate
+# Sync dependencies
+uv sync
 
 # Run inference logger tests
-pytest tests/test_inference_logger.py -v
+uv run pytest tests/test_inference_logger.py -v
 
 # Expected output:
 # test_log_prediction PASSED
@@ -45,12 +45,15 @@ pytest tests/test_inference_logger.py -v
 
 ```bash
 # Terminal 1
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 
 # Expected output:
 # Uvicorn running on http://0.0.0.0:8000
 # Press CTRL+C to quit
 ```
+
+> [!IMPORTANT]
+> Windows users should not run `.venv\Scripts\activate` in this repository. Use `uv sync` and `uv run <command>` instead.
 
 ## Step 5: Test /predict Endpoint (Terminal 2)
 

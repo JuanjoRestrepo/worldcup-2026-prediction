@@ -78,17 +78,23 @@ Built with professional Data Engineering and MLOps practices, the project featur
 git clone https://github.com/JuanjoRestrepo/worldcup-2026-prediction.git
 cd worldcup-2026-prediction
 
-# 2. Configure Environment
+# 2. Install/sync the Python environment
+uv sync
+
+# 3. Configure Environment
 cp .env.example .env
 
-# 3. Start the Inference API
+# 4. Start the Inference API
 uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
-# 4. Start the Dashboard UI (in a separate terminal)
+# 5. Start the Dashboard UI (in a separate terminal)
 uv run streamlit run src/frontend/app.py
 ```
 
 Open `http://localhost:8501` to view your frontend dashboard.
+
+> [!IMPORTANT]
+> On Windows, do not run `.venv\Scripts\activate` for this project. The supported local workflow is `uv sync` followed by `uv run <command>`.
 
 ---
 
