@@ -32,7 +32,9 @@ class FootballAPIClient:
         self.retries = retries
         self.backoff = backoff
 
-    def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(
+        self, endpoint: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Internal request handler with retry and rate limit handling.
         """
