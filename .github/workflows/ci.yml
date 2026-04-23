@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Tests, Lint, Type-check & dbt Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
