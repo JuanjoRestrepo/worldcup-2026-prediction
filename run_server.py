@@ -8,6 +8,8 @@ import sys
 import uvicorn
 
 from src.api.main import app
+from src.database.connection import get_sqlalchemy_engine
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -42,28 +44,28 @@ def ensure_dbt_tables_exist():
             # Try load_data script if available
             if Path("load_data.py").exists():
                 logger.info("Running load_data.py...")
-                result = subprocess.run(
+                sub_result = subprocess.run(
                     [sys.executable, "load_data.py"],
                     capture_output=True,
                     text=True,
                     timeout=300,
                 )
-                if result.returncode != 0:
-                    logger.error(f"load_data.py failed: {result.stderr}")
+                if sub_result.returncode != 0:
+                    logger.error(f"load_data.py failed: {sub_result.stderr}")
                 else:
                     logger.info("✅ Data loaded successfully")
 
             # Run dbt
             if Path("run_dbt.py").exists():
                 logger.info("Running dbt pipeline...")
-                result = subprocess.run(
+                sub_result = subprocess.run(
                     [sys.executable, "run_dbt.py", "run"],
                     capture_output=True,
                     text=True,
                     timeout=600,
                 )
-                if result.returncode != 0:
-                    logger.error(f"dbt run failed: {result.stderr}")
+                if sub_result.returncode != 0:
+                    logger.error(f"dbt run failed: {sub_result.stderr}")
                 else:
                     logger.info("✅ dbt pipeline completed")
         except Exception as e:

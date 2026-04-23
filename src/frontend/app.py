@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import plotly.graph_objects as go
 import requests
@@ -87,7 +88,7 @@ def get_prediction(
     away_team: str,
     tournament: str,
     neutral: bool,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Call the FastAPI backend and return the prediction payload."""
     payload = {
         "home_team": home_team,
@@ -102,7 +103,7 @@ def get_prediction(
             timeout=30,
         )
         response.raise_for_status()
-        return response.json()
+        return response.json()  # type: ignore[no-any-return]
     except requests.exceptions.ConnectionError:
         st.error(
             f"❌ **Cannot reach the Prediction API** at `{API_URL}`.\n\n"

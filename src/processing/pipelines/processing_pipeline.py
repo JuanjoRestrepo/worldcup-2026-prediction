@@ -118,7 +118,7 @@ def run_processing_pipeline(
     use_api_data: bool = True,
     persist_to_db: bool = False,
     pipeline_run_id: str | None = None,
-):
+) -> pd.DataFrame:
     """
     Run the complete data processing pipeline with leakage fixes.
 

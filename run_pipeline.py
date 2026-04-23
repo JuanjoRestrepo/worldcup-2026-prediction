@@ -8,6 +8,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from time import perf_counter
 
 from src.config.settings import settings
@@ -99,7 +100,7 @@ def run_full_pipeline(
     gold_data_path: Path | None = None,
     test_size: float = 0.2,
     version_tag: str | None = None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """
     Execute the full pipeline with optional stage skipping.
 
@@ -109,7 +110,7 @@ def run_full_pipeline(
     settings.ensure_project_dirs()
     pipeline_run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
-    summary: dict[str, object] = {
+    summary: dict[str, Any] = {
         "pipeline_run_id": pipeline_run_id,
         "started_at_utc": datetime.now(UTC).isoformat(),
         "stages": {},

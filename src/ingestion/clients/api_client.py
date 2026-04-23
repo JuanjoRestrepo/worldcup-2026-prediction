@@ -1,6 +1,7 @@
 import logging
 import time
 from datetime import datetime, timedelta
+from typing import Any
 
 import requests
 
@@ -31,7 +32,7 @@ class FootballAPIClient:
         self.retries = retries
         self.backoff = backoff
 
-    def _request(self, endpoint: str, params: dict | None = None) -> dict:
+    def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Internal request handler with retry and rate limit handling.
         """
@@ -48,7 +49,7 @@ class FootballAPIClient:
 
                 # ✅ Success
                 if response.status_code == 200:
-                    return response.json()
+                    return response.json()  # type: ignore[no-any-return]
 
                 # ⚠️ Rate limit (429) or Request limit reached (403)
                 if response.status_code in [429, 403]:
@@ -79,7 +80,7 @@ class FootballAPIClient:
         date_from: str | None = None,
         date_to: str | None = None,
         competition: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Fetch matches with optional filters.
 

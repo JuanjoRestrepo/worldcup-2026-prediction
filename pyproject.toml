@@ -42,6 +42,8 @@ dev = [
   "pytest==9.0.2",
   "ruff>=0.11,<0.13",
   "shap>=0.51.0",
+  "types-requests>=2.33.0.20260408",
+  "types-seaborn>=0.13.2.20260408",
 ]
 
 [tool.uv]
@@ -113,7 +115,13 @@ pretty = true
 show_error_codes = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = ["joblib", "psycopg2.*", "sklearn.*", "xgboost.*", "dbt.*"]
+module = ["joblib", "psycopg2.*", "sklearn.*", "xgboost.*", "dbt.*", "plotly.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*", "notebooks.*"]
+disallow_untyped_defs = false
+check_untyped_defs = false

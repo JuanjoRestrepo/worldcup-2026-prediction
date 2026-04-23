@@ -1,6 +1,7 @@
 """Validator for international match data (selecciones nacionales only)."""
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ CLUB_LEAGUES = {
 }
 
 
-def validate_international_match(match: dict) -> bool:
+def validate_international_match(match: dict[str, Any]) -> bool:
     """
     Validate if a match is from an international competition (selecciones nacionales).
 
@@ -84,7 +85,7 @@ def validate_international_match(match: dict) -> bool:
         return False
 
 
-def filter_international_matches(matches: list[dict]) -> list[dict]:
+def filter_international_matches(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Filter matches to keep only international competitions.
 
@@ -109,7 +110,7 @@ def filter_international_matches(matches: list[dict]) -> list[dict]:
     return international_matches
 
 
-def is_national_team(match: dict) -> bool:
+def is_national_team(match: dict[str, Any]) -> bool:
     """
     Heuristic to detect national teams (avoid clubs).
     """

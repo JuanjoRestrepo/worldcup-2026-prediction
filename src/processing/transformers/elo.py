@@ -27,7 +27,7 @@ ELO_DECAY_PERIOD_DAYS: int = 90  # Decay reference period (≈ one international
 
 def expected_score(rating_a: float, rating_b: float) -> float:
     """Calculate expected score for team A against team B using logistic ELO."""
-    return 1.0 / (1.0 + 10.0 ** ((rating_b - rating_a) / 400.0))
+    return float(1.0 / (1.0 + 10.0 ** ((rating_b - rating_a) / 400.0)))
 
 
 def update_elo(rating_a: float, rating_b: float, score_a: float) -> tuple[float, float]:
@@ -71,7 +71,7 @@ def _apply_inactivity_decay(
         return rating
     periods = days_since_last_match / ELO_DECAY_PERIOD_DAYS
     decay_multiplier = ELO_DECAY_FACTOR**periods
-    return ELO_MEAN + (rating - ELO_MEAN) * decay_multiplier
+    return float(ELO_MEAN + (rating - ELO_MEAN) * decay_multiplier)
 
 
 def compute_elo(df: pd.DataFrame, apply_decay: bool = True) -> pd.DataFrame:
