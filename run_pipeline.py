@@ -8,8 +8,8 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from time import perf_counter
+from typing import Any
 
 from src.config.settings import settings
 from src.ingestion.pipelines.ingestion_pipeline import run_ingestion_pipeline
