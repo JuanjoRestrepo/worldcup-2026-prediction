@@ -174,7 +174,7 @@ except Exception as e:
 
 
 # %%
-def predict_match(home_team, away_team, df_source):
+def predict_match(home_team: str, away_team: str, df_source: pd.DataFrame) -> None:
     """Dynamically reconstruct a 2026 mock-match between two teams using their most recent stats."""
 
     home_latest = (

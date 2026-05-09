@@ -78,8 +78,10 @@ def _sample_latest_team_snapshots_df() -> pd.DataFrame:
     )
 
 
+from typing import Generator, Any
+
 @pytest.fixture(autouse=True)
-def clear_feature_dataset_cache() -> None:
+def clear_feature_dataset_cache() -> Generator[None, None, None]:
     features.clear_feature_dataset_cache()
     yield
     features.clear_feature_dataset_cache()

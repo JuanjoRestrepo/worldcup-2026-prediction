@@ -1,20 +1,25 @@
 """Unit tests for the end-to-end pipeline orchestrator."""
 
 import pandas as pd
+import pytest
 
 import run_pipeline
 
+from typing import Any, cast
 
-def test_run_full_pipeline_passes_db_persistence_flag(monkeypatch):
-    calls: dict[str, object] = {}
+def test_run_full_pipeline_passes_db_persistence_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    
+    calls: dict[str, Any] = {}
 
-    def fake_ingestion(*, persist_to_db, pipeline_run_id):
+    def fake_ingestion(*, persist_to_db: bool, pipeline_run_id: str) -> None:
         calls["ingestion"] = {
             "persist_to_db": persist_to_db,
             "pipeline_run_id": pipeline_run_id,
         }
 
-    def fake_processing(*, use_api_data, persist_to_db, pipeline_run_id):
+    def fake_processing(*, use_api_data: bool, persist_to_db: bool, pipeline_run_id: str) -> pd.DataFrame:
         calls["processing"] = {
             "use_api_data": use_api_data,
             "persist_to_db": persist_to_db,
@@ -24,13 +29,13 @@ def test_run_full_pipeline_passes_db_persistence_flag(monkeypatch):
 
     def fake_training(
         *,
-        data_path,
-        artifact_path,
-        test_size,
-        persist_to_db,
-        pipeline_run_id,
-        version_tag=None,
-    ):
+        data_path: str,
+        artifact_path: str,
+        test_size: float,
+        persist_to_db: bool,
+        pipeline_run_id: str,
+        version_tag: str | None = None,
+    ) -> dict[str, Any]:
         calls["training"] = {
             "data_path": data_path,
             "artifact_path": artifact_path,

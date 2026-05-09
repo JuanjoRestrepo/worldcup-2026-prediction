@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from src.config.settings import settings
+from src.config.settings import settings as settings
 from src.config.team_aliases import normalize_team_name
 from src.modeling.inference_logger import (
     get_inference_logger,

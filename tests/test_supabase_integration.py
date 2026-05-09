@@ -46,7 +46,7 @@ pytestmark = pytest.mark.integration
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _fetch_schemas(engine: "Engine") -> set[str]:
+def _fetch_schemas(engine: Engine) -> set[str]:
     """Return all user-created schema names from information_schema."""
     sql = text(
         """
@@ -61,7 +61,7 @@ def _fetch_schemas(engine: "Engine") -> set[str]:
     return {row[0] for row in rows}
 
 
-def _fetch_tables(engine: "Engine", schema: str) -> set[str]:
+def _fetch_tables(engine: Engine, schema: str) -> set[str]:
     """Return all table names within a given schema."""
     sql = text(
         """
@@ -76,7 +76,7 @@ def _fetch_tables(engine: "Engine", schema: str) -> set[str]:
     return {row[0] for row in rows}
 
 
-def _row_count(engine: "Engine", schema: str, table: str) -> int:
+def _row_count(engine: Engine, schema: str, table: str) -> int:
     """Return the row count for a specific table."""
     # Use quoted identifiers to prevent SQL injection from schema/table names.
     sql = text(f'SELECT COUNT(*) FROM "{schema}"."{table}"')  # noqa: S608
@@ -91,13 +91,13 @@ def _row_count(engine: "Engine", schema: str, table: str) -> int:
 class TestSupabaseConnectivity:
     """Validate basic database connectivity and version information."""
 
-    def test_select_one(self, engine_fixture: "Engine") -> None:
+    def test_select_one(self, engine_fixture: Engine) -> None:
         """Confirm the connection is alive and returns results."""
         with engine_fixture.connect() as conn:
             result = conn.execute(text("SELECT 1")).scalar()
         assert result == 1, "Basic connectivity check failed — SELECT 1 returned unexpected value"
 
-    def test_postgres_version_is_readable(self, engine_fixture: "Engine") -> None:
+    def test_postgres_version_is_readable(self, engine_fixture: Engine) -> None:
         """Confirm we can query the server version (sanity check on permissions)."""
         with engine_fixture.connect() as conn:
             version: str | None = conn.execute(text("SELECT version()")).scalar()
@@ -109,7 +109,7 @@ class TestSupabaseConnectivity:
 class TestMedallionSchemas:
     """Validate that the Medallion architecture schemas exist in Supabase."""
 
-    def test_bronze_schema_exists(self, engine_fixture: "Engine") -> None:
+    def test_bronze_schema_exists(self, engine_fixture: Engine) -> None:
         """Bronze schema must exist — it holds raw ingested data."""
         schemas = _fetch_schemas(engine_fixture)
         assert "bronze" in schemas, (
@@ -117,21 +117,21 @@ class TestMedallionSchemas:
             "Run the ingestion pipeline first: uv run python run_pipeline.py --persist-to-db"
         )
 
-    def test_silver_schema_exists(self, engine_fixture: "Engine") -> None:
+    def test_silver_schema_exists(self, engine_fixture: Engine) -> None:
         """Silver schema must exist — it holds cleaned/standardised data."""
         schemas = _fetch_schemas(engine_fixture)
         assert "silver" in schemas, (
             f"Schema 'silver' not found. Available schemas: {schemas}."
         )
 
-    def test_gold_schema_exists(self, engine_fixture: "Engine") -> None:
+    def test_gold_schema_exists(self, engine_fixture: Engine) -> None:
         """Gold schema must exist — it holds feature-engineered and model data."""
         schemas = _fetch_schemas(engine_fixture)
         assert "gold" in schemas, (
             f"Schema 'gold' not found. Available schemas: {schemas}."
         )
 
-    def test_all_medallion_schemas_present(self, engine_fixture: "Engine") -> None:
+    def test_all_medallion_schemas_present(self, engine_fixture: Engine) -> None:
         """Single assertion for all three layers — used in CI for a fast smoke test."""
         schemas = _fetch_schemas(engine_fixture)
         missing = set(EXPECTED_TABLES.keys()) - schemas
@@ -150,7 +150,7 @@ class TestMedallionTables:
         for table in tables
     ])
     def test_table_exists(
-        self, engine_fixture: "Engine", schema: str, table: str
+        self, engine_fixture: Engine, schema: str, table: str
     ) -> None:
         """Each expected table must be present in its schema."""
         tables_in_schema = _fetch_tables(engine_fixture, schema)
@@ -171,7 +171,7 @@ class TestMedallionRowCounts:
     ])
     def test_table_has_rows(
         self,
-        engine_fixture: "Engine",
+        engine_fixture: Engine,
         schema: str,
         table: str,
         min_rows: int,
@@ -188,7 +188,7 @@ class TestMedallionRowCounts:
 class TestDatabaseSecurity:
     """Validate that the connection uses a safe, non-superuser role."""
 
-    def test_current_user_is_not_postgres_superuser(self, engine_fixture: "Engine") -> None:
+    def test_current_user_is_not_postgres_superuser(self, engine_fixture: Engine) -> None:
         """Supabase pooler user should not have superuser privileges.
 
         The Transaction/Session Pooler user is 'postgres.{project_ref}',
@@ -209,7 +209,7 @@ class TestDatabaseSecurity:
         assert is_superuser is not None, "Could not determine current user privilege level"
         logger.info("Current user is_superuser=%s (expected False in Supabase pooler)", is_superuser)
 
-    def test_current_user_is_readable(self, engine_fixture: "Engine") -> None:
+    def test_current_user_is_readable(self, engine_fixture: Engine) -> None:
         """Confirm the current DB user identity matches the expected pooler format."""
         with engine_fixture.connect() as conn:
             user: str | None = conn.execute(text("SELECT current_user")).scalar()

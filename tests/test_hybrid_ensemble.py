@@ -9,8 +9,10 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
 
+from typing import cast
 
-class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):
+
+class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):  # type: ignore[misc]
     """Small deterministic estimator for override-path tests."""
 
     def __init__(self, probabilities: list[list[float]]) -> None:
@@ -35,7 +37,7 @@ class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):
         return probabilities[:row_count]
 
     def predict(self, X: pd.DataFrame) -> NDArray[np.int64]:
-        return self.predict_proba(X).argmax(axis=1).astype(np.int64)
+        return cast(NDArray[np.int64], self.predict_proba(X).argmax(axis=1).astype(np.int64))
 
 
 def test_hybrid_ensemble_overrides_uncertain_generalist_with_draw_specialist():

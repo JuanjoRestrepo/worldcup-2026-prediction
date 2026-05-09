@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from typing import Any, cast
+
 from src.modeling.reporting_comparison import (
     EQUIVALENCE_TOLERANCE,
     generate_comparison_report,
@@ -37,9 +39,9 @@ def _build_report(
     draw_support: int = 1500,
     model_name: str = "logistic_c1_draw1",
     deployed_variant: str = "uncalibrated",
-    competition_segments: list[dict] | None = None,
-    confederation_segments: list[dict] | None = None,
-) -> dict:
+    competition_segments: list[dict[str, Any]] | None = None,
+    confederation_segments: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Build a minimal evaluation report JSON structure for testing."""
     if competition_segments is None:
         competition_segments = [
@@ -96,8 +98,8 @@ def _build_report(
 
 def _write_reports(
     tmp_path: Path,
-    v1_data: dict,
-    v2_data: dict,
+    v1_data: dict[str, Any],
+    v2_data: dict[str, Any],
 ) -> tuple[Path, Path, Path]:
     """Write two report JSONs and return (v1_path, v2_path, output_path)."""
     v1 = tmp_path / "report_v1.json"
@@ -122,7 +124,7 @@ class TestPromotionDecision:
         v2 = _build_report(log_loss=0.96, macro_f1=0.485)
         v1_path, v2_path, out = _write_reports(tmp_path, v1, v2)
 
-        result = generate_comparison_report(v1_path, v2_path, out)
+        result = cast(dict[str, Any], generate_comparison_report(v1_path, v2_path, out))
 
         assert "PROMOTE_V2" in result["decision"]
         assert out.exists()
@@ -156,7 +158,8 @@ class TestPromotionDecision:
         v2 = _build_report(log_loss=0.97 + tiny, macro_f1=0.480 + tiny)
         v1_path, v2_path, out = _write_reports(tmp_path, v1, v2)
 
-        result = generate_comparison_report(v1_path, v2_path, out)
+        
+        result = cast(dict[str, Any], generate_comparison_report(v1_path, v2_path, out))
 
         assert "EQUIVALENT" in result["decision"]
         assert "PROMOTE_V2" in result["decision"]
@@ -209,10 +212,14 @@ class TestMarkdownStructure:
         v2 = _build_report(log_loss=0.9600, macro_f1=0.4850)
         v1_path, v2_path, out = _write_reports(tmp_path, v1, v2)
 
-        result = generate_comparison_report(v1_path, v2_path, out)
+        result = cast(dict[str, Any], generate_comparison_report(v1_path, v2_path, out))
 
-        assert abs(result["v1_metrics"]["log_loss"] - 0.97) < 1e-6  # type: ignore[index]
-        assert abs(result["v2_metrics"]["log_loss"] - 0.96) < 1e-6  # type: ignore[index]
+        v1_log_loss = result["v1_metrics"]["log_loss"]
+        v2_log_loss = result["v2_metrics"]["log_loss"]
+        assert v1_log_loss is not None
+        assert v2_log_loss is not None
+        assert abs(v1_log_loss - 0.97) < 1e-6
+        assert abs(v2_log_loss - 0.96) < 1e-6
 
 
 # ---------------------------------------------------------------------------

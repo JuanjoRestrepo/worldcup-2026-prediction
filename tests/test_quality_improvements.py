@@ -12,6 +12,8 @@ import time
 import pandas as pd
 import pytest
 
+import numpy as np
+
 from src.processing.transformers.elo import (
     ELO_DECAY_FACTOR,
     ELO_DECAY_PERIOD_DAYS,
@@ -81,7 +83,7 @@ class TestEloTimeDecay:
         )
         result_a = compute_elo(df.copy(), apply_decay=True)
         result_b = compute_elo(df.copy(), apply_decay=True)
-        assert (result_a["elo_home"].values == result_b["elo_home"].values).all()
+        assert np.all(result_a["elo_home"].values == result_b["elo_home"].values)
 
     def test_inactive_team_has_lower_spread_than_no_decay(self) -> None:
         """Decay should narrow ELO spread when a team is inactive for 2-year gap."""

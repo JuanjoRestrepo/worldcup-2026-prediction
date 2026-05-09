@@ -31,7 +31,7 @@ def test_connection():
         conn.close()
 
 
-def debug_connection():
+def debug_connection() -> None:
     """
     Manual debug function — prints DB version.
     Useful for local troubleshooting.

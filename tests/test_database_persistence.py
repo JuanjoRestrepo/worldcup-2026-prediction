@@ -20,8 +20,8 @@ class _DummyBeginContext:
     def __enter__(self) -> _DummyConnection:
         return self.connection
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
-        return False
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        pass
 
 
 class _DummyEngine:

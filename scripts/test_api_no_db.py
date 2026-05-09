@@ -7,7 +7,7 @@ import requests
 BASE_URL = "http://localhost:8000"
 
 
-def test_config_endpoint():
+def test_config_endpoint() -> bool:
     """Test /config endpoint - should work without DB."""
     try:
         response = requests.get(f"{BASE_URL}/config", timeout=5)
@@ -25,7 +25,7 @@ def test_config_endpoint():
         return False
 
 
-def test_docs_endpoint():
+def test_docs_endpoint() -> bool:
     """Test /docs endpoint - Swagger UI."""
     try:
         response = requests.get(f"{BASE_URL}/docs", timeout=5)
@@ -35,7 +35,7 @@ def test_docs_endpoint():
         return False
 
 
-def test_openapi_schema():
+def test_openapi_schema() -> bool:
     """Test /openapi.json endpoint."""
     try:
         response = requests.get(f"{BASE_URL}/openapi.json", timeout=5)

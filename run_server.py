@@ -14,7 +14,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 
-def ensure_dbt_tables_exist():
+def ensure_dbt_tables_exist() -> None:
     """Check if dbt analytics tables exist. If not, run dbt and data pipelines."""
     try:
         logger.info("🔍 Checking if dbt analytics tables exist...")

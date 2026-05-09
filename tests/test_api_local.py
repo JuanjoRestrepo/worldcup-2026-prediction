@@ -7,7 +7,7 @@ import requests
 BASE_URL = "http://localhost:8000"
 
 
-def is_server_running(host="localhost", port=8000):
+def is_server_running(host: str = "localhost", port: int = 8000) -> bool:
     """Check if the API server is running."""
     try:
         with socket.create_connection((host, port), timeout=1):
