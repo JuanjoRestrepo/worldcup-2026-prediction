@@ -60,6 +60,8 @@ Built with professional Data Engineering and MLOps practices, the project featur
 - **Automated Retraining**: A GitHub Actions workflow (`retrain.yml`) handles end-to-end model retraining monthly. It fetches real-time updates from `martj42/international_results`, preventing data staleness heading into the summer of 2026.
 - **Promotion Gate (Champion vs. Challenger)**: Models are never blindly promoted. Retrained "Challenger" artifacts are objectively scored against the current "Champion" model via `reporting_comparison.py`. Only models that actively improve Log-Loss and Macro F1 are deployed; regressions are hard-rejected and archived securely. See our generated [MLOps Walkthrough](MLOps_walkthrough.md) and [Comparison Report](models/model_comparison_report.md) for live examples.
 - **Shadow Modeling**: The API runs an experimental model alongside the production model in real-time, capturing telemetry for A/B offline comparison without impacting end-user predictions.
+- **Supabase Integration**: Transitioned to a permanent, high-performance PostgreSQL backend via Supabase for multi-environment data persistence (Bronze/Silver/Gold) and inference logging.
+- **Dynamic Theme Engine**: Custom-built theme orchestration in Streamlit that dynamically rewrites `config.toml` for perfect Light/Dark mode consistency and high-contrast accessibility.
 - **Inference Logging**: Predictions and feature snapshots are persisted to a PostgreSQL database for continuous drift monitoring.
 
 ---
