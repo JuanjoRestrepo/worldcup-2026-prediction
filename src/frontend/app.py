@@ -126,25 +126,69 @@ def get_prediction(
     return None
 
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# ── Custom CSS (Premium Dark Mode) ──────────────────────────────────────────
 st.markdown(
     """
     <style>
-    .prediction-banner {
-        background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
-        color: white;
-        padding: 1.5rem 2rem;
-        border-radius: 12px;
-        text-align: center;
-        margin: 1rem 0;
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: 0.5px;
+    /* Main background and global styles */
+    .stApp {
+        background: linear-gradient(180deg, #0a0a0c 0%, #161b22 100%);
     }
-    .prob-label {
-        font-size: 0.85rem;
-        color: #555;
-        margin-bottom: 0.25rem;
+    
+    /* Premium Banner with Glassmorphism */
+    .prediction-banner {
+        background: rgba(0, 102, 204, 0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        padding: 2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 2rem 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        animation: fadeIn 0.8s ease-out;
+    }
+    
+    /* Animation for the banner */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Metric Cards Styling */
+    [data-testid="stMetricValue"] {
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
+        color: #0066cc;
+    }
+    
+    /* Custom divider */
+    hr {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin: 2rem 0;
+    }
+
+    /* Selectbox styling */
+    .stSelectbox label {
+        color: #8b949e !important;
+        font-weight: 500;
+    }
+    
+    /* Button enhancement */
+    .stButton > button {
+        background: linear-gradient(90deg, #0066cc 0%, #004d99 100%);
+        border: none;
+        border-radius: 8px;
+        height: 3rem;
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
     }
     </style>
     """,
