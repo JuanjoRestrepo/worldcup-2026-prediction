@@ -1,9 +1,10 @@
 """Unit tests for FastAPI serving helpers."""
 
 from datetime import date
+from typing import Any
 
 import pytest
-from typing import Any
+
 import src.api.main as api_main
 
 

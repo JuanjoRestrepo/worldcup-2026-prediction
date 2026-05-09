@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
-
-from typing import cast
 
 
 class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):  # type: ignore[misc]

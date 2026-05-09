@@ -78,7 +78,8 @@ def _sample_latest_team_snapshots_df() -> pd.DataFrame:
     )
 
 
-from typing import Generator, Any
+from collections.abc import Generator
+
 
 @pytest.fixture(autouse=True)
 def clear_feature_dataset_cache() -> Generator[None, None, None]:

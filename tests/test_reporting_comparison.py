@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
-
-from typing import Any, cast
 
 from src.modeling.reporting_comparison import (
     EQUIVALENCE_TOLERANCE,
@@ -158,7 +157,7 @@ class TestPromotionDecision:
         v2 = _build_report(log_loss=0.97 + tiny, macro_f1=0.480 + tiny)
         v1_path, v2_path, out = _write_reports(tmp_path, v1, v2)
 
-        
+
         result = cast(dict[str, Any], generate_comparison_report(v1_path, v2_path, out))
 
         assert "EQUIVALENT" in result["decision"]

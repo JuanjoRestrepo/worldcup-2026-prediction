@@ -1,16 +1,17 @@
 """Unit tests for the end-to-end pipeline orchestrator."""
 
+from typing import Any
+
 import pandas as pd
 import pytest
 
 import run_pipeline
 
-from typing import Any, cast
 
 def test_run_full_pipeline_passes_db_persistence_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    
+
     calls: dict[str, Any] = {}
 
     def fake_ingestion(*, persist_to_db: bool, pipeline_run_id: str) -> None:

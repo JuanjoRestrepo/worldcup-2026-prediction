@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import time
 
+import numpy as np
 import pandas as pd
 import pytest
-
-import numpy as np
 
 from src.processing.transformers.elo import (
     ELO_DECAY_FACTOR,
