@@ -143,6 +143,21 @@ if dark_mode:
             background: linear-gradient(180deg, #0a0a0c 0%, #161b22 100%);
             color: #e6edf3;
         }
+        /* Fix Selectbox background and text */
+        div[data-baseweb="select"] > div {
+            background-color: #1c2128 !important;
+            color: white !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
+        div[data-baseweb="select"] * {
+            color: white !important;
+        }
+        /* Fix Labels and Text */
+        .stMarkdown p, .stMarkdown h1, label {
+            color: #e6edf3 !important;
+        }
+        .vs-text { color: #0066cc !important; }
+        
         .prediction-banner {
             background: rgba(0, 102, 204, 0.15);
             backdrop-filter: blur(10px);
@@ -156,12 +171,11 @@ if dark_mode:
             font-weight: 800;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
-        [data-testid="stMetricValue"] { color: #0066cc; }
-        .stSelectbox label, .stCheckbox label { color: #8b949e !important; }
+        [data-testid="stMetricValue"] { color: #0066cc !important; }
         hr { border-top: 1px solid rgba(255, 255, 255, 0.1); }
         .stButton > button {
             background: linear-gradient(90deg, #0066cc 0%, #004d99 100%);
-            color: white; border: none; border-radius: 8px;
+            color: white !important; border: none; border-radius: 8px;
         }
         </style>
         """,
@@ -176,6 +190,7 @@ else:
             background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
             color: #212529;
         }
+        .vs-text { color: #003d79 !important; }
         .prediction-banner {
             background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
             color: white;
@@ -187,10 +202,10 @@ else:
             font-weight: 800;
             box-shadow: 0 4px 15px rgba(0, 61, 121, 0.2);
         }
-        [data-testid="stMetricValue"] { color: #003d79; }
+        [data-testid="stMetricValue"] { color: #003d79 !important; }
         .stButton > button {
             background: #003d79;
-            color: white; border: none; border-radius: 8px;
+            color: white !important; border: none; border-radius: 8px;
         }
         </style>
         """,
@@ -206,6 +221,11 @@ st.markdown(
     }
     .prediction-banner { animation: fadeIn 0.8s ease-out; }
     .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4); }
+    /* Global vs-text styling */
+    .vs-text {
+        text-align:center; font-size:1.4rem; 
+        font-weight:700; margin-top:1.8rem;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -232,8 +252,7 @@ with col1:
 
 with col2:
     st.markdown(
-        "<div style='text-align:center; font-size:1.4rem; "
-        "font-weight:700; margin-top:1.8rem; color:#003d79;'>VS</div>",
+        "<div class='vs-text'>VS</div>",
         unsafe_allow_html=True,
     )
 
