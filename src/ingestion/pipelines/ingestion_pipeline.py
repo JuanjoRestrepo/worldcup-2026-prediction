@@ -54,7 +54,7 @@ def run_ingestion_pipeline(
     csv_output_path = settings.BRONZE_DIR / "historical_standardized.csv"
     df_csv_standardized.to_csv(csv_output_path, index=False)
     logger.info(f"✅ Saved standardized historical data → {csv_output_path}")
-    if persist_to_db:
+    if persist_to_db and not df_csv_standardized.empty:
         persist_dataframe(
             df_csv_standardized,
             schema_name="bronze",
@@ -133,7 +133,7 @@ def run_ingestion_pipeline(
     else:
         logger.warning("⚠️  FOOTBALL_API_KEY not set. Using historical data only")
 
-    if persist_to_db:
+    if persist_to_db and not df_api_standardized.empty:
         persist_dataframe(
             df_api_standardized,
             schema_name="bronze",

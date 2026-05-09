@@ -212,7 +212,7 @@ def root() -> dict[str, str]:
         "health": "/health",
         "config": "/config",
         "predict": "/predict (POST)",
-        "live_api": "https://worldcup-2026-prediction.onrender.com",
+        "live_api": "https://worldcup-2026-predictiongit-sct6wndlbcjvuhtytpu5pu.streamlit.app",
     }
 
 
