@@ -165,7 +165,9 @@ enableXsrfProtection = false
 
 import pathlib  # noqa: E402 (needed here for config path resolution)
 
-_CONFIG_PATH = pathlib.Path(__file__).parent.parent.parent / ".streamlit" / "config.toml"
+_CONFIG_PATH = (
+    pathlib.Path(__file__).parent.parent.parent / ".streamlit" / "config.toml"
+)
 
 if "dark_mode" not in st.session_state:
     # Read the current config to initialise state correctly
@@ -235,7 +237,7 @@ st.markdown(
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
     }}
-    {''.join(c.strip() for c in (_DARK_BANNER_CSS if dark_mode else _LIGHT_BANNER_CSS).splitlines())}
+    {"".join(c.strip() for c in (_DARK_BANNER_CSS if dark_mode else _LIGHT_BANNER_CSS).splitlines())}
     </style>
     """,
     unsafe_allow_html=True,

@@ -11,7 +11,6 @@ import run_pipeline
 def test_run_full_pipeline_passes_db_persistence_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-
     calls: dict[str, Any] = {}
 
     def fake_ingestion(*, persist_to_db: bool, pipeline_run_id: str) -> None:
@@ -20,7 +19,9 @@ def test_run_full_pipeline_passes_db_persistence_flag(
             "pipeline_run_id": pipeline_run_id,
         }
 
-    def fake_processing(*, use_api_data: bool, persist_to_db: bool, pipeline_run_id: str) -> pd.DataFrame:
+    def fake_processing(
+        *, use_api_data: bool, persist_to_db: bool, pipeline_run_id: str
+    ) -> pd.DataFrame:
         calls["processing"] = {
             "use_api_data": use_api_data,
             "persist_to_db": persist_to_db,

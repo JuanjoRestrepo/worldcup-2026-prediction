@@ -8,7 +8,9 @@ import pytest
 import src.api.main as api_main
 
 
-def test_runtime_config_exposes_prediction_feature_source(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_runtime_config_exposes_prediction_feature_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(api_main.settings, "PREDICTION_FEATURE_SOURCE", "auto")
     monkeypatch.setattr(api_main.settings, "MONITORING_SOURCE", "auto")
     monkeypatch.setattr(api_main.settings, "DBT_BASE_SCHEMA", "analytics")
@@ -20,7 +22,9 @@ def test_runtime_config_exposes_prediction_feature_source(monkeypatch: pytest.Mo
     assert config["dbt_base_schema"] == "analytics"
 
 
-def test_predict_endpoint_returns_active_feature_source(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_predict_endpoint_returns_active_feature_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, Any] = {}
 
     class _LoggerStub:
@@ -84,7 +88,9 @@ def test_predict_endpoint_returns_active_feature_source(monkeypatch: pytest.Monk
     assert captured["predict_kwargs"]["match_date"] == date(2025, 11, 18)
 
 
-def test_latest_training_run_endpoint_returns_monitoring_source(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_latest_training_run_endpoint_returns_monitoring_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         api_main,
         "load_latest_training_run_summary_with_source",

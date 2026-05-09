@@ -46,6 +46,7 @@ pytestmark = pytest.mark.integration
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _fetch_schemas(engine: Engine) -> set[str]:
     """Return all user-created schema names from information_schema."""
     sql = text(
@@ -95,7 +96,9 @@ class TestSupabaseConnectivity:
         """Confirm the connection is alive and returns results."""
         with engine_fixture.connect() as conn:
             result = conn.execute(text("SELECT 1")).scalar()
-        assert result == 1, "Basic connectivity check failed — SELECT 1 returned unexpected value"
+        assert result == 1, (
+            "Basic connectivity check failed — SELECT 1 returned unexpected value"
+        )
 
     def test_postgres_version_is_readable(self, engine_fixture: Engine) -> None:
         """Confirm we can query the server version (sanity check on permissions)."""
@@ -144,11 +147,14 @@ class TestMedallionSchemas:
 class TestMedallionTables:
     """Validate that all expected tables exist within their respective schemas."""
 
-    @pytest.mark.parametrize("schema,table", [
-        (schema, table)
-        for schema, tables in EXPECTED_TABLES.items()
-        for table in tables
-    ])
+    @pytest.mark.parametrize(
+        "schema,table",
+        [
+            (schema, table)
+            for schema, tables in EXPECTED_TABLES.items()
+            for table in tables
+        ],
+    )
     def test_table_exists(
         self, engine_fixture: Engine, schema: str, table: str
     ) -> None:
@@ -163,12 +169,19 @@ class TestMedallionTables:
 class TestMedallionRowCounts:
     """Validate that core pipeline tables are non-empty after ingestion."""
 
-    @pytest.mark.parametrize("schema,table,min_rows", [
-        ("bronze", "historical_matches", 10_000),  # 49k+ rows expected from GitHub CSV
-        ("silver", "matches_cleaned", 5_000),      # Post-1990 filter: ~32k rows
-        ("gold", "features_dataset", 5_000),       # Feature-engineered gold layer
-        ("gold", "training_runs", 1),              # At least one training run recorded
-    ])
+    @pytest.mark.parametrize(
+        "schema,table,min_rows",
+        [
+            (
+                "bronze",
+                "historical_matches",
+                10_000,
+            ),  # 49k+ rows expected from GitHub CSV
+            ("silver", "matches_cleaned", 5_000),  # Post-1990 filter: ~32k rows
+            ("gold", "features_dataset", 5_000),  # Feature-engineered gold layer
+            ("gold", "training_runs", 1),  # At least one training run recorded
+        ],
+    )
     def test_table_has_rows(
         self,
         engine_fixture: Engine,
@@ -188,7 +201,9 @@ class TestMedallionRowCounts:
 class TestDatabaseSecurity:
     """Validate that the connection uses a safe, non-superuser role."""
 
-    def test_current_user_is_not_postgres_superuser(self, engine_fixture: Engine) -> None:
+    def test_current_user_is_not_postgres_superuser(
+        self, engine_fixture: Engine
+    ) -> None:
         """Supabase pooler user should not have superuser privileges.
 
         The Transaction/Session Pooler user is 'postgres.{project_ref}',
@@ -206,8 +221,13 @@ class TestDatabaseSecurity:
             is_superuser = conn.execute(sql).scalar()
         # Pooler users are typically not superusers on Supabase — this is correct.
         # If this returns True in production, flag it for review.
-        assert is_superuser is not None, "Could not determine current user privilege level"
-        logger.info("Current user is_superuser=%s (expected False in Supabase pooler)", is_superuser)
+        assert is_superuser is not None, (
+            "Could not determine current user privilege level"
+        )
+        logger.info(
+            "Current user is_superuser=%s (expected False in Supabase pooler)",
+            is_superuser,
+        )
 
     def test_current_user_is_readable(self, engine_fixture: Engine) -> None:
         """Confirm the current DB user identity matches the expected pooler format."""

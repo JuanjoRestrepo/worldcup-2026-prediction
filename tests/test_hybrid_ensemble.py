@@ -37,7 +37,9 @@ class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):  # type: ignore
         return probabilities[:row_count]
 
     def predict(self, X: pd.DataFrame) -> NDArray[np.int64]:
-        return cast(NDArray[np.int64], self.predict_proba(X).argmax(axis=1).astype(np.int64))
+        return cast(
+            NDArray[np.int64], self.predict_proba(X).argmax(axis=1).astype(np.int64)
+        )
 
 
 def test_hybrid_ensemble_overrides_uncertain_generalist_with_draw_specialist():
