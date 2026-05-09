@@ -126,112 +126,124 @@ def get_prediction(
     return None
 
 
-# ── Theme Toggle ──────────────────────────────────────────────────────────────
+# ── Theme Engine (rewrites config.toml so ALL native widgets switch correctly) ─
+# Injecting CSS is unreliable for Streamlit's native elements (labels, sidebar,
+# toolbar icons, checkboxes). Writing config.toml and calling st.rerun() is the
+# only guaranteed way to switch the entire theme engine including the header bar.
+
+_DARK_TOML = """\
+[theme]
+base="dark"
+primaryColor="#0066cc"
+backgroundColor="#0d1117"
+secondaryBackgroundColor="#161b22"
+textColor="#e6edf3"
+font="sans serif"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
+"""
+
+_LIGHT_TOML = """\
+[theme]
+base="light"
+primaryColor="#0066cc"
+backgroundColor="#f8f9fa"
+secondaryBackgroundColor="#ffffff"
+textColor="#212529"
+font="sans serif"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
+"""
+
+import pathlib  # noqa: E402 (needed here for config path resolution)
+
+_CONFIG_PATH = pathlib.Path(__file__).parent.parent.parent / ".streamlit" / "config.toml"
+
+if "dark_mode" not in st.session_state:
+    # Read the current config to initialise state correctly
+    current = _CONFIG_PATH.read_text(encoding="utf-8") if _CONFIG_PATH.exists() else ""
+    st.session_state["dark_mode"] = "dark" in current
+
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    dark_mode = st.toggle("🌙 Dark Mode", value=True)
+    new_dark = st.toggle("🌙 Dark Mode", value=st.session_state["dark_mode"])
+    if new_dark != st.session_state["dark_mode"]:
+        st.session_state["dark_mode"] = new_dark
+        _CONFIG_PATH.write_text(
+            _DARK_TOML if new_dark else _LIGHT_TOML, encoding="utf-8"
+        )
+        st.rerun()
     st.divider()
     st.caption("v0.1.0-alpha | Supabase Migrated")
 
-# ── Custom CSS (Dynamic Themes) ───────────────────────────────────────────────
-if dark_mode:
-    # Premium Dark Mode
-    st.markdown(
-        """
-        <style>
-        .stApp {
-            background: linear-gradient(180deg, #0a0a0c 0%, #161b22 100%);
-            color: #e6edf3;
-        }
-        /* Fix Selectbox background and text */
-        div[data-baseweb="select"] > div {
-            background-color: #1c2128 !important;
-            color: white !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-        }
-        div[data-baseweb="select"] * {
-            color: white !important;
-        }
-        /* Fix Labels and Text */
-        .stMarkdown p, .stMarkdown h1, label {
-            color: #e6edf3 !important;
-        }
-        .vs-text { color: #0066cc !important; }
-        
-        .prediction-banner {
-            background: rgba(0, 102, 204, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            padding: 2rem;
-            border-radius: 16px;
-            text-align: center;
-            margin: 2rem 0;
-            font-size: 1.75rem;
-            font-weight: 800;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-        [data-testid="stMetricValue"] { color: #0066cc !important; }
-        hr { border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        .stButton > button {
-            background: linear-gradient(90deg, #0066cc 0%, #004d99 100%);
-            color: white !important; border: none; border-radius: 8px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-else:
-    # Premium Light Mode
-    st.markdown(
-        """
-        <style>
-        .stApp {
-            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-            color: #212529;
-        }
-        .vs-text { color: #003d79 !important; }
-        .prediction-banner {
-            background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 16px;
-            text-align: center;
-            margin: 2rem 0;
-            font-size: 1.75rem;
-            font-weight: 800;
-            box-shadow: 0 4px 15px rgba(0, 61, 121, 0.2);
-        }
-        [data-testid="stMetricValue"] { color: #003d79 !important; }
-        .stButton > button {
-            background: #003d79;
-            color: white !important; border: none; border-radius: 8px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+dark_mode: bool = st.session_state["dark_mode"]
+
+# ── CSS: only things the theme engine cannot control (custom HTML elements) ───
+_DARK_BANNER_CSS = """
+    .prediction-banner {
+        background: rgba(0, 102, 204, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        padding: 2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 2rem 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .vs-text { color: #0066cc !important; }
+"""
+
+_LIGHT_BANNER_CSS = """
+    .prediction-banner {
+        background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 2rem 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        box-shadow: 0 4px 15px rgba(0, 61, 121, 0.2);
+    }
+    .vs-text { color: #003d79 !important; }
+"""
 
 st.markdown(
-    """
+    f"""
     <style>
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .prediction-banner { animation: fadeIn 0.8s ease-out; }
-    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4); }
-    /* Global vs-text styling */
-    .vs-text {
-        text-align:center; font-size:1.4rem; 
-        font-weight:700; margin-top:1.8rem;
-    }
+    @keyframes fadeIn {{
+        from {{ opacity: 0; transform: translateY(10px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .prediction-banner {{ animation: fadeIn 0.8s ease-out; }}
+    .vs-text {{
+        text-align: center; font-size: 1.4rem;
+        font-weight: 700; margin-top: 1.8rem;
+    }}
+    .stButton > button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
+    }}
+    {''.join(c.strip() for c in (_DARK_BANNER_CSS if dark_mode else _LIGHT_BANNER_CSS).splitlines())}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+
 # ── Header ────────────────────────────────────────────────────────────────────
+
 st.title("🏆 World Cup 2026 Predictor")
 st.markdown(
     "Powered by the **Segment-Aware Hybrid Ensemble** — "
