@@ -126,70 +126,86 @@ def get_prediction(
     return None
 
 
-# ── Custom CSS (Premium Dark Mode) ──────────────────────────────────────────
+# ── Theme Toggle ──────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
+    dark_mode = st.toggle("🌙 Dark Mode", value=True)
+    st.divider()
+    st.caption("v0.1.0-alpha | Supabase Migrated")
+
+# ── Custom CSS (Dynamic Themes) ───────────────────────────────────────────────
+if dark_mode:
+    # Premium Dark Mode
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background: linear-gradient(180deg, #0a0a0c 0%, #161b22 100%);
+            color: #e6edf3;
+        }
+        .prediction-banner {
+            background: rgba(0, 102, 204, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.75rem;
+            font-weight: 800;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        [data-testid="stMetricValue"] { color: #0066cc; }
+        .stSelectbox label, .stCheckbox label { color: #8b949e !important; }
+        hr { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .stButton > button {
+            background: linear-gradient(90deg, #0066cc 0%, #004d99 100%);
+            color: white; border: none; border-radius: 8px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    # Premium Light Mode
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #212529;
+        }
+        .prediction-banner {
+            background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.75rem;
+            font-weight: 800;
+            box-shadow: 0 4px 15px rgba(0, 61, 121, 0.2);
+        }
+        [data-testid="stMetricValue"] { color: #003d79; }
+        .stButton > button {
+            background: #003d79;
+            color: white; border: none; border-radius: 8px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 st.markdown(
     """
     <style>
-    /* Main background and global styles */
-    .stApp {
-        background: linear-gradient(180deg, #0a0a0c 0%, #161b22 100%);
-    }
-    
-    /* Premium Banner with Glassmorphism */
-    .prediction-banner {
-        background: rgba(0, 102, 204, 0.15);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        padding: 2rem;
-        border-radius: 16px;
-        text-align: center;
-        margin: 2rem 0;
-        font-size: 1.75rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        animation: fadeIn 0.8s ease-out;
-    }
-    
-    /* Animation for the banner */
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-
-    /* Metric Cards Styling */
-    [data-testid="stMetricValue"] {
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-        color: #0066cc;
-    }
-    
-    /* Custom divider */
-    hr {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        margin: 2rem 0;
-    }
-
-    /* Selectbox styling */
-    .stSelectbox label {
-        color: #8b949e !important;
-        font-weight: 500;
-    }
-    
-    /* Button enhancement */
-    .stButton > button {
-        background: linear-gradient(90deg, #0066cc 0%, #004d99 100%);
-        border: none;
-        border-radius: 8px;
-        height: 3rem;
-        transition: all 0.3s ease;
-    }
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
-    }
+    .prediction-banner { animation: fadeIn 0.8s ease-out; }
+    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4); }
     </style>
     """,
     unsafe_allow_html=True,
