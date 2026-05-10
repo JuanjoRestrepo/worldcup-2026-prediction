@@ -38,8 +38,6 @@ jobs:
       POSTGRES_USER: worldcup
       POSTGRES_PASSWORD: worldcup_dev
       DBT_BASE_SCHEMA: analytics
-      PREDICTION_FEATURE_SOURCE: csv
-      MONITORING_SOURCE: dbt
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
@@ -84,12 +82,9 @@ jobs:
       - name: Run MyPy type checking
         run: uv run python -m mypy backend/api backend/modeling backend/database backend/contracts
 
-      # ── dbt validation and generation ─────────────────────────────────────
+      # ── dbt validation ────────────────────────────────────────────────────
       - name: Validate dbt project syntax
         run: uv run python scripts/run_dbt.py parse
-
-      - name: Generate dbt models (creates empty schema tables for integration tests)
-        run: uv run python scripts/run_dbt.py run
 
       # ── Tests ─────────────────────────────────────────────────────────────
       - name: Run pytest
