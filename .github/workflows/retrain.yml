@@ -40,6 +40,7 @@ jobs:
       # Suppress DB persistence during scheduled retrains — artifacts are the
       # source of truth; DB persistence is opt-in for local dev only.
       PERSIST_TO_DB: "false"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Check out repository

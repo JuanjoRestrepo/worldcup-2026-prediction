@@ -8,8 +8,71 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 from backend.api.main import app
+from backend.modeling.types import PredictionResult, LatestTrainingRunSummary
+
+
+@pytest.fixture(autouse=True)
+def mock_db_dependencies():
+    """Mock database dependencies to prevent CI failures on empty DB."""
+    with patch("backend.api.main.predict_match_outcome") as mock_predict, \
+         patch("backend.api.main.load_latest_training_run_summary_with_source") as mock_latest_run:
+        
+        # Mock prediction response using TypedDict structure
+        mock_predict.return_value = {
+            "home_team": "Argentina",
+            "away_team": "Brazil",
+            "predicted_class": 1,
+            "predicted_outcome": "home_win",
+            "class_probabilities": {"home_win": 0.6, "draw": 0.3, "away_win": 0.1},
+            "neutral": True,
+            "tournament": "World Cup Qualifiers",
+            "match_date": "2026-05-10",
+            "feature_snapshot_dates": {
+                "home_team": "Argentina",
+                "away_team": "Brazil",
+                "home_snapshot_date": "2026-05-01",
+                "away_snapshot_date": "2026-05-01",
+            },
+            "feature_source": "mock_postgres",
+            "model_artifact_path": "models/match_predictor.joblib",
+            "match_segment": "qualifiers",
+            "is_override_triggered": False,
+        }
+
+        # Mock invalid team failure gracefully if needed
+        def side_effect(**kwargs):
+            if kwargs.get("home_team") == "Atlantis FC":
+                raise ValueError("Team 'Atlantis FC' was not found in the gold feature dataset.")
+            return mock_predict.return_value
+
+        mock_predict.side_effect = side_effect
+
+        # Mock monitoring response
+        mock_latest_run.return_value = (
+            {
+                "pipeline_run_id": "mock_run_id",
+                "artifact_path": "models/mock.joblib",
+                "data_path": "data/mock.csv",
+                "training_rows": 1000,
+                "test_rows": 200,
+                "feature_count": 50,
+                "train_date_start": "2010-01-01",
+                "train_date_end": "2026-01-01",
+                "test_date_start": "2026-01-02",
+                "test_date_end": "2026-05-01",
+                "accuracy": 0.8,
+                "macro_f1": 0.8,
+                "weighted_f1": 0.8,
+                "log_loss": 0.5,
+                "trained_at_utc": "2026-05-10T00:00:00Z",
+                "persisted_at_utc": "2026-05-10T00:00:00Z"
+            },
+            "mock_source"
+        )
+        yield
 
 
 @pytest.fixture
