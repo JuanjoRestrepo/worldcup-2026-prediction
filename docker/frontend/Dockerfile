@@ -37,16 +37,14 @@ RUN groupadd --system appgroup \
 
 WORKDIR /app
 
-# Copy the built venv from the builder — no build tools land in the runner.
-COPY --from=builder /app/.venv /app/.venv
+# Copy the built venv from the builder
+COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
 
-# Only the frontend module and its Streamlit config are needed.
-# Placing these after the venv copy keeps the expensive install layer cached
-# across source-only changes.
-COPY frontend ./frontend
-COPY frontend/.streamlit ./.streamlit
+# Copy frontend source
+COPY --chown=appuser:appgroup frontend ./frontend
+COPY --chown=appuser:appgroup frontend/.streamlit ./.streamlit
 
-RUN chown -R appuser:appgroup /app
+RUN chown appuser:appgroup /app
 
 USER appuser
 

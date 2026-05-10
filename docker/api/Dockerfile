@@ -54,22 +54,15 @@ RUN groupadd --system appgroup \
 WORKDIR /app
 
 # Copy only the pre-built virtual environment from the builder stage.
-# This drops all of uv, pip, and the build toolchain from the final image.
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
 
-# Copy application source — placed AFTER the venv copy so that code changes
-# only invalidate the cheaper COPY layer, not the package install.
-COPY backend ./backend
+# Copy application source
+COPY --chown=appuser:appgroup backend ./backend
+COPY --chown=appuser:appgroup models ./models
+COPY --chown=appuser:appgroup data/gold ./data/gold
 
-# Bake in the pre-trained model artifact and gold feature CSV snapshot.
-# Both are small (~100KB model, ~14MB CSV) — no persistent disk needed on Render free tier.
-COPY models ./models
-COPY data/gold ./data/gold
-
-# Set correct ownership in a single RUN command (combining into one layer is
-# more efficient than a separate RUN chown because it avoids intermediate layers).
-RUN mkdir -p /app/data /app/models \
-    && chown -R appuser:appgroup /app
+# Create data/models directories with correct permissions in one go
+RUN mkdir -p /app/data /app/models && chown appuser:appgroup /app/data /app/models
 
 USER appuser
 
