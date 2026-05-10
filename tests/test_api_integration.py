@@ -1,6 +1,6 @@
 """Integration tests for the FastAPI prediction engine using TestClient.
 
-These tests run without requiring a separate running server process, 
+These tests run without requiring a separate running server process,
 using FastAPI's TestClient to simulate HTTP requests.
 """
 
