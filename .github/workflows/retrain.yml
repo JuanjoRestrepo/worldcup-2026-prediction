@@ -103,7 +103,7 @@ jobs:
         run: |
           uv run python -c "
           from pathlib import Path
-          from src.modeling.reporting_comparison import generate_comparison_report
+          from backend.modeling.reporting_comparison import generate_comparison_report
           result = generate_comparison_report(
               v1_report_path=Path('models/match_predictor_evaluation_report_v1.json'),
               v2_report_path=Path('models/match_predictor_evaluation_report.json'),

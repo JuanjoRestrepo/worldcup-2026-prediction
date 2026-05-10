@@ -79,7 +79,7 @@ jobs:
         run: uv run python -m ruff format --check .
 
       - name: Run MyPy type checking
-        run: uv run python -m mypy src/api src/modeling src/database src/contracts
+        run: uv run python -m mypy backend/api backend/modeling backend/database backend/contracts
 
       # ── Tests ─────────────────────────────────────────────────────────────
       - name: Run pytest
