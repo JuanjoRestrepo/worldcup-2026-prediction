@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from src.api.main import app
-from src.config.team_aliases import TEAM_ALIASES, normalize_team_name
+from backend.api.main import app
+from backend.config.team_aliases import TEAM_ALIASES, normalize_team_name
 
 client = TestClient(app)
 
@@ -60,7 +60,7 @@ class TestPredictEndpoint:
             "match_date": "2026-04-02",
         }
         # Just verify schema is valid by creating request (would fail if invalid)
-        from src.api.main import PredictionRequest
+        from backend.api.main import PredictionRequest
 
         req = PredictionRequest(**payload)
         assert req.home_team == "Brazil"
@@ -68,7 +68,7 @@ class TestPredictEndpoint:
 
     def test_predict_response_includes_feature_freshness(self):
         """Test that PredictionResponse includes feature_freshness field."""
-        from src.api.main import PredictionResponse
+        from backend.api.main import PredictionResponse
 
         response_data = {
             "home_team": "Brazil",
@@ -92,7 +92,7 @@ class TestFeatureFreshness:
 
     def test_validate_feature_freshness_fresh(self):
         """Test detection of fresh features."""
-        from src.modeling.inference_logger import validate_feature_freshness
+        from backend.modeling.inference_logger import validate_feature_freshness
 
         now = datetime.now(UTC)
         today_str = now.date().isoformat()
@@ -107,7 +107,7 @@ class TestFeatureFreshness:
         """Test detection of stale features."""
         from datetime import timedelta
 
-        from src.modeling.inference_logger import validate_feature_freshness
+        from backend.modeling.inference_logger import validate_feature_freshness
 
         old_date = (datetime.now(UTC) - timedelta(days=40)).date().isoformat()
 
@@ -122,7 +122,7 @@ class TestFeatureFreshness:
         """Test handling of mixed fresh/stale features."""
         from datetime import timedelta
 
-        from src.modeling.inference_logger import validate_feature_freshness
+        from backend.modeling.inference_logger import validate_feature_freshness
 
         now = datetime.now(UTC)
         fresh_date = now.date().isoformat()
@@ -140,7 +140,7 @@ class TestPredictWithAliases:
 
     def test_predict_request_schema_with_alias_description(self):
         """Verify schema documents that aliases are supported."""
-        from src.api.main import PredictionRequest
+        from backend.api.main import PredictionRequest
 
         schema = PredictionRequest.model_json_schema()
         assert "home_team" in schema["properties"]
@@ -162,7 +162,7 @@ class TestErrorHandling:
 
     def test_predict_error_messages_helpful(self):
         """Test that error messages are informative."""
-        from src.api.main import PredictionRequest
+        from backend.api.main import PredictionRequest
 
         # Invalid request should return helpful message
         invalid_payload = {

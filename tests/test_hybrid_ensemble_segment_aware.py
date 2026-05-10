@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
-from src.modeling.hybrid_ensemble_segment_aware import (
+from backend.modeling.hybrid_ensemble_segment_aware import (
     SegmentAwareHybridDrawOverrideEnsemble,
     SegmentConfig,
 )

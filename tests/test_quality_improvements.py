@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.processing.transformers.elo import (
+from backend.processing.transformers.elo import (
     ELO_DECAY_FACTOR,
     ELO_DECAY_PERIOD_DAYS,
     ELO_MEAN,
@@ -21,7 +21,7 @@ from src.processing.transformers.elo import (
     _apply_inactivity_decay,
     compute_elo,
 )
-from src.processing.transformers.rolling_features import compute_rolling_features
+from backend.processing.transformers.rolling_features import compute_rolling_features
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ELO TIME-DECAY TESTS
@@ -236,7 +236,7 @@ class TestPredictModuleImportLatency:
     """
 
     def test_predict_module_imports_under_2s(self) -> None:
-        """src.modeling.predict import should complete in under 6 seconds.
+        """backend.modeling.predict import should complete in under 6 seconds.
 
         Note: Windows has higher import overhead than Linux. The 6s limit is
         intentionally generous for local dev; in CI (Linux) this typically runs < 2s.
@@ -244,9 +244,9 @@ class TestPredictModuleImportLatency:
         start = time.monotonic()
         import importlib
 
-        import src.modeling.predict  # noqa: PLC0415
+        import backend.modeling.predict  # noqa: PLC0415
 
-        importlib.reload(src.modeling.predict)
+        importlib.reload(backend.modeling.predict)
         elapsed = time.monotonic() - start
         assert elapsed < 6.0, (
             f"predict module import took {elapsed:.3f}s — module-level code is too slow"
@@ -290,7 +290,7 @@ class TestEnsembleCalibrationGuard:
         # Verify that these specific families are in the protected list in train.py logic.
         import inspect
 
-        from src.modeling.train import train_and_export_model
+        from backend.modeling.train import train_and_export_model
 
         train_source = inspect.getsource(train_and_export_model)
 

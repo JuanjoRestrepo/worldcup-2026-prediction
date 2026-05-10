@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.ingestion.utils.international_validator import (
+from backend.ingestion.utils.international_validator import (
     CLUB_LEAGUES,
     INTERNATIONAL_COMPETITIONS,
     filter_international_matches,

@@ -15,19 +15,19 @@ import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
-from src.modeling.evaluation import (
+from backend.modeling.evaluation import (
     CandidateSpec,
     evaluate_candidates_with_backtesting,
 )
-from src.modeling.hybrid_ensemble_segment_aware import (
+from backend.modeling.hybrid_ensemble_segment_aware import (
     SegmentAwareHybridDrawOverrideEnsemble,
     SegmentConfig,
 )
-from src.modeling.segment_routing import (
+from backend.modeling.segment_routing import (
     SEGMENT_METADATA_COLUMNS,
     tournament_segment_detector,
 )
-from src.modeling.train import (
+from backend.modeling.train import (
     _build_candidate_specs,
     _build_segment_configs,
     _make_sample_weight_builder,

@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from src.processing.transformers.opponent_strength import compute_opponent_strength
+from backend.processing.transformers.opponent_strength import compute_opponent_strength
 
 
 def test_compute_opponent_strength_columns():

@@ -8,7 +8,7 @@ Validates:
 
 Design decisions:
 - All credentials are sourced from environment variables loaded by
-  python-dotenv (via src.config.settings). No secrets are hardcoded.
+  python-dotenv (via backend.config.settings). No secrets are hardcoded.
 - Every test that requires a live DB connection uses the shared
   ``engine_fixture`` from conftest.py, which auto-skips when the DB is
   unavailable (e.g., in offline CI without a DB service container).

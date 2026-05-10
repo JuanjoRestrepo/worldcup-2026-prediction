@@ -7,7 +7,7 @@
 
 ## What Changed
 
-### 1. [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/evaluation.py) — Metadata Pass-Through
+### 1. [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/evaluation.py) — Metadata Pass-Through
 
 Added `metadata_columns: list[str] | None = None` parameter to `evaluate_candidates_with_backtesting()`. When segment-aware candidates are detected (by `family == "segment_aware_hybrid"`), the function appends metadata columns (e.g., `tournament`) to the validation DataFrame during `predict_proba`/`predict` calls. The ensemble's `feature_names_in_` filtering strips these columns before model inference, so they only serve the segment detector.
 
@@ -37,8 +37,8 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import TimeSeriesSplit
 
-from src.modeling.features import OUTCOME_LABELS
-from src.modeling.types import TrainingMetrics
+from backend.modeling.features import OUTCOME_LABELS
+from backend.modeling.types import TrainingMetrics
 
 PRIMARY_SELECTION_METRICS = (
     "macro_f1",
@@ -589,8 +589,8 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import TimeSeriesSplit
 
-from src.modeling.features import OUTCOME_LABELS
-from src.modeling.types import TrainingMetrics
+from backend.modeling.features import OUTCOME_LABELS
+from backend.modeling.types import TrainingMetrics
 
 PRIMARY_SELECTION_METRICS = (
     "macro_f1",
@@ -1152,7 +1152,7 @@ def evaluate_candidates_with_backtesting(
 
 ---
 
-### 2. [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/train.py) — Segment Detector + 4 Candidates
+### 2. [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/train.py) — Segment Detector + 4 Candidates
 
 Three additions:
 
@@ -1203,10 +1203,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
-from src.config.settings import settings
-from src.contracts.data_contracts import validate_feature_dataset_contract
-from src.database.persistence import persist_training_run
-from src.modeling.evaluation import (
+from backend.config.settings import settings
+from backend.contracts.data_contracts import validate_feature_dataset_contract
+from backend.database.persistence import persist_training_run
+from backend.modeling.evaluation import (
     CandidateSpec,
     ProbabilisticEstimator,
     evaluate_candidates_with_backtesting,
@@ -1216,12 +1216,12 @@ from src.modeling.evaluation import (
     select_deployment_variant,
     split_train_calibration_test,
 )
-from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
-from src.modeling.features import select_model_feature_columns
-from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
-from src.modeling.reporting import generate_evaluation_report
-from src.modeling.two_stage import TwoStageDrawClassifier
-from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
+from backend.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
+from backend.modeling.features import select_model_feature_columns
+from backend.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
+from backend.modeling.reporting import generate_evaluation_report
+from backend.modeling.two_stage import TwoStageDrawClassifier
+from backend.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
 logger = logging.getLogger(__name__)
 
@@ -2001,10 +2001,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
-from src.config.settings import settings
-from src.contracts.data_contracts import validate_feature_dataset_contract
-from src.database.persistence import persist_training_run
-from src.modeling.evaluation import (
+from backend.config.settings import settings
+from backend.contracts.data_contracts import validate_feature_dataset_contract
+from backend.database.persistence import persist_training_run
+from backend.modeling.evaluation import (
     CandidateSpec,
     ProbabilisticEstimator,
     evaluate_candidates_with_backtesting,
@@ -2014,16 +2014,16 @@ from src.modeling.evaluation import (
     select_deployment_variant,
     split_train_calibration_test,
 )
-from src.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
-from src.modeling.features import select_model_feature_columns
-from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
-from src.modeling.hybrid_ensemble_segment_aware import (
+from backend.modeling.features import OUTCOME_LABELS, TARGET_COLUMN, load_feature_dataset
+from backend.modeling.features import select_model_feature_columns
+from backend.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
+from backend.modeling.hybrid_ensemble_segment_aware import (
     SegmentAwareHybridDrawOverrideEnsemble,
     SegmentConfig,
 )
-from src.modeling.reporting import generate_evaluation_report
-from src.modeling.two_stage import TwoStageDrawClassifier
-from src.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
+from backend.modeling.reporting import generate_evaluation_report
+from backend.modeling.two_stage import TwoStageDrawClassifier
+from backend.modeling.types import DateRange, ModelArtifactBundle, TrainingMetrics, TrainingSummary
 
 logger = logging.getLogger(__name__)
 
@@ -3085,8 +3085,8 @@ The generalist still wins globally because its log_loss (0.9642) is ~0.003 lower
 
 | File | Action | Lines Changed |
 |---|---|---|
-| [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/evaluation.py) | Modified | +30 |
-| [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/train.py) | Modified | +230 |
+| [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/evaluation.py) | Modified | +30 |
+| [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/train.py) | Modified | +230 |
 | [test_segment_aware_training_integration.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/tests/test_segment_aware_training_integration.py) | Created | 282 lines |
 
 ---
@@ -3094,7 +3094,7 @@ The generalist still wins globally because its log_loss (0.9642) is ~0.003 lower
 ## Pending in Git
 
 ```
-modified:   src/modeling/evaluation.py
-modified:   src/modeling/train.py
+modified:   backend/modeling/evaluation.py
+modified:   backend/modeling/train.py
 new file:   tests/test_segment_aware_training_integration.py
 ```

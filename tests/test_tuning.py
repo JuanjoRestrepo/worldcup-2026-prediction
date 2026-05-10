@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from src.modeling.tuning import auto_tune_segment_thresholds
+from backend.modeling.tuning import auto_tune_segment_thresholds
 
 
 class MockEstimator:

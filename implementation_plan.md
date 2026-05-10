@@ -34,7 +34,7 @@ The draw class represents **23.5%** of outcomes (7,513/31,957). This prior imbal
 
 ### Component 1: Training Pipeline
 
-#### [MODIFY] [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/train.py)
+#### [MODIFY] [train.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/train.py)
 
 **Changes:**
 1. **Import** `SegmentAwareHybridDrawOverrideEnsemble` and `SegmentConfig` from `hybrid_ensemble_segment_aware.py`
@@ -60,7 +60,7 @@ The draw class represents **23.5%** of outcomes (7,513/31,957). This prior imbal
 
 ### Component 2: Evaluation Pipeline (Metadata Pass-Through)
 
-#### [MODIFY] [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/src/modeling/evaluation.py)
+#### [MODIFY] [evaluation.py](file:///c:/Users/restr/Desktop/worldcup-2026-prediction/backend/modeling/evaluation.py)
 
 **Changes:**
 1. Add `metadata_columns: list[str] | None = None` parameter to `evaluate_candidates_with_backtesting`
@@ -110,16 +110,16 @@ Test coverage:
 ### Automated Tests
 ```bash
 # 1. Full lint check
-uv run ruff check src/modeling/ tests/
+uv run ruff check backend/modeling/ tests/
 
 # 2. Type checking
-uv run mypy src/modeling/train.py src/modeling/evaluation.py src/modeling/hybrid_ensemble_segment_aware.py
+uv run mypy backend/modeling/train.py backend/modeling/evaluation.py backend/modeling/hybrid_ensemble_segment_aware.py
 
 # 3. Existing + new tests
 uv run python -m pytest tests/ -x --tb=short -q
 
 # 4. Full retraining (validates end-to-end pipeline with new candidates)
-uv run python -m src.modeling.train
+uv run python -m backend.modeling.train
 ```
 
 ### Manual Verification

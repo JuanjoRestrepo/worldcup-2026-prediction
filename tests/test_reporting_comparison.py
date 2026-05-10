@@ -16,7 +16,7 @@ from typing import Any, cast
 
 import pytest
 
-from src.modeling.reporting_comparison import (
+from backend.modeling.reporting_comparison import (
     EQUIVALENCE_TOLERANCE,
     generate_comparison_report,
 )

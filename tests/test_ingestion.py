@@ -1,4 +1,4 @@
-from src.ingestion.clients.csv_client import load_historical_data
+from backend.ingestion.clients.csv_client import load_historical_data
 
 
 def test_load_csv():

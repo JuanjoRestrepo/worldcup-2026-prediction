@@ -14,7 +14,7 @@ The World Cup 2026 Prediction Engine has been successfully transformed from a lo
 
 ### 1. Repository Restructuring
 We moved from a flat structure to a professional, modular layout:
-- `src/`: Core logic (API, Modeling, Ingestion).
+- `backend/`: Core logic (API, Modeling, Ingestion).
 - `scripts/`: Production & utility scripts (dbt runners, pipelines).
 - `notebooks/`: Research and EDA.
 - `docs/history/`: Archived technical documentation.

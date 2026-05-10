@@ -78,7 +78,7 @@ EXPOSE 8000
 # Use gunicorn + UvicornWorker for async support on a production ASGI app.
 # WEB_CONCURRENCY defaults to 1 to stay within Render Free Tier 512MB RAM.
 # Shell form required to expand env vars at container start time.
-CMD ["sh", "-c", "gunicorn src.api.main:app \
+CMD ["sh", "-c", "gunicorn backend.api.main:app \
     --workers ${WEB_CONCURRENCY:-1} \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind ${API_HOST:-0.0.0.0}:${API_PORT:-8000} \

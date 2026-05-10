@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from src.modeling import features
+from backend.modeling import features
 
 
 def _sample_feature_df() -> pd.DataFrame:

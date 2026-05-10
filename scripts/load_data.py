@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import text
 
-from src.database.connection import get_sqlalchemy_engine
+from backend.database.connection import get_sqlalchemy_engine
 
 DATA_DIR = Path(__file__).parent / "data"
 RAW_DIR = DATA_DIR / "raw"

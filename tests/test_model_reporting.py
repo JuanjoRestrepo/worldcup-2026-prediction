@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from src.modeling.reporting import build_prediction_frame, build_segment_analysis
+from backend.modeling.reporting import build_prediction_frame, build_segment_analysis
 
 
 def test_build_prediction_frame_adds_segments_and_probabilities():

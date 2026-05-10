@@ -7,7 +7,7 @@ import sys
 # Ensure the root project directory is in the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.modeling.predict import predict_match_outcome
+from backend.modeling.predict import predict_match_outcome
 
 try:
     print("🔍 Testing prediction locally...")

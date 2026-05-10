@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.contracts.data_contracts import (
+from backend.contracts.data_contracts import (
     DataContractError,
     validate_feature_dataset_contract,
     validate_historical_raw_contract,

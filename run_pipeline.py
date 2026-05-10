@@ -11,10 +11,10 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from src.config.settings import settings
-from src.ingestion.pipelines.ingestion_pipeline import run_ingestion_pipeline
-from src.modeling.train import train_and_export_model
-from src.processing.pipelines.processing_pipeline import run_processing_pipeline
+from backend.config.settings import settings
+from backend.ingestion.pipelines.ingestion_pipeline import run_ingestion_pipeline
+from backend.modeling.train import train_and_export_model
+from backend.processing.pipelines.processing_pipeline import run_processing_pipeline
 
 logger = logging.getLogger(__name__)
 

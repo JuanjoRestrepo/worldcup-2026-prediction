@@ -20,13 +20,13 @@ def test_ensure_profiles_file_copies_example(monkeypatch):
     monkeypatch.setattr(
         run_dbt.shutil,
         "copyfile",
-        lambda src, dst: copied.update({"src": src, "dst": dst}),
+        lambda src, dst: copied.update({"backend": src, "dst": dst}),
     )
 
     resolved = run_dbt._ensure_profiles_file()
 
     assert resolved == target
-    assert copied == {"src": template, "dst": target}
+    assert copied == {"backend": template, "dst": target}
 
 
 def test_resolve_dbt_executable_uses_project_venv(monkeypatch):

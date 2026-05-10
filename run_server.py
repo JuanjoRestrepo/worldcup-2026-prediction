@@ -7,8 +7,8 @@ import sys
 
 import uvicorn
 
-from src.api.main import app
-from src.database.connection import get_sqlalchemy_engine
+from backend.api.main import app
+from backend.database.connection import get_sqlalchemy_engine
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)

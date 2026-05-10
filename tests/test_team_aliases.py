@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.config.team_aliases import TEAM_ALIASES, normalize_team_name
+from backend.config.team_aliases import TEAM_ALIASES, normalize_team_name
 
 
 class TestTeamAliases:

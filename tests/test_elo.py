@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from src.processing.transformers.elo import (
+from backend.processing.transformers.elo import (
     INITIAL_ELO,
     compute_elo,
     expected_score,

@@ -103,7 +103,7 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src/api", "src/modeling", "src/database", "src/contracts"]
+files = ["backend/api", "backend/modeling", "backend/database", "backend/contracts"]
 strict = true
 warn_return_any = true
 warn_unused_configs = true

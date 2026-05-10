@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from src.processing.transformers.rolling_features import compute_rolling_features
+from backend.processing.transformers.rolling_features import compute_rolling_features
 
 
 def test_compute_rolling_features_columns():

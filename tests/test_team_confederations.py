@@ -1,6 +1,6 @@
 """Unit tests for confederation lookup used in model evaluation reports."""
 
-from src.modeling.team_confederations import get_team_confederation
+from backend.modeling.team_confederations import get_team_confederation
 
 
 def test_get_team_confederation_resolves_major_nations():

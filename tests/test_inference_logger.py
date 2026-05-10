@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pandas as pd
 import pytest
 
-from src.modeling.inference_logger import InferenceLogger
+from backend.modeling.inference_logger import InferenceLogger
 
 
 @pytest.fixture

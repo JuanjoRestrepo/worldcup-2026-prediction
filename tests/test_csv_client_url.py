@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from src.ingestion.clients.csv_client import (
+from backend.ingestion.clients.csv_client import (
     EXPECTED_COLUMNS,
     load_historical_data,
 )
@@ -50,7 +50,7 @@ class TestForceLocal:
 
     def test_load_returns_dataframe_from_local_file(self, local_csv: Path) -> None:
         """The function reads the local CSV without touching the network."""
-        with patch("src.ingestion.clients.csv_client._download_csv") as mock_dl:
+        with patch("backend.ingestion.clients.csv_client._download_csv") as mock_dl:
             df = load_historical_data(local_path=local_csv, force_local=True)
 
         mock_dl.assert_not_called()
@@ -78,7 +78,7 @@ class TestNetworkFallback:
         """A URLError during download must not crash the pipeline."""
         with patch("urllib.request.urlopen") as mock_open:
             mock_open.side_effect = urllib.error.URLError("simulated timeout")
-            with caplog.at_level("WARNING", logger="src.ingestion.clients.csv_client"):
+            with caplog.at_level("WARNING", logger="backend.ingestion.clients.csv_client"):
                 df = load_historical_data(
                     url="https://example.invalid/results.csv",
                     local_path=local_csv,

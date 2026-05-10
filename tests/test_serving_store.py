@@ -5,7 +5,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from src.modeling import serving_store
+from backend.modeling import serving_store
 
 
 def test_load_latest_training_run_summary_with_source_prefers_dbt(monkeypatch):

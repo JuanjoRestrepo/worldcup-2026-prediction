@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from src.modeling.evaluation import (
+from backend.modeling.evaluation import (
     evaluate_multiclass_predictions,
     select_deployment_variant,
     split_train_calibration_test,

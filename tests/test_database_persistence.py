@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from src.database.persistence import build_training_run_frame, persist_dataframe
+from backend.database.persistence import build_training_run_frame, persist_dataframe
 
 
 class _DummyConnection:

@@ -8,9 +8,9 @@ import pytest
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.database.connection import get_sqlalchemy_engine
+from backend.database.connection import get_sqlalchemy_engine
 
-# Add the project root to sys.path so that 'src' imports work
+# Add the project root to sys.path so that 'backend' imports work
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 

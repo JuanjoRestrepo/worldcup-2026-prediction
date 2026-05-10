@@ -1,4 +1,4 @@
-from src.processing.transformers.match_standardizer import standardize_api
+from backend.processing.transformers.match_standardizer import standardize_api
 
 
 def test_standardize_api():

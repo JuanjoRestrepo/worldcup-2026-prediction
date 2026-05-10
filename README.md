@@ -87,10 +87,10 @@ uv sync
 cp .env.example .env
 
 # 4. Start the Inference API
-uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
 
 # 5. Start the Dashboard UI (in a separate terminal)
-uv run streamlit run src/frontend/app.py
+uv run streamlit run backend/frontend/app.py
 ```
 
 Open `http://localhost:8501` to view your frontend dashboard.

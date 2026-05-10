@@ -9,7 +9,7 @@ import pandas as pd
 from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from src.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
+from backend.modeling.hybrid_ensemble import HybridDrawOverrideEnsemble
 
 
 class FixedProbabilityEstimator(BaseEstimator, ClassifierMixin):  # type: ignore[misc]

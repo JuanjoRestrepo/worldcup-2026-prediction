@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected database connection pooling configuration for Supabase compatibility.
 
 ### Changed
-- Refactored `src/database` to use `.env` settings via a centralized `settings.py`.
+- Refactored `backend/database` to use `.env` settings via a centralized `settings.py`.
 - Modernized type hints in all test suites and orchestration scripts.
 
 ---

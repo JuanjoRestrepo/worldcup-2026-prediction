@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-import src.modeling.predict as predict_module
-from src.config.settings import settings
+import backend.modeling.predict as predict_module
+from backend.config.settings import settings
 
 
 class _WrappedModel:

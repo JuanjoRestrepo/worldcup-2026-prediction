@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from src.ingestion.clients.api_client import FootballAPIClient
+from backend.ingestion.clients.api_client import FootballAPIClient
 
 
 def test_api_connection():

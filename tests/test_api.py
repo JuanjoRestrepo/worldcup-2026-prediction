@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-import src.api.main as api_main
+import backend.api.main as api_main
 
 
 def test_runtime_config_exposes_prediction_feature_source(

@@ -9,7 +9,7 @@ import logging
 
 import pytest
 
-from src.database.connection import get_connection
+from backend.database.connection import get_connection
 
 
 def test_connection():

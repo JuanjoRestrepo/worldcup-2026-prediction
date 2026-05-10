@@ -8,7 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.modeling.two_stage import TwoStageDrawClassifier
+from backend.modeling.two_stage import TwoStageDrawClassifier
 
 
 def _scaled_logistic() -> Pipeline:
