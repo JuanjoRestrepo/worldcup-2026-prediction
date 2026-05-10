@@ -90,7 +90,7 @@ cp .env.example .env
 uv run uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
 
 # 5. Start the Dashboard UI (in a separate terminal)
-uv run streamlit run backend/frontend/app.py
+uv run streamlit run frontend/app.py
 ```
 
 Open `http://localhost:8501` to view your frontend dashboard.
@@ -110,8 +110,8 @@ Interested in the engineering decisions, leakage fixes, and the evolution from J
 
 This project is fully automated for zero-cost cloud deployments:
 
-- **API Backend**: Dockerized FastAPI deployed to [Render](https://render.com) using the included `render.yaml` blueprint.
-- **Dashboard UI**: Deployed to [Streamlit Community Cloud](https://share.streamlit.io).
+- **API Backend**: Dockerized FastAPI deployed to [Render](https://worldcup-2026-api.onrender.com/).
+- **Dashboard UI**: Deployed to [Streamlit Community Cloud](https://worldcup-2026-prediction.streamlit.app/).
 - **Telemetry DB**: [Supabase](https://supabase.com) PostgreSQL footprint for storing `inference_logs`.
 
 _For detailed deployment instructions, see the provided `DEPLOYMENT.md` available in your artifact history._
