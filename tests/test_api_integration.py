@@ -6,20 +6,23 @@ using FastAPI's TestClient to simulate HTTP requests.
 
 from __future__ import annotations
 
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from backend.api.main import app
-from backend.modeling.types import PredictionResult, LatestTrainingRunSummary
 
 
 @pytest.fixture(autouse=True)
 def mock_db_dependencies():
     """Mock database dependencies to prevent CI failures on empty DB."""
-    with patch("backend.api.main.predict_match_outcome") as mock_predict, \
-         patch("backend.api.main.load_latest_training_run_summary_with_source") as mock_latest_run:
-        
+    with (
+        patch("backend.api.main.predict_match_outcome") as mock_predict,
+        patch(
+            "backend.api.main.load_latest_training_run_summary_with_source"
+        ) as mock_latest_run,
+    ):
         # Mock prediction response using TypedDict structure
         mock_predict.return_value = {
             "home_team": "Argentina",
@@ -45,7 +48,9 @@ def mock_db_dependencies():
         # Mock invalid team failure gracefully if needed
         def side_effect(**kwargs):
             if kwargs.get("home_team") == "Atlantis FC":
-                raise ValueError("Team 'Atlantis FC' was not found in the gold feature dataset.")
+                raise ValueError(
+                    "Team 'Atlantis FC' was not found in the gold feature dataset."
+                )
             return mock_predict.return_value
 
         mock_predict.side_effect = side_effect
@@ -68,9 +73,9 @@ def mock_db_dependencies():
                 "weighted_f1": 0.8,
                 "log_loss": 0.5,
                 "trained_at_utc": "2026-05-10T00:00:00Z",
-                "persisted_at_utc": "2026-05-10T00:00:00Z"
+                "persisted_at_utc": "2026-05-10T00:00:00Z",
             },
-            "mock_source"
+            "mock_source",
         )
         yield
 
