@@ -43,9 +43,8 @@ COPY --from=builder /app/.venv /app/.venv
 # Only the frontend module and its Streamlit config are needed.
 # Placing these after the venv copy keeps the expensive install layer cached
 # across source-only changes.
-COPY backend/frontend ./backend/frontend
-COPY backend/__init__.py ./backend/__init__.py
-COPY .streamlit ./.streamlit
+COPY frontend ./frontend
+COPY frontend/.streamlit ./.streamlit
 
 RUN chown -R appuser:appgroup /app
 
@@ -54,7 +53,7 @@ USER appuser
 EXPOSE 8501
 
 # Disable Streamlit's browser-open and telemetry for headless container operation.
-CMD ["streamlit", "run", "backend/frontend/app.py", \
+CMD ["streamlit", "run", "frontend/app.py", \
      "--server.port=8501", \
      "--server.address=0.0.0.0", \
      "--server.headless=true", \

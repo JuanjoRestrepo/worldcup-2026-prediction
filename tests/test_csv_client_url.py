@@ -78,7 +78,9 @@ class TestNetworkFallback:
         """A URLError during download must not crash the pipeline."""
         with patch("urllib.request.urlopen") as mock_open:
             mock_open.side_effect = urllib.error.URLError("simulated timeout")
-            with caplog.at_level("WARNING", logger="backend.ingestion.clients.csv_client"):
+            with caplog.at_level(
+                "WARNING", logger="backend.ingestion.clients.csv_client"
+            ):
                 df = load_historical_data(
                     url="https://example.invalid/results.csv",
                     local_path=local_csv,

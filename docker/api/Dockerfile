@@ -59,7 +59,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy application source — placed AFTER the venv copy so that code changes
 # only invalidate the cheaper COPY layer, not the package install.
-COPY src ./src
+COPY backend ./backend
 
 # Bake in the pre-trained model artifact and gold feature CSV snapshot.
 # Both are small (~100KB model, ~14MB CSV) — no persistent disk needed on Render free tier.
