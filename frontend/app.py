@@ -126,117 +126,119 @@ def get_prediction(
     return None
 
 
-# ── Theme Engine (rewrites config.toml so ALL native widgets switch correctly) ─
-# Injecting CSS is unreliable for Streamlit's native elements (labels, sidebar,
-# toolbar icons, checkboxes). Writing config.toml and calling st.rerun() is the
-# only guaranteed way to switch the entire theme engine including the header bar.
-
-_DARK_TOML = """\
-[theme]
-base="dark"
-primaryColor="#0066cc"
-backgroundColor="#0d1117"
-secondaryBackgroundColor="#161b22"
-textColor="#e6edf3"
-font="sans serif"
-
-[server]
-headless = true
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-"""
-
-_LIGHT_TOML = """\
-[theme]
-base="light"
-primaryColor="#0066cc"
-backgroundColor="#f8f9fa"
-secondaryBackgroundColor="#ffffff"
-textColor="#212529"
-font="sans serif"
-
-[server]
-headless = true
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-"""
-
-import pathlib  # noqa: E402 (needed here for config path resolution)
-
-_CONFIG_PATH = pathlib.Path(__file__).parent.parent / ".streamlit" / "config.toml"
+# ── Dark-mode toggle (controls custom HTML elements only) ────────────────────
+# Streamlit's native widget theme is set statically in .streamlit/config.toml
+# (base = "dark"). The toggle here switches the CSS design tokens that govern
+# our custom HTML banners.  Writing config.toml at runtime is unreliable on
+# Streamlit Cloud (read-only filesystem), so we use CSS custom properties with
+# prefers-color-scheme as the baseline and a data-theme attribute override —
+# exactly as recommended by the modern-web-guidance dark-mode best-practice.
 
 if "dark_mode" not in st.session_state:
-    # Read the current config to initialise state correctly
-    current = _CONFIG_PATH.read_text(encoding="utf-8") if _CONFIG_PATH.exists() else ""
-    st.session_state["dark_mode"] = "dark" in current
+    st.session_state["dark_mode"] = True  # default: dark (matches config.toml)
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    new_dark = st.toggle("🌙 Dark Mode", value=st.session_state["dark_mode"])
+    new_dark: bool = st.toggle("🌙 Dark Mode", value=st.session_state["dark_mode"])
     if new_dark != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = new_dark
-        _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _CONFIG_PATH.write_text(
-            _DARK_TOML if new_dark else _LIGHT_TOML, encoding="utf-8"
-        )
-        st.rerun()
     st.divider()
     st.caption("v0.1.0-alpha | Supabase Migrated")
 
 dark_mode: bool = st.session_state["dark_mode"]
 
-# ── CSS: only things the theme engine cannot control (custom HTML elements) ───
-_DARK_BANNER_CSS = """
-    .prediction-banner {
-        background: rgba(0, 102, 204, 0.15);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #ffffff;
-        padding: 2rem;
-        border-radius: 16px;
-        text-align: center;
-        margin: 2rem 0;
-        font-size: 1.75rem;
-        font-weight: 800;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
-    .vs-text { color: #0066cc !important; }
-"""
-
-_LIGHT_BANNER_CSS = """
-    .prediction-banner {
-        background: linear-gradient(135deg, #003d79 0%, #0066cc 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 16px;
-        text-align: center;
-        margin: 2rem 0;
-        font-size: 1.75rem;
-        font-weight: 800;
-        box-shadow: 0 4px 15px rgba(0, 61, 121, 0.2);
-    }
-    .vs-text { color: #003d79 !important; }
-"""
+# ── Global CSS: design tokens + custom component styles ──────────────────────
+# Strategy (per modern-web-guidance dark-mode guide):
+#   1. Define CSS custom properties on :root for light mode defaults.
+#   2. Override tokens in @media (prefers-color-scheme: dark) for system pref.
+#   3. The [data-theme] attribute on <html> allows our JS toggle to override
+#      the system preference explicitly — the correct progressive-enhancement
+#      approach.  We inject a tiny <script> to set the attribute on <html>
+#      before the first paint, eliminating any flash of wrong theme.
+theme_attr = "dark" if dark_mode else "light"
 
 st.markdown(
     f"""
+    <script>
+        // Set data-theme on <html> immediately to avoid FOUC.
+        document.documentElement.setAttribute('data-theme', '{theme_attr}');
+    </script>
     <style>
-    @keyframes fadeIn {{
-        from {{ opacity: 0; transform: translateY(10px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
-    }}
-    .prediction-banner {{ animation: fadeIn 0.8s ease-out; }}
-    .vs-text {{
-        text-align: center; font-size: 1.4rem;
-        font-weight: 700; margin-top: 1.8rem;
-    }}
-    .stButton > button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
-    }}
-    {"".join(c.strip() for c in (_DARK_BANNER_CSS if dark_mode else _LIGHT_BANNER_CSS).splitlines())}
+        /* ── Design tokens (light defaults) ─────────────────────────── */
+        :root {{
+            --banner-bg:      linear-gradient(135deg, #003d79 0%, #0066cc 100%);
+            --banner-text:    #ffffff;
+            --banner-border:  transparent;
+            --banner-shadow:  0 4px 15px rgba(0, 61, 121, 0.25);
+            --vs-color:       #003d79;
+        }}
+
+        /* ── Dark token overrides via system preference (fallback) ──── */
+        @media (prefers-color-scheme: dark) {{
+            :root {{
+                --banner-bg:     rgba(0, 102, 204, 0.15);
+                --banner-text:   #e6edf3;
+                --banner-border: rgba(255, 255, 255, 0.12);
+                --banner-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+                --vs-color:      #0066cc;
+            }}
+        }}
+
+        /* ── Explicit override via data-theme (our toggle wins over OS) */
+        html[data-theme="dark"] :root,
+        html[data-theme="dark"] {{
+            --banner-bg:     rgba(0, 102, 204, 0.15);
+            --banner-text:   #e6edf3;
+            --banner-border: rgba(255, 255, 255, 0.12);
+            --banner-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+            --vs-color:      #0066cc;
+        }}
+
+        html[data-theme="light"] :root,
+        html[data-theme="light"] {{
+            --banner-bg:     linear-gradient(135deg, #003d79 0%, #0066cc 100%);
+            --banner-text:   #ffffff;
+            --banner-border: transparent;
+            --banner-shadow: 0 4px 15px rgba(0, 61, 121, 0.25);
+            --vs-color:      #003d79;
+        }}
+
+        /* ── Prediction banner component ────────────────────────────── */
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(10px); }}
+            to   {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .prediction-banner {{
+            background:    var(--banner-bg);
+            color:         var(--banner-text);
+            border:        1px solid var(--banner-border);
+            box-shadow:    var(--banner-shadow);
+            padding:       2rem;
+            border-radius: 16px;
+            text-align:    center;
+            margin:        2rem 0;
+            font-size:     1.75rem;
+            font-weight:   800;
+            animation:     fadeIn 0.8s ease-out;
+            backdrop-filter: blur(10px);
+        }}
+
+        /* ── VS label ───────────────────────────────────────────────── */
+        .vs-text {{
+            color:       var(--vs-color);
+            text-align:  center;
+            font-size:   1.4rem;
+            font-weight: 700;
+            margin-top:  1.8rem;
+        }}
+
+        /* ── Predict button hover micro-animation ───────────────────── */
+        .stButton > button:hover {{
+            transform:  translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }}
     </style>
     """,
     unsafe_allow_html=True,
