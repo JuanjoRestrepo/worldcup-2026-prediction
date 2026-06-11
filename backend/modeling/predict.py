@@ -242,9 +242,27 @@ def predict_match_outcome(
         try:
             expected_home_goals = float(home_goals_model.predict(feature_frame)[0])
             expected_away_goals = float(away_goals_model.predict(feature_frame)[0])
-            predicted_score = (
-                f"{round(expected_home_goals)}-{round(expected_away_goals)}"
-            )
+
+            # Reconcile predicted score with classifier's outcome
+            h = int(round(expected_home_goals))
+            a = int(round(expected_away_goals))
+
+            if predicted_outcome_label == "draw":
+                if h != a:
+                    avg = (h + a) // 2
+                    h = a = (
+                        max(1, avg)
+                        if (expected_home_goals + expected_away_goals) >= 1.0
+                        else 0
+                    )
+            elif predicted_outcome_label == "home_win":
+                if h <= a:
+                    h = a + 1
+            elif predicted_outcome_label == "away_win":
+                if a <= h:
+                    a = h + 1
+
+            predicted_score = f"{h}-{a}"
         except Exception as exc:
             logger.warning("Expected goals inference failed: %s", exc)
 
