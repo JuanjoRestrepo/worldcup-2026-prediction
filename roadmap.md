@@ -6,11 +6,13 @@ This roadmap outlines strategic directions and future improvements for the ML en
 
 ## 1. Advanced Data Sources & Integrations
 
-The current model relies exclusively on historical match results (goals, tournaments, dates). To leap forward in predictive power, integrating more granular data is the top priority:
+The current model relies exclusively on historical match results (goals, tournaments, dates). To leap forward in predictive power, we will architect a new Medallion ingestion layer using the following specialized open-source tools and APIs:
 
-* **Event-Level Data Integration:** Integrate Opta or StatsBomb event data for granular features (e.g., non-penalty xG, deep completions, passes into the penalty area). This will capture tactical dominance that result-only data misses.
-* **Lineups and Roster Quality:** Scrape Transfermarkt values or FIFA ratings to calculate the exact market value / talent rating of the starting XI, adjusting for injured key players.
-* **Travel & Climate Context:** For WC 2026, travel distances between North American cities, altitude (e.g., Mexico City), and humidity can significantly affect performance. Build features mapping these geographical factors to team resilience.
+* **Squad Depth & Roster Quality (`soccerdata` -> SoFIFA):** The most critical missing feature is absolute team talent. We will use `soccerdata.SoFIFA()` to pull official EA FC (FIFA) Overall Ratings (OVR) for national team rosters. Averaging the OVR of the starting XI vs the bench provides a deterministic "Squad Talent Differential" and "Depth Score" without paying for expensive market value APIs.
+* **Event-Level Context (`soccerdata` -> FBref):** We will query `soccerdata.FBref()` (powered by Opta) to extract international match possession metrics, progressive carries, and match-level Expected Goals (xG). Note: We explicitly avoid `Understat` here, as it does not cover international tournaments like the World Cup.
+* **Live Tournament Stability (API-Football):** While `soccerdata` (web scraping) is perfect for historical backtesting and feature engineering, scrapers are prone to breaking if HTML structures change. As we approach the actual World Cup 2026, we will integrate `API-Football` (JSON REST API) for the daily live-score and lineup endpoints to guarantee production stability without DOM-breakage risks.
+* **Injury Timelines (`worldfootballR` -> Transfermarkt):** Incorporate the `worldfootballR` package (potentially via `rpy2` orchestration) to specifically scrape Transfermarkt's injury directories for national teams. This will flag missing key players prior to inference.
+* **Travel & Climate Context:** For WC 2026, travel distances between North American host cities, stadium altitudes (e.g., Estadio Azteca), and regional humidity can significantly affect performance. We will build static mapping features for these geographical factors to act as team resilience modifiers.
 
 ## 2. Model & Algorithm Enhancements
 
