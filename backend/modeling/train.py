@@ -1111,7 +1111,7 @@ def train_and_export_model(
     logger.info("Training Poisson regressors for expected goals (home & away)...")
     y_home_goals = pretest_df["homeGoals"].astype(float)
     y_away_goals = pretest_df["awayGoals"].astype(float)
-    
+
     # Simple Pipeline with median imputation + XGBRegressor
     home_goals_model = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
@@ -1125,7 +1125,7 @@ def train_and_export_model(
         ))
     ])
     home_goals_model.fit(X_pretest, y_home_goals)
-    
+
     away_goals_model = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("model", XGBRegressor(
