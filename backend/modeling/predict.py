@@ -169,6 +169,8 @@ def predict_match_outcome(
     feature_columns = bundle["feature_columns"]
     encoded_to_outcome = bundle["encoded_to_outcome"]
     outcome_labels = bundle["outcome_labels"]
+    home_goals_model = bundle.get("home_goals_model")
+    away_goals_model = bundle.get("away_goals_model")
 
     # ── Feature loading ──────────────────────────────────────────────────────
     resolved_feature_source = feature_source or settings.PREDICTION_FEATURE_SOURCE
@@ -231,6 +233,18 @@ def predict_match_outcome(
     )
     predicted_encoded_raw = int(model.predict(feature_frame)[0])
     predicted_outcome_int = int(encoded_to_outcome[predicted_encoded_raw])
+
+    # ── Expected Goals inference ──────────────────────────────────────────────
+    expected_home_goals: float | None = None
+    expected_away_goals: float | None = None
+    predicted_score: str | None = None
+    if home_goals_model is not None and away_goals_model is not None:
+        try:
+            expected_home_goals = float(home_goals_model.predict(feature_frame)[0])
+            expected_away_goals = float(away_goals_model.predict(feature_frame)[0])
+            predicted_score = f"{round(expected_home_goals)}-{round(expected_away_goals)}"
+        except Exception as exc:
+            logger.warning("Expected goals inference failed: %s", exc)
 
     # ── Segment-aware telemetry ───────────────────────────────────────────────
     match_segment = detect_match_segment(tournament)
@@ -325,4 +339,7 @@ def predict_match_outcome(
         "shadow_class_probabilities": shadow_class_probabilities,
         "shadow_is_override_triggered": shadow_is_override_triggered,
         "shadow_model_name": shadow_model_name,
+        "expected_home_goals": expected_home_goals,
+        "expected_away_goals": expected_away_goals,
+        "predicted_score": predicted_score,
     }

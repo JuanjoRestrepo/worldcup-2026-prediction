@@ -165,9 +165,7 @@ enableXsrfProtection = false
 
 import pathlib  # noqa: E402 (needed here for config path resolution)
 
-_CONFIG_PATH = (
-    pathlib.Path(__file__).parent.parent.parent / ".streamlit" / "config.toml"
-)
+_CONFIG_PATH = pathlib.Path(__file__).parent.parent / ".streamlit" / "config.toml"
 
 if "dark_mode" not in st.session_state:
     # Read the current config to initialise state correctly
@@ -179,6 +177,7 @@ with st.sidebar:
     new_dark = st.toggle("🌙 Dark Mode", value=st.session_state["dark_mode"])
     if new_dark != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = new_dark
+        _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
         _CONFIG_PATH.write_text(
             _DARK_TOML if new_dark else _LIGHT_TOML, encoding="utf-8"
         )
@@ -327,6 +326,10 @@ if predict_btn:
             "away_win": f"✈️ **{away} wins!**",
             "draw": "🤝 **Draw**",
         }.get(outcome, outcome)
+
+        predicted_score = result.get("predicted_score")
+        if predicted_score:
+            outcome_display += f"<br><span style='font-size: 1.2rem; font-weight: normal;'>Exact Score: {predicted_score}</span>"
 
         st.markdown(
             f"<div class='prediction-banner'>🎯 {outcome_display}</div>",

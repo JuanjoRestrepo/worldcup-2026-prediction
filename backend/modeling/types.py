@@ -61,6 +61,8 @@ class ModelArtifactBundle(TypedDict):
     deployed_model_variant: str
     calibration_method: str
     training_summary: TrainingSummary
+    home_goals_model: NotRequired[Any]
+    away_goals_model: NotRequired[Any]
 
 
 class TeamSnapshotMetadata(TypedDict):
@@ -108,6 +110,9 @@ class PredictionResult(TypedDict):
     model_artifact_path: str
     match_segment: str | None
     is_override_triggered: bool
+    expected_home_goals: NotRequired[float | None]
+    expected_away_goals: NotRequired[float | None]
+    predicted_score: NotRequired[str | None]
     shadow_predicted_outcome: NotRequired[str | None]
     shadow_class_probabilities: NotRequired[dict[str, float] | None]
     shadow_is_override_triggered: NotRequired[bool | None]

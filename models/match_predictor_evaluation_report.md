@@ -50,6 +50,6 @@
 - 2021-09-08 | Armenia vs Liechtenstein | actual=draw predicted=home_win conf=0.86
 
 ## Artifact Files
-- Confusion matrix: `models\match_predictor_confusion_matrix.png`
-- Calibration curves: `models\match_predictor_calibration_curves.png`
-- JSON report: `models\match_predictor_evaluation_report.json`
+- Confusion matrix: `/Users/jorgerestrepo/Desktop/worldcup-2026-prediction/models/match_predictor_confusion_matrix.png`
+- Calibration curves: `/Users/jorgerestrepo/Desktop/worldcup-2026-prediction/models/match_predictor_calibration_curves.png`
+- JSON report: `/Users/jorgerestrepo/Desktop/worldcup-2026-prediction/models/match_predictor_evaluation_report.json`

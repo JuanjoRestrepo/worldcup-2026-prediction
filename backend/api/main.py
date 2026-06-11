@@ -112,6 +112,15 @@ class PredictionResponse(BaseModel):
         False,
         description="Whether specialist ensemble override was triggered for this prediction",
     )
+    expected_home_goals: float | None = Field(
+        None, description="Expected goals for home team"
+    )
+    expected_away_goals: float | None = Field(
+        None, description="Expected goals for away team"
+    )
+    predicted_score: str | None = Field(
+        None, description="Predicted exact score formatted as 'home-away'"
+    )
     shadow_predicted_outcome: str | None = Field(
         None, description="Shadow model's predicted outcome"
     )
@@ -345,6 +354,9 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             model_artifact_path=prediction["model_artifact_path"],
             match_segment=prediction.get("match_segment"),
             is_override_triggered=prediction.get("is_override_triggered", False),
+            expected_home_goals=prediction.get("expected_home_goals"),
+            expected_away_goals=prediction.get("expected_away_goals"),
+            predicted_score=prediction.get("predicted_score"),
             shadow_predicted_outcome=prediction.get("shadow_predicted_outcome"),
             shadow_class_probabilities=prediction.get("shadow_class_probabilities"),
             shadow_is_override_triggered=prediction.get("shadow_is_override_triggered"),

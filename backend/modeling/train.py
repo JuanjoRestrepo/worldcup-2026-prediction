@@ -23,7 +23,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
-from xgboost import XGBClassifier
+from xgboost import XGBClassifier, XGBRegressor
 
 from backend.config.settings import settings
 from backend.contracts.data_contracts import validate_feature_dataset_contract
@@ -1105,6 +1105,41 @@ def train_and_export_model(
         ],
     }
 
+    # ============================================================================
+    # Expected Goals Regression (Poisson)
+    # ============================================================================
+    logger.info("Training Poisson regressors for expected goals (home & away)...")
+    y_home_goals = pretest_df["homeGoals"].astype(float)
+    y_away_goals = pretest_df["awayGoals"].astype(float)
+    
+    # Simple Pipeline with median imputation + XGBRegressor
+    home_goals_model = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("model", XGBRegressor(
+            objective="count:poisson",
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=4,
+            random_state=RANDOM_STATE,
+            n_jobs=0
+        ))
+    ])
+    home_goals_model.fit(X_pretest, y_home_goals)
+    
+    away_goals_model = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("model", XGBRegressor(
+            objective="count:poisson",
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=4,
+            random_state=RANDOM_STATE,
+            n_jobs=0
+        ))
+    ])
+    away_goals_model.fit(X_pretest, y_away_goals)
+    logger.info("Expected goals regressors trained successfully.")
+
     artifact: ModelArtifactBundle = {
         "model": final_deployed_model,
         "feature_columns": feature_columns,
@@ -1116,6 +1151,8 @@ def train_and_export_model(
         "deployed_model_variant": deployed_model_variant,
         "calibration_method": calibration_method,
         "training_summary": training_summary,
+        "home_goals_model": home_goals_model,
+        "away_goals_model": away_goals_model,
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1190,6 +1227,8 @@ def train_and_export_model(
             "deployed_model_variant": "uncalibrated",
             "calibration_method": "none",
             "training_summary": training_summary,
+            "home_goals_model": home_goals_model,
+            "away_goals_model": away_goals_model,
         }
         joblib.dump(shadow_artifact, shadow_artifact_path)
         logger.info("Shadow model artifact exported to %s", shadow_artifact_path)
