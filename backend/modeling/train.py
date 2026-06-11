@@ -1113,30 +1113,40 @@ def train_and_export_model(
     y_away_goals = pretest_df["awayGoals"].astype(float)
 
     # Simple Pipeline with median imputation + XGBRegressor
-    home_goals_model = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("model", XGBRegressor(
-            objective="count:poisson",
-            n_estimators=150,
-            learning_rate=0.05,
-            max_depth=4,
-            random_state=RANDOM_STATE,
-            n_jobs=0
-        ))
-    ])
+    home_goals_model = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "model",
+                XGBRegressor(
+                    objective="count:poisson",
+                    n_estimators=150,
+                    learning_rate=0.05,
+                    max_depth=4,
+                    random_state=RANDOM_STATE,
+                    n_jobs=0,
+                ),
+            ),
+        ]
+    )
     home_goals_model.fit(X_pretest, y_home_goals)
 
-    away_goals_model = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("model", XGBRegressor(
-            objective="count:poisson",
-            n_estimators=150,
-            learning_rate=0.05,
-            max_depth=4,
-            random_state=RANDOM_STATE,
-            n_jobs=0
-        ))
-    ])
+    away_goals_model = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "model",
+                XGBRegressor(
+                    objective="count:poisson",
+                    n_estimators=150,
+                    learning_rate=0.05,
+                    max_depth=4,
+                    random_state=RANDOM_STATE,
+                    n_jobs=0,
+                ),
+            ),
+        ]
+    )
     away_goals_model.fit(X_pretest, y_away_goals)
     logger.info("Expected goals regressors trained successfully.")
 

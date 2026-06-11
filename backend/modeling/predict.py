@@ -242,7 +242,9 @@ def predict_match_outcome(
         try:
             expected_home_goals = float(home_goals_model.predict(feature_frame)[0])
             expected_away_goals = float(away_goals_model.predict(feature_frame)[0])
-            predicted_score = f"{round(expected_home_goals)}-{round(expected_away_goals)}"
+            predicted_score = (
+                f"{round(expected_home_goals)}-{round(expected_away_goals)}"
+            )
         except Exception as exc:
             logger.warning("Expected goals inference failed: %s", exc)
 
