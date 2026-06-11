@@ -12,6 +12,7 @@ from backend.contracts.data_contracts import (
 from backend.database.persistence import persist_dataframe
 from backend.ingestion.clients.api_data_loader import load_api_data
 from backend.ingestion.clients.csv_client import load_historical_data
+from backend.processing.transformers.advanced_features import compute_advanced_features
 from backend.processing.transformers.elo import compute_elo
 from backend.processing.transformers.match_standardizer import standardize_csv
 from backend.processing.transformers.opponent_strength import compute_opponent_strength
@@ -261,6 +262,15 @@ def run_processing_pipeline(
         "✅ Tournament features: is_friendly, is_world_cup, is_qualifier, is_continental"
     )
     logger.info("✅ ELO form features: home_elo_form, away_elo_form")
+
+    # PHASE 3C: Compute advanced football analytics features
+    logger.info("\n🧠 PHASE 3C: Computing advanced football analytics features...")
+    logger.info(
+        "   Features: EWMA form, H2H record, clean sheet rate, tournament pressure, "
+        "rest days, confederation strength, goals variance"
+    )
+    df = compute_advanced_features(df)
+    logger.info("✅ Advanced features computed (14 new columns)")
 
     # PHASE 5: Create target variables
     logger.info("\n🎯 PHASE 5: Creating target variables...")

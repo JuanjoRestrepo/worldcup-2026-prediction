@@ -278,16 +278,17 @@ class TestPredictModuleImportLatency:
 
 
 class TestEnsembleCalibrationGuard:
-    """Validate that custom rule-based ensembles bypass probability calibration.
+    """Validate that custom rule-based ensembles use temperature scaling calibration.
 
-    Calibrating hybrid ensembles with isotonic or sigmoid methods native to sklearn
-    interferes with deliberately tuned segment probability thresholds.
+    Post-hoc temperature scaling (Guo et al. 2017) calibrates probabilities while
+    preserving all draw-override threshold logic in the base ensemble. This replaces
+    the previous 'skip calibration' approach which left the ECE gap unfixed.
     """
 
     def test_calibration_graceful_for_custom_ensembles(self) -> None:
-        """Ensure train.py logic evaluates custom ensembles as uncalibrated."""
+        """Ensure train.py applies temperature scaling for custom ensembles."""
 
-        # Verify that these specific families are in the protected list in train.py logic.
+        # Verify that these specific families trigger temperature scaling in train.py.
         import inspect
 
         from backend.modeling.train import train_and_export_model
@@ -298,6 +299,7 @@ class TestEnsembleCalibrationGuard:
         assert '"hybrid_draw_override_ensemble"' in train_source, "Guard missing"
         assert '"two_stage_draw_classifier"' in train_source, "Guard missing"
         assert "is_custom_ensemble =" in train_source, "Guard condition missing"
-        assert "Skipping calibration for custom ensemble family" in train_source, (
-            "Guard log missing"
+        assert "applying temperature scaling for calibration" in train_source, (
+            "Temperature scaling branch missing"
         )
+

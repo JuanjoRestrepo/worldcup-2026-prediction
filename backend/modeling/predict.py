@@ -12,7 +12,7 @@ from typing import Any, cast
 import joblib
 import numpy as np
 from numpy.typing import NDArray
-from scipy.stats import poisson  # type: ignore[import-untyped]
+from scipy.stats import poisson
 
 from backend.config.settings import settings
 from backend.modeling.evaluation import extract_estimator_classes, predict_proba_aligned

@@ -378,6 +378,48 @@ def build_match_feature_frame(
         # Draw propensity features (position-specific) — direct signal for draw specialist
         "home_draw_rate_last5": _safe_value(home_home_row, "home_draw_rate_last5"),
         "away_draw_rate_last5": _safe_value(away_away_row, "away_draw_rate_last5"),
+        # ── Advanced football analytics features ──────────────────────────────
+        # EWMA time-decayed form (α=0.3) — exponential recency weighting
+        "home_ewma_goals": _safe_value(home_home_row, "home_ewma_goals"),
+        "home_ewma_conceded": _safe_value(home_home_row, "home_ewma_conceded"),
+        "away_ewma_goals": _safe_value(away_away_row, "away_ewma_goals"),
+        "away_ewma_conceded": _safe_value(away_away_row, "away_ewma_conceded"),
+        # Defensive solidity
+        "home_clean_sheet_rate_last10": _safe_value(
+            home_home_row, "home_clean_sheet_rate_last10"
+        ),
+        "away_clean_sheet_rate_last10": _safe_value(
+            away_away_row, "away_clean_sheet_rate_last10"
+        ),
+        # Scoring volatility
+        "home_goals_variance_last10": _safe_value(
+            home_home_row, "home_goals_variance_last10"
+        ),
+        "away_goals_variance_last10": _safe_value(
+            away_away_row, "away_goals_variance_last10"
+        ),
+        # Tournament context
+        "tournament_pressure_score": _coalesce(
+            _safe_value(home_home_row, "tournament_pressure_score"), 0.55
+        ),
+        # Rest days (use NaN if unknown; imputer handles at inference)
+        "home_days_since_last_match": _safe_value(
+            home_home_row, "home_days_since_last_match"
+        ),
+        "away_days_since_last_match": _safe_value(
+            away_away_row, "away_days_since_last_match"
+        ),
+        # H2H record (NaN if no history — imputed at inference)
+        "h2h_home_win_rate": float("nan"),
+        "h2h_draw_rate": float("nan"),
+        "h2h_avg_goals": float("nan"),
+        # Confederation strength
+        "home_confederation_avg_elo": _safe_value(
+            home_home_row, "home_confederation_avg_elo"
+        ),
+        "away_confederation_avg_elo": _safe_value(
+            away_away_row, "away_confederation_avg_elo"
+        ),
         **flags,
     }
 
@@ -541,6 +583,41 @@ def build_match_feature_frame_from_team_snapshots(
         # Draw propensity features (position-specific) — direct signal for draw specialist
         "home_draw_rate_last5": _safe_value(home_home_row, "draw_rate_last5"),
         "away_draw_rate_last5": _safe_value(away_away_row, "draw_rate_last5"),
+        # ── Advanced football analytics features ──────────────────────────────
+        "home_ewma_goals": _safe_value(home_home_row, "home_ewma_goals"),
+        "home_ewma_conceded": _safe_value(home_home_row, "home_ewma_conceded"),
+        "away_ewma_goals": _safe_value(away_away_row, "away_ewma_goals"),
+        "away_ewma_conceded": _safe_value(away_away_row, "away_ewma_conceded"),
+        "home_clean_sheet_rate_last10": _safe_value(
+            home_home_row, "home_clean_sheet_rate_last10"
+        ),
+        "away_clean_sheet_rate_last10": _safe_value(
+            away_away_row, "away_clean_sheet_rate_last10"
+        ),
+        "home_goals_variance_last10": _safe_value(
+            home_home_row, "home_goals_variance_last10"
+        ),
+        "away_goals_variance_last10": _safe_value(
+            away_away_row, "away_goals_variance_last10"
+        ),
+        "tournament_pressure_score": _coalesce(
+            _safe_value(home_overall_row, "tournament_pressure_score"), 0.55
+        ),
+        "home_days_since_last_match": _safe_value(
+            home_home_row, "home_days_since_last_match"
+        ),
+        "away_days_since_last_match": _safe_value(
+            away_away_row, "away_days_since_last_match"
+        ),
+        "h2h_home_win_rate": float("nan"),
+        "h2h_draw_rate": float("nan"),
+        "h2h_avg_goals": float("nan"),
+        "home_confederation_avg_elo": _safe_value(
+            home_overall_row, "home_confederation_avg_elo"
+        ),
+        "away_confederation_avg_elo": _safe_value(
+            away_overall_row, "away_confederation_avg_elo"
+        ),
         **flags,
     }
 

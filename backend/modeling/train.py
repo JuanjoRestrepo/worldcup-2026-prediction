@@ -20,6 +20,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.frozen import FrozenEstimator
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
@@ -707,6 +708,100 @@ def _fit_calibrated_variant(
     return calibrator
 
 
+class TemperatureScaledEnsemble:
+    """Post-hoc temperature scaling for custom ensemble classifiers.
+
+    Applies a single learned temperature parameter T to the ensemble's
+    raw probability outputs via softmax(logits/T), improving calibration
+    without disturbing any draw-override threshold logic in the base model.
+
+    Mathematically equivalent to Platt scaling with a constrained slope,
+    as described in Guo et al. (2017) "On Calibration of Modern Neural
+    Networks" — adapted here for tree-based ensembles.
+
+    The temperature T is learned by minimising negative log-likelihood
+    on the calibration holdout set using scipy.optimize.minimize_scalar.
+
+    Not a subclass of sklearn's BaseEstimator to avoid mypy 'Any' base
+    errors. Satisfies the ProbabilisticEstimator protocol duck-typing.
+    """
+
+    def __init__(self, base_estimator: ProbabilisticEstimator) -> None:
+        """Initialise with an already-fitted base ensemble."""
+        self.base_estimator = base_estimator
+        self.temperature_: float = 1.0  # identity (uncalibrated) default
+        self._classes: NDArray[np.int64] = np.array([], dtype=np.int64)
+
+    @property
+    def classes_(self) -> NDArray[np.int64]:
+        """Return class labels for sklearn compatibility."""
+        return self._classes
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+    ) -> TemperatureScaledEnsemble:
+        """Learn the temperature T that minimises NLL on the calibration set."""
+        import scipy.optimize as _opt  # noqa: PLC0415
+        import scipy.special as _sp  # noqa: PLC0415
+
+        raw_probs = predict_proba_aligned(self.base_estimator, X)
+        # Resolve class labels from underlying estimator
+        raw_classes = getattr(self.base_estimator, "classes_", None)
+        if raw_classes is not None:
+            self._classes = np.asarray(raw_classes, dtype=np.int64)
+        else:
+            self._classes = np.array([0, 1, 2], dtype=np.int64)
+
+        # Convert probabilities → logits (clip to avoid log(0))
+        clipped = np.clip(raw_probs, 1e-7, 1.0 - 1e-7)
+        logits: NDArray[np.float64] = np.log(clipped)
+        y_arr = y.to_numpy(dtype=np.int64)
+
+        def nll(T: float) -> float:
+            scaled: NDArray[np.float64] = _sp.softmax(logits / max(T, 1e-3), axis=1)
+            log_probs = np.log(np.clip(scaled[np.arange(len(y_arr)), y_arr], 1e-7, 1.0))
+            return -float(log_probs.mean())
+
+        result = _opt.minimize_scalar(nll, bounds=(0.1, 5.0), method="bounded")
+        self.temperature_ = float(result.x)
+        logger.info(
+            "Temperature scaling converged: T=%.4f (NLL=%.4f)",
+            self.temperature_,
+            result.fun,
+        )
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> NDArray[np.float64]:
+        """Return temperature-scaled probabilities."""
+        import scipy.special as _sp  # noqa: PLC0415
+
+        raw_probs = predict_proba_aligned(self.base_estimator, X)
+        clipped = np.clip(raw_probs, 1e-7, 1.0 - 1e-7)
+        logits: NDArray[np.float64] = np.log(clipped)
+        scaled: NDArray[np.float64] = _sp.softmax(
+            logits / max(self.temperature_, 1e-3), axis=1
+        )
+        return scaled
+
+    def predict(self, X: pd.DataFrame) -> NDArray[np.int64]:
+        """Delegate hard predictions to the base ensemble (preserves draw-override)."""
+        return self.base_estimator.predict(X).astype(np.int64)
+
+
+def _fit_temperature_scaled_variant(
+    fitted_estimator: ProbabilisticEstimator,
+    *,
+    X_calibration: pd.DataFrame,
+    y_calibration_encoded: pd.Series,
+) -> TemperatureScaledEnsemble:
+    """Fit and return a TemperatureScaledEnsemble on the calibration holdout."""
+    wrapper = TemperatureScaledEnsemble(base_estimator=fitted_estimator)
+    wrapper.fit(X_calibration, y_calibration_encoded)
+    return wrapper
+
+
 def _split_calibration_window(
     calibration_df: pd.DataFrame,
     *,
@@ -944,10 +1039,22 @@ def train_and_export_model(
     }
 
     if is_custom_ensemble:
+        # Post-hoc temperature scaling: calibrates probabilities while
+        # preserving all draw-override threshold logic in the base model.
+        # This resolves the ECE gap without disrupting decision boundaries.
         logger.info(
-            "Skipping calibration for custom ensemble family: %s. "
-            "Calibration interferes with manually tuned probability thresholds.",
+            "Custom ensemble detected (%s): applying temperature scaling for calibration.",
             selected_candidate_spec.family,
+        )
+        temp_scaled = _fit_temperature_scaled_variant(
+            selected_pipeline_for_calibration,
+            X_calibration=X_calibration_fit,
+            y_calibration_encoded=y_calibration_fit,
+        )
+        calibration_selection_metrics["temperature"] = _evaluate_pipeline(
+            cast(ProbabilisticEstimator, temp_scaled),
+            X=X_calibration_selection,
+            y=y_calibration_selection,
         )
     else:
         for method in ("sigmoid", "isotonic"):
@@ -999,6 +1106,28 @@ def train_and_export_model(
             method=deployed_model_variant,
         )
         calibration_method = deployed_model_variant
+    elif deployed_model_variant == "temperature":
+        # Temperature scaling for custom ensembles
+        base_rows = pd.concat([train_df, calibration_fit_df], ignore_index=True)
+        X_base = base_rows[feature_columns].copy()
+        y_base = base_rows[TARGET_COLUMN].map(OUTCOME_TO_ENCODED)
+        base_pipeline = _fit_pipeline(
+            selected_candidate_pipeline,
+            X=X_base,
+            y_encoded=y_base,
+            sample_weight_builder=selected_candidate_spec.sample_weight_builder,
+        )
+        final_deployed_model = cast(
+            ProbabilisticEstimator,
+            _fit_temperature_scaled_variant(
+                base_pipeline,
+                X_calibration=X_calibration_selection,
+                y_calibration_encoded=calibration_selection_df[TARGET_COLUMN].map(
+                    OUTCOME_TO_ENCODED
+                ),
+            ),
+        )
+        calibration_method = "temperature"
 
     uncalibrated_metrics = _evaluate_pipeline(
         final_uncalibrated_model,
@@ -1106,48 +1235,66 @@ def train_and_export_model(
     }
 
     # ============================================================================
-    # Expected Goals Regression (Poisson)
+    # Expected Goals Regression (Poisson) with CV hyperparameter tuning
     # ============================================================================
     logger.info("Training Poisson regressors for expected goals (home & away)...")
+    logger.info(
+        "Running 3-fold CV grid search to select optimal Poisson regressor hyperparameters..."
+    )
     y_home_goals = pretest_df["homeGoals"].astype(float)
     y_away_goals = pretest_df["awayGoals"].astype(float)
 
-    # Simple Pipeline with median imputation + XGBRegressor
-    home_goals_model = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            (
-                "model",
-                XGBRegressor(
-                    objective="count:poisson",
-                    n_estimators=150,
-                    learning_rate=0.05,
-                    max_depth=4,
-                    random_state=RANDOM_STATE,
-                    n_jobs=0,
-                ),
-            ),
-        ]
-    )
-    home_goals_model.fit(X_pretest, y_home_goals)
+    # Grid search: validate hyperparameters on non-missing rows only
+    _valid_mask = y_home_goals.notna() & y_away_goals.notna()
+    X_pretest_valid = X_pretest[_valid_mask]
+    y_home_valid = y_home_goals[_valid_mask]
+    y_away_valid = y_away_goals[_valid_mask]
 
-    away_goals_model = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            (
-                "model",
-                XGBRegressor(
-                    objective="count:poisson",
-                    n_estimators=150,
-                    learning_rate=0.05,
-                    max_depth=4,
-                    random_state=RANDOM_STATE,
-                    n_jobs=0,
+    _POISSON_GRID = {
+        "model__n_estimators": [100, 200],
+        "model__max_depth": [3, 4, 5],
+        "model__subsample": [0.8, 1.0],
+        "model__learning_rate": [0.05, 0.10],
+    }
+
+    def _build_poisson_pipeline() -> Pipeline:
+        return Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                (
+                    "model",
+                    XGBRegressor(
+                        objective="count:poisson",
+                        random_state=RANDOM_STATE,
+                        n_jobs=0,
+                    ),
                 ),
-            ),
-        ]
+            ]
+        )
+
+    _home_search = GridSearchCV(
+        _build_poisson_pipeline(),
+        _POISSON_GRID,
+        cv=3,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=-1,
+        refit=True,
     )
-    away_goals_model.fit(X_pretest, y_away_goals)
+    _home_search.fit(X_pretest_valid, y_home_valid)
+    home_goals_model = _home_search.best_estimator_
+    logger.info("Home goals model best params: %s", _home_search.best_params_)
+
+    _away_search = GridSearchCV(
+        _build_poisson_pipeline(),
+        _POISSON_GRID,
+        cv=3,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=-1,
+        refit=True,
+    )
+    _away_search.fit(X_pretest_valid, y_away_valid)
+    away_goals_model = _away_search.best_estimator_
+    logger.info("Away goals model best params: %s", _away_search.best_params_)
     logger.info("Expected goals regressors trained successfully.")
 
     artifact: ModelArtifactBundle = {
