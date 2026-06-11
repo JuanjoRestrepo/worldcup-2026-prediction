@@ -302,4 +302,3 @@ class TestEnsembleCalibrationGuard:
         assert "applying temperature scaling for calibration" in train_source, (
             "Temperature scaling branch missing"
         )
-
