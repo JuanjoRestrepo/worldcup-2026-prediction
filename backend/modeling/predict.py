@@ -12,6 +12,7 @@ from typing import Any, cast
 import joblib
 import numpy as np
 from numpy.typing import NDArray
+from scipy.stats import poisson  # type: ignore[import-untyped]
 
 from backend.config.settings import settings
 from backend.modeling.evaluation import extract_estimator_classes, predict_proba_aligned
@@ -80,6 +81,43 @@ def _is_shadow_primary() -> bool:
 # ────────────────────────────────────────────────────────────────────────────
 # Probability decoding — shared by primary and shadow to avoid duplication
 # ────────────────────────────────────────────────────────────────────────────
+
+
+def _calculate_most_probable_score(
+    expected_home_goals: float,
+    expected_away_goals: float,
+    predicted_outcome_label: str,
+    max_goals: int = 10,
+) -> str:
+    """
+    Computes the most probable exact score using a bivariate Poisson distribution,
+    strictly conditioned on the primary model's predicted outcome.
+    """
+    best_score = (0, 0)
+    max_prob = -1.0
+
+    for h in range(max_goals):
+        for a in range(max_goals):
+            # Calculate independent Poisson joint probability
+            prob = float(
+                poisson.pmf(h, expected_home_goals)
+                * poisson.pmf(a, expected_away_goals)
+            )
+
+            # Filter mathematically impossible scores for the given outcome
+            if predicted_outcome_label == "draw" and h != a:
+                continue
+            if predicted_outcome_label == "home_win" and h <= a:
+                continue
+            if predicted_outcome_label == "away_win" and a <= h:
+                continue
+
+            # Find the argmax of the valid subset
+            if prob > max_prob:
+                max_prob = prob
+                best_score = (h, a)
+
+    return f"{best_score[0]}-{best_score[1]}"
 
 
 def _decode_probabilities(
@@ -243,26 +281,10 @@ def predict_match_outcome(
             expected_home_goals = float(home_goals_model.predict(feature_frame)[0])
             expected_away_goals = float(away_goals_model.predict(feature_frame)[0])
 
-            # Reconcile predicted score with classifier's outcome
-            h = int(round(expected_home_goals))
-            a = int(round(expected_away_goals))
-
-            if predicted_outcome_label == "draw":
-                if h != a:
-                    avg = (h + a) // 2
-                    h = a = (
-                        max(1, avg)
-                        if (expected_home_goals + expected_away_goals) >= 1.0
-                        else 0
-                    )
-            elif predicted_outcome_label == "home_win":
-                if h <= a:
-                    h = a + 1
-            elif predicted_outcome_label == "away_win":
-                if a <= h:
-                    a = h + 1
-
-            predicted_score = f"{h}-{a}"
+            # Reconcile predicted score using bivariate Poisson matrix
+            predicted_score = _calculate_most_probable_score(
+                expected_home_goals, expected_away_goals, predicted_outcome_label
+            )
         except Exception as exc:
             logger.warning("Expected goals inference failed: %s", exc)
 
