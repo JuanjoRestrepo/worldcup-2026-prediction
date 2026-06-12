@@ -79,6 +79,7 @@ ALL_TEAMS = sorted(
         "Egypt",
         "South Africa",
         "Ivory Coast",
+        "Bosnia and Herzegovina",
     ]
 )
 
