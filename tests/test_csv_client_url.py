@@ -20,6 +20,7 @@ from backend.ingestion.clients.csv_client import (
     EXPECTED_COLUMNS,
     load_historical_data,
 )
+from backend.config.settings import settings
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -38,6 +39,12 @@ def local_csv(tmp_path: Path) -> Path:
     csv_path = tmp_path / "international_results.csv"
     csv_path.write_text(_MINIMAL_CSV_CONTENT, encoding="utf-8")
     return csv_path
+
+
+@pytest.fixture(autouse=True)
+def mock_raw_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Mock RAW_DIR to an empty temp dir so real manual_results.csv doesn't leak into tests."""
+    monkeypatch.setattr(settings, "RAW_DIR", tmp_path)
 
 
 # ---------------------------------------------------------------------------
