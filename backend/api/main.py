@@ -8,7 +8,7 @@ import traceback
 from datetime import date
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
@@ -193,6 +193,20 @@ class RecentInferencesResponse(BaseModel):
     inferences: list[RecentInferenceRecord]
 
 
+class RecordResultRequest(BaseModel):
+    """Request body for recording a real match result."""
+
+    date: str = Field(..., description="Date of the match (YYYY-MM-DD)")
+    home_team: str = Field(..., description="Home team name")
+    away_team: str = Field(..., description="Away team name")
+    home_score: int = Field(..., ge=0, description="Home team score")
+    away_score: int = Field(..., ge=0, description="Away team score")
+    tournament: str = Field("Friendly", description="Tournament name")
+    city: str = Field("Unknown", description="City name")
+    country: str = Field("Unknown", description="Country name")
+    neutral: bool = Field(False, description="Whether match is neutral")
+
+
 class ToggleShadowRequest(BaseModel):
     """Request body to hot-swap the shadow model."""
 
@@ -267,6 +281,106 @@ def toggle_shadow(
         message=f"Shadow model as primary is now {state_str}",
         shadow_as_primary=request.enable,
     )
+
+
+@app.post("/admin/results")
+def record_result(
+    request: RecordResultRequest,
+    api_key: str = Depends(_get_admin_key),
+) -> dict[str, str]:
+    """Record a real-world match result by writing to manual_results.csv."""
+    import csv
+
+    from backend.config.team_aliases import normalize_team_name
+
+    norm_home = normalize_team_name(request.home_team)
+    norm_away = normalize_team_name(request.away_team)
+
+    manual_path = settings.RAW_DIR / "manual_results.csv"
+    file_exists = manual_path.exists()
+
+    header = [
+        "date",
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+        "tournament",
+        "city",
+        "country",
+        "neutral",
+    ]
+
+    try:
+        settings.RAW_DIR.mkdir(parents=True, exist_ok=True)
+        with open(manual_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(header)
+            writer.writerow(
+                [
+                    request.date,
+                    norm_home,
+                    norm_away,
+                    request.home_score,
+                    request.away_score,
+                    request.tournament,
+                    request.city,
+                    request.country,
+                    str(request.neutral).upper(),
+                ]
+            )
+        logger.info(
+            "Admin recorded match result: %s %d-%d %s",
+            norm_home,
+            request.home_score,
+            request.away_score,
+            norm_away,
+        )
+        return {
+            "status": "success",
+            "message": f"Result recorded for {norm_home} vs {norm_away}",
+        }
+    except Exception as exc:
+        logger.error("Failed to record manual result: %s", exc)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to record result: {exc}"
+        ) from exc
+
+
+@app.post("/admin/run-pipeline")
+def run_pipeline(
+    background_tasks: BackgroundTasks,
+    api_key: str = Depends(_get_admin_key),
+) -> dict[str, str]:
+    """Trigger the end-to-end model training pipeline in the background."""
+
+    def execute_pipeline_and_clear_cache() -> None:
+        try:
+            logger.info("Starting background pipeline execution...")
+            from run_pipeline import run_full_pipeline
+
+            run_full_pipeline(
+                run_ingestion=True,
+                run_processing=True,
+                run_training=True,
+                use_api_data=False,
+                persist_to_db=settings.PERSIST_TO_DB,
+            )
+            from backend.modeling.predict import _load_model_bundle_cached
+
+            _load_model_bundle_cached.cache_clear()
+            logger.info(
+                "Background pipeline execution completed successfully. Model cache cleared."
+            )
+        except Exception as exc:
+            logger.error("Background pipeline execution failed: %s", exc)
+
+    background_tasks.add_task(execute_pipeline_and_clear_cache)
+    return {
+        "status": "success",
+        "message": "Model training pipeline triggered in the background. This will take a few minutes.",
+    }
 
 
 @app.get("/monitoring/latest-training-run", response_model=LatestTrainingRunResponse)

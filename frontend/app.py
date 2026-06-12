@@ -23,59 +23,90 @@ ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 
 ALL_TEAMS = sorted(
     [
-        "Argentina",
-        "France",
-        "Brazil",
-        "England",
-        "Spain",
-        "Portugal",
-        "Colombia",
-        "Uruguay",
-        "Mexico",
-        "United States",
-        "Germany",
-        "Italy",
-        "Netherlands",
-        "Belgium",
-        "Croatia",
-        "Denmark",
-        "Switzerland",
-        "Morocco",
-        "Senegal",
-        "Nigeria",
-        "Cameroon",
-        "Ghana",
+        "Albania",
         "Algeria",
-        "Japan",
-        "South Korea",
+        "Argentina",
         "Australia",
-        "Iran",
-        "Saudi Arabia",
-        "Ecuador",
-        "Chile",
-        "Peru",
-        "Venezuela",
-        "Bolivia",
-        "Paraguay",
-        "Canada",
-        "Costa Rica",
-        "Panama",
-        "Jamaica",
-        "Poland",
-        "Czech Republic",
-        "Serbia",
-        "Hungary",
-        "Romania",
-        "Turkey",
-        "Ukraine",
         "Austria",
-        "Scotland",
-        "Wales",
-        "Tunisia",
-        "Egypt",
-        "South Africa",
-        "Ivory Coast",
+        "Bahrain",
+        "Belgium",
+        "Bolivia",
         "Bosnia and Herzegovina",
+        "Brazil",
+        "Burkina Faso",
+        "Cameroon",
+        "Canada",
+        "Cape Verde",
+        "Chile",
+        "China PR",
+        "Colombia",
+        "Costa Rica",
+        "Croatia",
+        "Curaçao",
+        "Czech Republic",
+        "DR Congo",
+        "Denmark",
+        "Ecuador",
+        "Egypt",
+        "El Salvador",
+        "England",
+        "Finland",
+        "France",
+        "Georgia",
+        "Germany",
+        "Ghana",
+        "Greece",
+        "Guatemala",
+        "Haiti",
+        "Honduras",
+        "Hungary",
+        "Iceland",
+        "Iran",
+        "Iraq",
+        "Italy",
+        "Ivory Coast",
+        "Jamaica",
+        "Japan",
+        "Jordan",
+        "Mali",
+        "Mexico",
+        "Morocco",
+        "Netherlands",
+        "New Zealand",
+        "Nigeria",
+        "Northern Ireland",
+        "Norway",
+        "Oman",
+        "Panama",
+        "Paraguay",
+        "Peru",
+        "Poland",
+        "Portugal",
+        "Qatar",
+        "Republic of Ireland",
+        "Romania",
+        "Saudi Arabia",
+        "Scotland",
+        "Senegal",
+        "Serbia",
+        "Slovakia",
+        "Slovenia",
+        "South Africa",
+        "South Korea",
+        "Spain",
+        "Sweden",
+        "Switzerland",
+        "Syria",
+        "Tunisia",
+        "Turkey",
+        "UAE",
+        "Ukraine",
+        "United States",
+        "Uruguay",
+        "Uzbekistan",
+        "Venezuela",
+        "Wales",
+        "Zambia",
     ]
 )
 
@@ -138,6 +169,89 @@ with st.sidebar:
     new_dark: bool = st.toggle("🌙 Dark Mode", value=st.session_state["dark_mode"])
     if new_dark != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = new_dark
+    st.divider()
+
+    st.markdown("### 🔧 Admin Panel")
+    show_admin = True
+    if ADMIN_API_KEY:
+        admin_key_input = st.text_input("🔑 Admin Key", type="password")
+        if admin_key_input != ADMIN_API_KEY:
+            show_admin = False
+            st.caption("Enter correct key to unlock admin actions.")
+
+    if show_admin:
+        st.markdown("#### 🏆 Record Match Result")
+        adm_home = st.selectbox("Home Team", options=ALL_TEAMS, key="adm_home")
+        adm_away = st.selectbox("Away Team", options=ALL_TEAMS, key="adm_away")
+        adm_date = st.date_input("Match Date")
+        col_s1, col_s2 = st.columns(2)
+        adm_home_score = col_s1.number_input("Home Score", min_value=0, step=1, value=0)
+        adm_away_score = col_s2.number_input("Away Score", min_value=0, step=1, value=0)
+        adm_tournament = st.selectbox(
+            "Tournament",
+            options=[
+                "FIFA World Cup",
+                "FIFA World Cup Qualifier",
+                "Friendly",
+                "Other",
+            ],
+            index=0,
+        )
+        adm_city = st.text_input("City", value="Unknown")
+        adm_country = st.text_input("Country", value="Unknown")
+        adm_neutral = st.checkbox("Neutral Ground", value=True)
+
+        if st.button("💾 Submit Score", use_container_width=True):
+            if adm_home == adm_away:
+                st.error("Teams must be different!")
+            elif adm_date is None:
+                st.error("Please select a date!")
+            else:
+                headers = {"X-Admin-Key": ADMIN_API_KEY} if ADMIN_API_KEY else {}
+                payload = {
+                    "date": adm_date.strftime("%Y-%m-%d"),
+                    "home_team": adm_home,
+                    "away_team": adm_away,
+                    "home_score": int(adm_home_score),
+                    "away_score": int(adm_away_score),
+                    "tournament": adm_tournament,
+                    "city": adm_city,
+                    "country": adm_country,
+                    "neutral": adm_neutral,
+                }
+                try:
+                    res = requests.post(
+                        f"{API_URL}/admin/results",
+                        json=payload,
+                        headers=headers,
+                        timeout=10,
+                    )
+                    if res.status_code == 200:
+                        st.success("✅ Result recorded successfully!")
+                    else:
+                        st.error(f"Failed to record result: {res.text}")
+                except Exception as e:
+                    st.error(f"Error connecting to API: {e}")
+
+        st.divider()
+        st.markdown("#### 🔄 Model Retraining")
+        if st.button("🚀 Retrain Model", use_container_width=True):
+            headers = {"X-Admin-Key": ADMIN_API_KEY} if ADMIN_API_KEY else {}
+            try:
+                res = requests.post(
+                    f"{API_URL}/admin/run-pipeline",
+                    headers=headers,
+                    timeout=10,
+                )
+                if res.status_code == 200:
+                    st.success(
+                        "🔄 Retraining triggered! This runs in the background. Check logs for details."
+                    )
+                else:
+                    st.error(f"Failed to trigger retraining: {res.text}")
+            except Exception as e:
+                st.error(f"Error connecting to API: {e}")
+
     st.divider()
     st.caption("v0.1.0-alpha | Supabase Migrated")
 

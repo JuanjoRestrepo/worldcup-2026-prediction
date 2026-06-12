@@ -189,6 +189,45 @@ def load_historical_data(
 
     _validate_schema(df, source=source_used)
 
+    manual_path = settings.RAW_DIR / "manual_results.csv"
+    if manual_path.exists():
+        try:
+            manual_df = pd.read_csv(manual_path, low_memory=False)
+            _validate_schema(manual_df, source="manual_results.csv")
+            if "home_score" in manual_df.columns and "away_score" in manual_df.columns:
+                manual_df = manual_df.dropna(subset=["home_score", "away_score"])
+
+            # Remove existing matches from df that are overridden in manual_df
+            # to prevent duplicate rows for the same date/teams.
+            manual_keys = set(
+                zip(
+                    manual_df["date"].astype(str),
+                    manual_df["home_team"].astype(str),
+                    manual_df["away_team"].astype(str),
+                )
+            )
+
+            def is_overridden(row: pd.Series) -> bool:
+                return (
+                    str(row["date"]),
+                    str(row["home_team"]),
+                    str(row["away_team"]),
+                ) in manual_keys
+
+            # Filter out the overridden matches from the main df
+            mask = df.apply(is_overridden, axis=1)
+            df = df[~mask]
+
+            # Concatenate manual results
+            df = pd.concat([df, manual_df], ignore_index=True)
+            logger.info(
+                "Loaded and appended %d manual results (overwrote %d existing matches).",
+                len(manual_df),
+                mask.sum(),
+            )
+        except Exception as exc:
+            logger.error("Failed to load manual results from %s: %s", manual_path, exc)
+
     date_min = df["date"].min()
     date_max = df["date"].max()
     logger.info(

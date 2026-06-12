@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.main import app
@@ -173,6 +175,94 @@ class TestErrorHandling:
         # This test documents what error message users should see
         req = PredictionRequest(**invalid_payload)
         assert req.home_team == "NonexistentTeam123"
+
+
+class TestAdminEndpoints:
+    """Test the admin endpoints: /admin/results and /admin/run-pipeline."""
+
+    def test_record_result_unauthenticated(self):
+        """Ensure /admin/results returns 503 when admin key not configured, or 403 when key is wrong."""
+        payload = {
+            "date": "2026-06-12",
+            "home_team": "Canada",
+            "away_team": "Bosnia and Herzegovina",
+            "home_score": 2,
+            "away_score": 1,
+            "tournament": "FIFA World Cup",
+        }
+        response = client.post("/admin/results", json=payload)
+        # Should be 503 (since ADMIN_API_KEY is not set in test environment by default)
+        assert response.status_code in {503, 403}
+
+    def test_record_result_authenticated(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Ensure /admin/results successfully records a match when authenticated."""
+        monkeypatch.setenv("ADMIN_API_KEY", "supersecret")
+
+        from backend.config.settings import settings
+
+        monkeypatch.setattr(settings, "RAW_DIR", tmp_path)
+
+        payload = {
+            "date": "2026-06-12",
+            "home_team": "Canada",
+            "away_team": "Bosnia and Herzegovina",
+            "home_score": 2,
+            "away_score": 1,
+            "tournament": "FIFA World Cup",
+            "city": "Toronto",
+            "country": "Canada",
+            "neutral": False,
+        }
+        headers = {"X-Admin-Key": "supersecret"}
+        response = client.post("/admin/results", json=payload, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
+
+        manual_csv = tmp_path / "manual_results.csv"
+        assert manual_csv.exists()
+
+        import pandas as pd
+
+        df = pd.read_csv(manual_csv)
+        assert len(df) == 1
+        assert df.iloc[0]["home_team"] == "Canada"
+        assert df.iloc[0]["away_team"] == "Bosnia and Herzegovina"
+        assert df.iloc[0]["home_score"] == 2.0
+        assert df.iloc[0]["away_score"] == 1.0
+
+    def test_run_pipeline_authenticated(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ensure /admin/run-pipeline triggers pipeline when authenticated."""
+        monkeypatch.setenv("ADMIN_API_KEY", "supersecret")
+
+        pipeline_calls = []
+
+        def mock_run_pipeline(**kwargs):
+            pipeline_calls.append(kwargs)
+            return {"status": "success"}
+
+        import run_pipeline
+
+        monkeypatch.setattr(run_pipeline, "run_full_pipeline", mock_run_pipeline)
+
+        cache_cleared = []
+        import backend.modeling.predict as predict_mod
+
+        monkeypatch.setattr(
+            predict_mod._load_model_bundle_cached,
+            "cache_clear",
+            lambda: cache_cleared.append(True),
+        )
+
+        headers = {"X-Admin-Key": "supersecret"}
+        response = client.post("/admin/run-pipeline", headers=headers)
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
+
+        assert len(pipeline_calls) == 1
+        assert pipeline_calls[0]["use_api_data"] is False
+        assert len(cache_cleared) == 1
 
 
 class TestPredictIntegration:

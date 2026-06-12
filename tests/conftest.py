@@ -23,7 +23,7 @@ def engine_fixture() -> Iterator[Engine]:
         with engine.connect() as connection:
             connection.exec_driver_sql("SELECT 1")
     except (RuntimeError, SQLAlchemyError) as exc:
-        if 'engine' in locals():
+        if "engine" in locals():
             engine.dispose()
         pytest.skip(f"PostgreSQL not available for integration test: {exc}")
 

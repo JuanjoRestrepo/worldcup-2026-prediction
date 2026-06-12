@@ -1,8 +1,7 @@
-
 import soccerdata as sd
 
 
-def test_sofifa():
+def test_sofifa() -> None:
     try:
         # SoFIFA covers all international teams.
         sofifa = sd.SoFIFA(leagues="FIFA World Cup")
@@ -12,7 +11,7 @@ def test_sofifa():
         print("SoFIFA Error:", e)
 
 
-def test_fbref():
+def test_fbref() -> None:
     try:
         fbref = sd.FBref(leagues="FIFA World Cup", seasons=2022)
         df = fbref.read_match_stats(stat_type="possession")
