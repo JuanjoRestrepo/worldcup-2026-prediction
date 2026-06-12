@@ -433,7 +433,7 @@ def _compute_talent_differential(df: pd.DataFrame) -> pd.DataFrame:
     """
     from pathlib import Path
 
-    from thefuzz import process  # type: ignore
+    from thefuzz import process
 
     tm_path = Path("data/bronze/transfermarkt_static.csv")
     if not tm_path.exists():
