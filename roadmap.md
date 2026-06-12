@@ -1,34 +1,29 @@
-# Roadmap: World Cup 2026 Prediction Engine
+# World Cup 2026 Prediction Engine - Roadmap
 
-This roadmap outlines strategic directions and future improvements for the ML engine, feature engineering, and the overall application architecture to achieve top-tier performance for predicting the 2026 World Cup.
+This document outlines planned improvements and future features for the prediction engine, focusing on advanced analytics, real-time data integration, and infrastructure hardening.
 
----
+## 1. Advanced Feature Engineering
+- **Expected Goals (xG) Integration:** Integrate historical xG, xA, and non-penalty xG from robust sources (e.g., Opta via API-Football).
+- **Player-Level Metrics:** Incorporate player availability, injury severity, fatigue metrics (minutes played in top 5 leagues), and individual form tracking.
+- **In-Game States:** Build conditional probabilities based on game state (e.g., probability of winning when conceding first).
+- **Live Transfermarkt API:** Build a stable backend connector for automated weekly squad value ingestion instead of a static lookup table, utilizing headless residential proxies to bypass Cloudflare.
 
-## 1. Advanced Data Sources & Integrations
+## 2. Modeling & Calibration Improvements
+- **Bayesian Modeling:** Implement a Bayesian hierarchical model using `PyMC` to naturally capture uncertainty and the shrinkage of extreme predictions.
+- **Dynamic Bivariate Poisson:** Extend the Poisson regression into a Bivariate Poisson model (using the `skellam` distribution or copulas) to explicitly capture the correlation between home and away goals.
+- **Live Updating Odds:** Introduce a real-time calibration mechanism against betting exchange odds (e.g., Betfair) to capture late market movements (injuries, lineup drops).
 
-The current model relies exclusively on historical match results (goals, tournaments, dates). To leap forward in predictive power, we will architect a new Medallion ingestion layer using the following specialized open-source tools and APIs:
+## 3. System Architecture & DevOps
+- **Automated Data Pipelines:** Transition ETL workflows to Apache Airflow or Dagster for fully automated, scheduled data ingestion and training cycles.
+- **Feature Store:** Migrate the current CSV/Parquet-based Bronze/Silver/Gold architecture into a formal Feature Store (e.g., Feast) for point-in-time correctness during backtesting.
+- **Cloud Deployment:** Containerize the API with Docker and deploy to AWS Elastic Beanstalk, Google Cloud Run, or Azure App Service.
+- **Monitoring & Observability:** Implement Prometheus and Grafana to track prediction drift and accuracy across tournaments.
 
-* **Squad Depth & Roster Quality (`soccerdata` -> SoFIFA):** The most critical missing feature is absolute team talent. We will use `soccerdata.SoFIFA()` to pull official EA FC (FIFA) Overall Ratings (OVR) for national team rosters. Averaging the OVR of the starting XI vs the bench provides a deterministic "Squad Talent Differential" and "Depth Score" without paying for expensive market value APIs.
-* **Event-Level Context (`soccerdata` -> FBref):** We will query `soccerdata.FBref()` (powered by Opta) to extract international match possession metrics, progressive carries, and match-level Expected Goals (xG). Note: We explicitly avoid `Understat` here, as it does not cover international tournaments like the World Cup.
-* **Live Tournament Stability (API-Football):** While `soccerdata` (web scraping) is perfect for historical backtesting and feature engineering, scrapers are prone to breaking if HTML structures change. As we approach the actual World Cup 2026, we will integrate `API-Football` (JSON REST API) for the daily live-score and lineup endpoints to guarantee production stability without DOM-breakage risks.
-* **Injury Timelines (`worldfootballR` -> Transfermarkt):** Incorporate the `worldfootballR` package (potentially via `rpy2` orchestration) to specifically scrape Transfermarkt's injury directories for national teams. This will flag missing key players prior to inference.
-* **Travel & Climate Context:** For WC 2026, travel distances between North American host cities, stadium altitudes (e.g., Estadio Azteca), and regional humidity can significantly affect performance. We will build static mapping features for these geographical factors to act as team resilience modifiers.
+## 4. Frontend & User Experience
+- **Interactive Visualisations:** Add SHAP feature importance charts dynamically to the UI so users can see exactly *why* a team is favored.
+- **Simulation Mode:** Allow users to simulate an entire tournament bracket (Monte Carlo simulation of group stages and knockouts) using the predictive model.
+- **Head-to-Head Deep Dives:** Show historical H2H records, form trends, and clean-sheet probabilities within the prediction screen.
 
-## 2. Model & Algorithm Enhancements
-
-* **Deep Learning for Tabular Data (TabNet / FT-Transformer):** Although tree-based models (XGBoost/LightGBM) currently dominate tabular data, experimenting with modern tabular deep learning architectures might capture complex non-linear feature interactions (e.g., how specific formations counter others).
-* **Multi-Task Learning:** Train a neural network to simultaneously predict the match outcome, the exact scoreline, and the number of corners/cards. The shared representations often improve the primary classification task.
-* **Dynamic Time Warping (DTW) on Form:** Instead of basic EWMA, use DTW to find historical periods where a team had a similar trajectory to their current form, to better predict their next result.
-* **Bivariate Poisson / Dixon-Coles Improvements:** The current Poisson regressors assume home and away goals are independent. Upgrading to a Bivariate Poisson or a full Dixon-Coles model with a low-scoring correlation parameter ($\rho$) will better model the 0-0, 1-0, 0-1, and 1-1 clusters.
-
-## 3. Operations & MLOps
-
-* **Automated Data Quality & Drift Detection:** Implement `Great Expectations` or `Pandera` in the pipeline to catch schema changes in API responses and detect data drift (e.g., if goal-scoring rates suddenly jump globally).
-* **Continuous Training (CT) Pipeline:** Fully automate the training loop via GitHub Actions or Airflow so that when new match results arrive, the model retrains, evaluates via the Champion vs Challenger gate, and automatically redeploys if superior.
-* **Feature Store Integration:** Transition `processing_pipeline.py` into an organized Feature Store (e.g., Feast or Hopsworks) to serve pre-calculated ELO and form metrics to the real-time inference API at single-digit millisecond latency.
-
-## 4. UI / UX & Frontend
-
-* **Interactive "What-If" Scenario Builder:** Allow the user to manually override features in the UI. For example, "What if Messi doesn't play?" (simulated by dropping Argentina's ELO by X points).
-* **xG vs Actual Goals Visualization:** Add charts showing teams that are over-performing or under-performing their Expected Goals, providing narrative context for the predictions.
-* **Explainable AI (XAI) Dashboard:** Surface SHAP values directly in the Streamlit app. For every match prediction, show a waterfall chart explaining *why* the model chose the outcome (e.g., "+15% due to Home Advantage, -5% due to poor H2H record").
+## 5. Security & Code Quality
+- **100% Type Coverage:** Enforce strict MyPy coverage across all modules and scripts.
+- **Extended Test Suite:** Increase unit and integration testing coverage for the modeling module to 95%+, adding property-based testing (`hypothesis`) for the mathematical transformations.

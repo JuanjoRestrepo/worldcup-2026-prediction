@@ -279,7 +279,14 @@ def compute_advanced_features(df: pd.DataFrame) -> pd.DataFrame:
     df = _compute_confederation_strength(df)
     logger.info("  ✅ Confederation strength index computed")
 
-    logger.info("Advanced feature engineering complete. Added 14 new columns.")
+    # ------------------------------------------------------------------ #
+    # Feature H: Talent Differential (Transfermarkt)                       #
+    # log(home_squad_value + 1) - log(away_squad_value + 1)                #
+    # ------------------------------------------------------------------ #
+    df = _compute_talent_differential(df)
+    logger.info("  ✅ Talent differential feature computed")
+
+    logger.info("Advanced feature engineering complete. Added 17 new columns.")
     return df
 
 
@@ -415,4 +422,63 @@ def _compute_confederation_strength(df: pd.DataFrame) -> pd.DataFrame:
         _lookup_conf_elo(row["date"], away_conf.iloc[i])
         for i, (_, row) in enumerate(df.iterrows())
     ]
+    return df
+
+
+def _compute_talent_differential(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute the log talent differential using static Transfermarkt squad values.
+
+    Reads data/bronze/transfermarkt_static.csv, fuzzy matches to canonical teams,
+    and applies log(home_value + 1) - log(away_value + 1).
+    """
+    from pathlib import Path
+
+    from thefuzz import process  # type: ignore
+
+    tm_path = Path("data/bronze/transfermarkt_static.csv")
+    if not tm_path.exists():
+        logger.warning(
+            "transfermarkt_static.csv not found. Filling talent features with 0."
+        )
+        df["home_squad_value"] = 0.0
+        df["away_squad_value"] = 0.0
+        df["talent_differential"] = 0.0
+        return df
+
+    tm_df = pd.read_csv(tm_path)
+    # Basic data cleaning and prep
+    tm_df["Total_Value_Num"] = pd.to_numeric(
+        tm_df["Total_Value_Num"], errors="coerce"
+    ).fillna(0.0)
+
+    # Extract unique canonical teams from the dataframe
+    canonical_teams = list(set(df["homeTeam"].unique()) | set(df["awayTeam"].unique()))
+    source_teams = tm_df["Nation"].unique().tolist()
+
+    # Fuzzy match TM teams to Kaggle canonical teams
+    mapping = {}
+    for src in source_teams:
+        match, score = process.extractOne(src, canonical_teams)
+        if score >= 85:
+            mapping[src] = match
+
+    tm_df["canonical_team"] = tm_df["Nation"].map(mapping)
+    # Keep only matched teams and set index
+    tm_df = tm_df.dropna(subset=["canonical_team"]).set_index("canonical_team")
+
+    # Lookup dictionary
+    val_dict = tm_df["Total_Value_Num"].to_dict()
+
+    # Map to df using a baseline minimal value (e.g., 1M) for unmatched teams
+    BASELINE_VALUE = 1_000_000.0
+
+    df["home_squad_value"] = df["homeTeam"].map(val_dict).fillna(BASELINE_VALUE)
+    df["away_squad_value"] = df["awayTeam"].map(val_dict).fillna(BASELINE_VALUE)
+
+    # Calculate Log Talent Differential
+    # log1p safely handles log(1 + x)
+    df["talent_differential"] = np.log1p(df["home_squad_value"]) - np.log1p(
+        df["away_squad_value"]
+    )
+
     return df
