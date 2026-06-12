@@ -121,7 +121,7 @@ warn_unused_ignores = true
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = ["joblib", "psycopg2.*", "sklearn.*", "xgboost.*", "dbt.*", "plotly.*", "scipy.*"]
+module = ["joblib", "psycopg2.*", "sklearn.*", "xgboost.*", "dbt.*", "plotly.*", "scipy.*", "soccerdata.*", "thefuzz.*", "seleniumbase.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

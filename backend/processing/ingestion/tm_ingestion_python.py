@@ -2,10 +2,9 @@
 
 import logging
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 from seleniumbase import Driver  # type: ignore
 
 logger = logging.getLogger(__name__)
