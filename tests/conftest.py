@@ -18,12 +18,13 @@ sys.path.insert(0, str(project_root))
 @pytest.fixture
 def engine_fixture() -> Iterator[Engine]:
     """Provide a live SQLAlchemy engine or skip integration tests when DB is unavailable."""
-    engine = get_sqlalchemy_engine()
     try:
+        engine = get_sqlalchemy_engine()
         with engine.connect() as connection:
             connection.exec_driver_sql("SELECT 1")
-    except SQLAlchemyError as exc:
-        engine.dispose()
+    except (RuntimeError, SQLAlchemyError) as exc:
+        if 'engine' in locals():
+            engine.dispose()
         pytest.skip(f"PostgreSQL not available for integration test: {exc}")
 
     try:

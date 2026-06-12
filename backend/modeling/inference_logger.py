@@ -70,16 +70,48 @@ def validate_feature_freshness(
 
 
 class InferenceLogger:
-    """Centralized logging for model inference requests and predictions."""
+    """Centralized logging for model inference requests and predictions.
+
+    The DB engine is initialised *lazily* on the first write so that
+    application startup is never blocked by a missing / unreachable Supabase.
+    If POSTGRES_HOST is not configured (or raises RuntimeError on first use),
+    the logger silently disables itself and predictions continue unaffected.
+    """
 
     def __init__(self, engine: Engine | None = None) -> None:
-        """Initialize with optional SQLAlchemy engine."""
-        self.engine = engine or get_sqlalchemy_engine()
+        """Initialise with an optional pre-built engine.
+
+        If no engine is provided, it will be created on the first log_prediction
+        call.  This keeps object construction instantaneous even when the DB
+        host is unreachable.
+        """
+        # Store the injected engine (may be None — resolved lazily below).
+        self._engine: Engine | None = engine
+        self._db_disabled: bool = False  # Flipped to True on first connection failure
+
+    @property
+    def engine(self) -> Engine | None:
+        """Lazily resolve the SQLAlchemy engine on first access."""
+        if self._db_disabled:
+            return None
+        if self._engine is None:
+            try:
+                self._engine = get_sqlalchemy_engine()
+            except RuntimeError as exc:
+                logger.warning(
+                    "[InferenceLogger] DB unavailable — logging disabled: %s", exc
+                )
+                self._db_disabled = True
+                return None
+        return self._engine
 
     def _ensure_inference_log_table(self) -> None:
         """Create or align the inference logging table for current monitoring fields."""
-        ensure_schema(self.engine, INFERENCE_LOG_SCHEMA)
-        with self.engine.begin() as connection:
+        eng = self.engine
+        if eng is None:
+            return
+        ensure_schema(eng, INFERENCE_LOG_SCHEMA)
+        with eng.begin() as connection:
             connection.exec_driver_sql(
                 f"""
                 CREATE TABLE IF NOT EXISTS "{INFERENCE_LOG_SCHEMA}"."{INFERENCE_LOG_TABLE}" (
@@ -221,11 +253,17 @@ class InferenceLogger:
         if os.getenv("SKIP_INFERENCE_LOGGING") == "1":
             return
 
+        # Lazily resolve engine; if DB is disabled, skip silently.
+        eng = self.engine
+        if eng is None:
+            logger.debug("[InferenceLogger] DB not available — skipping persistence.")
+            return
+
         try:
             self._ensure_inference_log_table()
             df.to_sql(
                 name=INFERENCE_LOG_TABLE,
-                con=self.engine,
+                con=eng,
                 schema=INFERENCE_LOG_SCHEMA,
                 if_exists="append",
                 index=False,
@@ -241,7 +279,6 @@ class InferenceLogger:
         except Exception as exc:
             logger.error("Failed to persist inference log: %s", exc)
             # Don't raise - inference should not fail due to logging error
-            # but we should track this in observability
 
     def get_inference_statistics(
         self,
@@ -282,7 +319,13 @@ class InferenceLogger:
         """
 
         try:
-            df = pd.read_sql_query(query, con=self.engine)
+            eng = self.engine
+            if eng is None:
+                return {
+                    "status": "no_data",
+                    "message": "Database disabled. No inferences available.",
+                }
+            df = pd.read_sql_query(query, con=eng)
             if df.empty:
                 return {
                     "status": "no_data",
@@ -313,7 +356,7 @@ class InferenceLogger:
             GROUP BY match_segment
             ORDER BY segment_inferences DESC
             """
-            segment_df = pd.read_sql_query(segment_query, con=self.engine)
+            segment_df = pd.read_sql_query(segment_query, con=eng)
             stats["segment_performance"] = (
                 segment_df.to_dict(orient="records") if not segment_df.empty else []
             )
@@ -361,7 +404,10 @@ class InferenceLogger:
         """
 
         try:
-            df = pd.read_sql_query(query, con=self.engine)
+            eng = self.engine
+            if eng is None:
+                return []
+            df = pd.read_sql_query(query, con=eng)
             records = df.to_dict(orient="records")
             return [cast(dict[str, Any], record) for record in records]
         except Exception as exc:
