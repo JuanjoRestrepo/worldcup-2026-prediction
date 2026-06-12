@@ -19,12 +19,8 @@ st.set_page_config(
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 API_URL = os.getenv("API_URL", "http://localhost:8000")
-
-# The /predict endpoint needs no auth key — only admin routes do.
-# We keep the env var for admin endpoints in case they're called later.
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 
-# Comprehensive team list (all major World Cup 2026 participants + more)
 ALL_TEAMS = sorted(
     [
         "Argentina",
@@ -127,16 +123,15 @@ def get_prediction(
     return None
 
 
-# ── Dark-mode toggle (controls custom HTML elements only) ────────────────────
-# Streamlit's native widget theme is set statically in .streamlit/config.toml
-# (base = "dark"). The toggle here switches the CSS design tokens that govern
-# our custom HTML banners.  Writing config.toml at runtime is unreliable on
-# Streamlit Cloud (read-only filesystem), so we use CSS custom properties with
-# prefers-color-scheme as the baseline and a data-theme attribute override —
-# exactly as recommended by the modern-web-guidance dark-mode best-practice.
-
+# ── Theme state ───────────────────────────────────────────────────────────────
+# Architecture:
+#   - config.toml base="dark" so Streamlit native widgets default to dark.
+#   - When the user flips to light, we inject comprehensive CSS that overrides
+#     every Streamlit internal selector back to a clean light palette.
+#   - Dark mode: we only inject CSS for our *custom* HTML components since
+#     Streamlit handles the base dark styles itself via config.toml.
 if "dark_mode" not in st.session_state:
-    st.session_state["dark_mode"] = True  # default: dark (matches config.toml)
+    st.session_state["dark_mode"] = True
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
@@ -148,106 +143,289 @@ with st.sidebar:
 
 dark_mode: bool = st.session_state["dark_mode"]
 
-# ── Global CSS: design tokens + custom component styles ──────────────────────
-# Strategy (per modern-web-guidance dark-mode guide):
-#   1. Define CSS custom properties on :root for light mode defaults.
-#   2. Override tokens in @media (prefers-color-scheme: dark) for system pref.
-#   3. The [data-theme] attribute on <html> allows our JS toggle to override
-#      the system preference explicitly — the correct progressive-enhancement
-#      approach.  We inject a tiny <script> to set the attribute on <html>
-#      before the first paint, eliminating any flash of wrong theme.
-theme_attr = "dark" if dark_mode else "light"
+# ── Design tokens ─────────────────────────────────────────────────────────────
+# Both palettes are fully specified so either branch is self-contained.
+if dark_mode:
+    # GitHub-dark inspired — deep navy blacks, electric blue accent
+    PALETTE = {
+        "bg_primary": "#0d1117",
+        "bg_secondary": "#161b22",
+        "bg_card": "rgba(22, 27, 34, 0.85)",
+        "border": "rgba(48, 54, 61, 0.8)",
+        "text_primary": "#e6edf3",
+        "text_secondary": "#8b949e",
+        "accent": "#3b9eff",
+        "accent_glow": "rgba(59, 158, 255, 0.25)",
+        "win_color": "#3b9eff",
+        "draw_color": "#6e7681",
+        "loss_color": "#f85149",
+        "banner_bg": "linear-gradient(135deg, rgba(22,27,34,0.9) 0%, rgba(13,17,23,0.95) 100%)",
+        "banner_border": "rgba(59, 158, 255, 0.35)",
+        "banner_shadow": "0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 158, 255, 0.15)",
+        "metric_bg": "rgba(22, 27, 34, 0.6)",
+        "bar_chart_bg": "rgba(0,0,0,0)",
+        "plotly_paper": "rgba(0,0,0,0)",
+    }
+else:
+    # Warm off-white — premium editorial, clean sports analytics feel
+    PALETTE = {
+        "bg_primary": "#f6f8fa",
+        "bg_secondary": "#ffffff",
+        "bg_card": "rgba(255, 255, 255, 0.95)",
+        "border": "rgba(208, 215, 222, 0.8)",
+        "text_primary": "#24292f",
+        "text_secondary": "#57606a",
+        "accent": "#0969da",
+        "accent_glow": "rgba(9, 105, 218, 0.15)",
+        "win_color": "#0969da",
+        "draw_color": "#656d76",
+        "loss_color": "#d1242f",
+        "banner_bg": "linear-gradient(135deg, #0969da 0%, #218bff 100%)",
+        "banner_border": "transparent",
+        "banner_shadow": "0 8px 24px rgba(9, 105, 218, 0.3)",
+        "metric_bg": "rgba(246, 248, 250, 0.9)",
+        "bar_chart_bg": "rgba(0,0,0,0)",
+        "plotly_paper": "rgba(0,0,0,0)",
+    }
+
+P = PALETTE
+
+# ── Comprehensive CSS injection ───────────────────────────────────────────────
+# Dark mode: only custom component styles (Streamlit native handles the rest).
+# Light mode: full override of ALL Streamlit internals since config.toml is dark.
+LIGHT_OVERRIDE_CSS = (
+    """
+    /* ── Full Streamlit light-mode override ──────────────────────────────── */
+    /* Main app shell */
+    .stApp,
+    .stApp > header,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"],
+    [data-testid="stMain"] {{
+        background-color: {bg_primary} !important;
+        color: {text_primary} !important;
+    }}
+
+    /* Main content block */
+    [data-testid="stMainBlockContainer"],
+    [data-testid="block-container"],
+    .block-container {{
+        background-color: {bg_primary} !important;
+        color: {text_primary} !important;
+    }}
+
+    /* Sidebar */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarContent"],
+    .css-1d391kg, .css-sidebar {{
+        background-color: {bg_secondary} !important;
+        color: {text_primary} !important;
+        border-right: 1px solid {border} !important;
+    }}
+
+    /* All markdown / text */
+    .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2,
+    .stMarkdown h3, .stMarkdown h4, p, h1, h2, h3, label,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stText"] {{
+        color: {text_primary} !important;
+    }}
+
+    /* Caption / small text */
+    .stCaption, [data-testid="stCaptionContainer"],
+    .stCaption p {{
+        color: {text_secondary} !important;
+    }}
+
+    /* Selectbox, inputs */
+    [data-testid="stSelectbox"] > div > div,
+    [data-baseweb="select"] > div,
+    .stSelectbox div[data-baseweb="select"] > div,
+    [data-baseweb="input"] input,
+    input, select, textarea {{
+        background-color: {bg_secondary} !important;
+        color: {text_primary} !important;
+        border-color: {border} !important;
+    }}
+
+    /* Dropdown popup items */
+    [data-baseweb="popover"] ul,
+    [data-baseweb="popover"] li,
+    [data-baseweb="menu"] ul,
+    [data-baseweb="menu"] li {{
+        background-color: {bg_secondary} !important;
+        color: {text_primary} !important;
+    }}
+    [data-baseweb="menu"] li:hover {{
+        background-color: {bg_primary} !important;
+    }}
+
+    /* Checkbox */
+    [data-testid="stCheckbox"] label,
+    [data-testid="stCheckbox"] span {{
+        color: {text_primary} !important;
+    }}
+
+    /* Toggle */
+    [data-testid="stToggle"] label,
+    [data-testid="stToggle"] p {{
+        color: {text_primary} !important;
+    }}
+
+    /* Metric */
+    [data-testid="stMetric"],
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricValue"],
+    [data-testid="metric-container"] {{
+        background-color: {metric_bg} !important;
+        color: {text_primary} !important;
+        border: 1px solid {border} !important;
+        border-radius: 10px !important;
+    }}
+    [data-testid="stMetricLabel"] p,
+    [data-testid="stMetricValue"] {{
+        color: {text_primary} !important;
+    }}
+
+    /* Expander */
+    [data-testid="stExpander"],
+    [data-testid="stExpanderDetails"] {{
+        background-color: {bg_secondary} !important;
+        border: 1px solid {border} !important;
+        border-radius: 12px !important;
+        color: {text_primary} !important;
+    }}
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary p {{
+        color: {text_primary} !important;
+    }}
+
+    /* Info / alert boxes */
+    [data-testid="stAlert"],
+    .stAlert {{
+        background-color: {metric_bg} !important;
+        color: {text_primary} !important;
+        border-color: {border} !important;
+    }}
+
+    /* Divider */
+    hr {{
+        border-color: {border} !important;
+        opacity: 0.6;
+    }}
+
+    /* Spinner */
+    .stSpinner > div {{
+        border-top-color: {accent} !important;
+    }}
+
+    /* Code blocks */
+    code, pre, [data-testid="stCode"] {{
+        background-color: {bg_primary} !important;
+        color: {text_primary} !important;
+        border: 1px solid {border} !important;
+    }}
+""".format(**P)
+    if not dark_mode
+    else ""
+)
+
+COMMON_CSS = """
+    /* ── Custom component: prediction banner ──────────────────────────────── */
+    @keyframes fadeInUp {{
+        from {{ opacity: 0; transform: translateY(16px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
+    }}
+    @keyframes shimmer {{
+        0%   {{ background-position: -200% center; }}
+        100% {{ background-position: 200% center; }}
+    }}
+
+    .prediction-banner {{
+        background:      {banner_bg};
+        color:           {text_primary};
+        border:          1px solid {banner_border};
+        box-shadow:      {banner_shadow};
+        padding:         2.25rem 2rem;
+        border-radius:   20px;
+        text-align:      center;
+        margin:          1.75rem 0;
+        font-size:       1.8rem;
+        font-weight:     800;
+        letter-spacing:  -0.02em;
+        line-height:     1.3;
+        animation:       fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        position:        relative;
+        overflow:        hidden;
+    }}
+
+    .prediction-banner::before {{
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            {accent_glow} 50%,
+            transparent 100%
+        );
+        background-size: 200% auto;
+        animation: shimmer 3s linear infinite;
+        border-radius: inherit;
+        pointer-events: none;
+    }}
+
+    /* ── VS label ────────────────────────────────────────────────────────── */
+    .vs-text {{
+        color:       {accent};
+        text-align:  center;
+        font-size:   1.35rem;
+        font-weight: 900;
+        margin-top:  1.85rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.85;
+    }}
+
+    /* ── Primary button ──────────────────────────────────────────────────── */
+    .stButton > button[kind="primary"] {{
+        background: linear-gradient(135deg, {accent} 0%, {win_color} 100%) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.03em !important;
+        transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    box-shadow 0.18s ease,
+                    filter 0.18s ease !important;
+    }}
+    .stButton > button[kind="primary"]:hover {{
+        transform:  translateY(-3px) !important;
+        box-shadow: 0 8px 24px {accent_glow} !important;
+        filter:     brightness(1.1) !important;
+    }}
+    .stButton > button[kind="primary"]:active {{
+        transform: translateY(-1px) !important;
+    }}
+
+    /* ── Title ───────────────────────────────────────────────────────────── */
+    h1 {{
+        background: linear-gradient(135deg, {accent} 0%, {text_primary} 65%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 900 !important;
+        letter-spacing: -0.03em !important;
+    }}
+""".format(**P)
 
 st.markdown(
-    f"""
-    <script>
-        // Set data-theme on <html> immediately to avoid FOUC.
-        document.documentElement.setAttribute('data-theme', '{theme_attr}');
-    </script>
-    <style>
-        /* ── Design tokens (light defaults) ─────────────────────────── */
-        :root {{
-            --banner-bg:      linear-gradient(135deg, #003d79 0%, #0066cc 100%);
-            --banner-text:    #ffffff;
-            --banner-border:  transparent;
-            --banner-shadow:  0 4px 15px rgba(0, 61, 121, 0.25);
-            --vs-color:       #003d79;
-        }}
-
-        /* ── Dark token overrides via system preference (fallback) ──── */
-        @media (prefers-color-scheme: dark) {{
-            :root {{
-                --banner-bg:     rgba(0, 102, 204, 0.15);
-                --banner-text:   #e6edf3;
-                --banner-border: rgba(255, 255, 255, 0.12);
-                --banner-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
-                --vs-color:      #0066cc;
-            }}
-        }}
-
-        /* ── Explicit override via data-theme (our toggle wins over OS) */
-        html[data-theme="dark"] :root,
-        html[data-theme="dark"] {{
-            --banner-bg:     rgba(0, 102, 204, 0.15);
-            --banner-text:   #e6edf3;
-            --banner-border: rgba(255, 255, 255, 0.12);
-            --banner-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
-            --vs-color:      #0066cc;
-        }}
-
-        html[data-theme="light"] :root,
-        html[data-theme="light"] {{
-            --banner-bg:     linear-gradient(135deg, #003d79 0%, #0066cc 100%);
-            --banner-text:   #ffffff;
-            --banner-border: transparent;
-            --banner-shadow: 0 4px 15px rgba(0, 61, 121, 0.25);
-            --vs-color:      #003d79;
-        }}
-
-        /* ── Prediction banner component ────────────────────────────── */
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(10px); }}
-            to   {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        .prediction-banner {{
-            background:    var(--banner-bg);
-            color:         var(--banner-text);
-            border:        1px solid var(--banner-border);
-            box-shadow:    var(--banner-shadow);
-            padding:       2rem;
-            border-radius: 16px;
-            text-align:    center;
-            margin:        2rem 0;
-            font-size:     1.75rem;
-            font-weight:   800;
-            animation:     fadeIn 0.8s ease-out;
-            backdrop-filter: blur(10px);
-        }}
-
-        /* ── VS label ───────────────────────────────────────────────── */
-        .vs-text {{
-            color:       var(--vs-color);
-            text-align:  center;
-            font-size:   1.4rem;
-            font-weight: 700;
-            margin-top:  1.8rem;
-        }}
-
-        /* ── Predict button hover micro-animation ───────────────────── */
-        .stButton > button:hover {{
-            transform:  translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }}
-    </style>
-    """,
+    f"<style>{LIGHT_OVERRIDE_CSS}{COMMON_CSS}</style>",
     unsafe_allow_html=True,
 )
 
-
 # ── Header ────────────────────────────────────────────────────────────────────
-
 st.title("🏆 World Cup 2026 Predictor")
 st.markdown(
     "Powered by the **Segment-Aware Hybrid Ensemble** — "
@@ -323,7 +501,6 @@ if predict_btn:
     if result:
         outcome = result["predicted_outcome"]
 
-        # Outcome banner
         outcome_display = {
             "home_win": f"🏃 **{home} wins!**",
             "away_win": f"✈️ **{away} wins!**",
@@ -332,32 +509,33 @@ if predict_btn:
 
         predicted_score = result.get("predicted_score")
         if predicted_score:
-            outcome_display += f"<br><span style='font-size: 1.2rem; font-weight: normal;'>Exact Score: {predicted_score}</span>"
+            outcome_display += (
+                f"<br><span style='font-size: 1.1rem; font-weight: 500; "
+                f"opacity: 0.85;'>Predicted Score: {predicted_score}</span>"
+            )
 
         st.markdown(
             f"<div class='prediction-banner'>🎯 {outcome_display}</div>",
             unsafe_allow_html=True,
         )
 
-        # Raw probabilities
         probs = result.get("class_probabilities", {})
         win_home = probs.get("home_win", probs.get("Home Win", 0.0)) * 100
         draw_pct = probs.get("draw", probs.get("Draw", 0.0)) * 100
         win_away = probs.get("away_win", probs.get("Away Win", 0.0)) * 100
 
-        # Metric cards
         m1, m2, m3 = st.columns(3)
         m1.metric(f"🏠 {home}", f"{win_home:.1f}%")
         m2.metric("🤝 Draw", f"{draw_pct:.1f}%")
         m3.metric(f"✈️ {away}", f"{win_away:.1f}%")
 
-        # Horizontal stacked bar chart
+        # Horizontal stacked bar — colours adapt to current theme
         if win_home + draw_pct + win_away > 0:
             fig = go.Figure()
             for label, value, color in [
-                (home, win_home, "#003d79"),
-                ("Draw", draw_pct, "#7f8c8d"),
-                (away, win_away, "#e74c3c"),
+                (home, win_home, P["win_color"]),
+                ("Draw", draw_pct, P["draw_color"]),
+                (away, win_away, P["loss_color"]),
             ]:
                 fig.add_trace(
                     go.Bar(
@@ -379,14 +557,17 @@ if predict_btn:
                 margin={"l": 0, "r": 0, "t": 0, "b": 0},
                 xaxis={"visible": False, "range": [0, 100]},
                 yaxis={"visible": False},
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor=P["bar_chart_bg"],
+                paper_bgcolor=P["plotly_paper"],
                 showlegend=False,
                 bargap=0,
+                font={"color": P["text_primary"]},
             )
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(
+                fig, use_container_width=True, config={"displayModeBar": False}
+            )
 
-        # ── Advanced Analytics (collapsible) ─────────────────────────────
+        # ── Advanced Analytics (collapsible) ──────────────────────────────
         with st.expander("📊 Advanced Analytics & Model Telemetry"):
             st.markdown("#### 🔎 Model Explainability")
             st.info(
@@ -398,7 +579,8 @@ if predict_btn:
                 "- 🏃 **Form** (avg goals, conceded, win-rate over last 5)\n"
                 "- 🤝 **Draw propensity** — if probabilities fall in the uncertainty zone, "
                 "a dedicated Draw Specialist activates\n"
-                "- 🏟️ **Home advantage effect** (set to 0 for neutral ground)"
+                "- 🏟️ **Home advantage effect** (set to 0 for neutral ground)\n"
+                "- 💰 **Talent differential** (Transfermarkt squad values, log-scaled)"
             )
 
             st.markdown("#### 📡 Raw API Payload")
