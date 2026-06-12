@@ -34,10 +34,10 @@ def extract_fbref_match_stats(
         fbref = sd.FBref(leagues=leagues, seasons=seasons)
 
         logger.info("Fetching possession match stats...")
-        df_possession = fbref.read_match_stats(stat_type="possession")
+        df_possession = fbref.read_team_match_stats(stat_type="schedule")
 
         logger.info("Fetching summary match stats (for xG)...")
-        df_summary = fbref.read_match_stats(stat_type="summary")
+        df_summary = fbref.read_team_match_stats(stat_type="shooting")
 
         # Merge both outputs to have a comprehensive event-level view
         df_merged = pd.merge(
