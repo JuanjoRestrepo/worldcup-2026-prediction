@@ -20,22 +20,39 @@ class TestTeamAliases:
         assert normalize_team_name("br") == "Brazil"
         assert normalize_team_name("BR") == "Brazil"
 
-    def test_normalize_european_teams(self):
-        """Test European team aliases."""
+    def test_normalize_european_teams(self) -> None:
+        """Test European team aliases including FIFA 2026 official names."""
         assert normalize_team_name("Holland") == "Netherlands"
         assert normalize_team_name("Czech") == "Czech Republic"
-        assert normalize_team_name("Czechia") == "Czech Republic"
+        assert normalize_team_name("Czechia") == "Czech Republic"  # FIFA 2026
+        assert normalize_team_name("Turkiye") == "Turkey"  # FIFA 2026
+        assert normalize_team_name("turkiye") == "Turkey"
 
-    def test_normalize_asian_teams(self):
-        """Test Asian team aliases."""
+    def test_normalize_asian_teams(self) -> None:
+        """Test Asian team aliases including FIFA 2026 official names."""
         assert normalize_team_name("Korea") == "South Korea"
         assert normalize_team_name("South_Korea") == "South Korea"
         assert normalize_team_name("SK") == "South Korea"
+        assert normalize_team_name("Korea Republic") == "South Korea"  # FIFA 2026
+        assert normalize_team_name("Korea_Republic") == "South Korea"
+        assert normalize_team_name("IR Iran") == "Iran"  # FIFA 2026
+        assert normalize_team_name("IR_Iran") == "Iran"
 
-    def test_normalize_african_teams(self):
-        """Test African team aliases."""
-        assert normalize_team_name("Ivory_Coast") == "Côte d'Ivoire"
-        assert normalize_team_name("Cote_d_Ivoire") == "Côte d'Ivoire"
+    def test_normalize_african_teams(self) -> None:
+        """Test African team aliases.
+
+        IMPORTANT: The gold feature dataset uses 'Ivory Coast', NOT 'Côte d'Ivoire'.
+        All alias variants must resolve to 'Ivory Coast' to avoid feature-lookup errors.
+        """
+        # Core Ivory Coast variants
+        assert normalize_team_name("Ivory_Coast") == "Ivory Coast"
+        assert normalize_team_name("Ivory Coast") == "Ivory Coast"
+        assert normalize_team_name("Cote_d_Ivoire") == "Ivory Coast"
+        assert normalize_team_name("cote_d_ivoire") == "Ivory Coast"
+        assert normalize_team_name("Cote_Divoire") == "Ivory Coast"
+        # FIFA 2026 naming conventions
+        assert normalize_team_name("Cabo_Verde") == "Cape Verde"
+        assert normalize_team_name("Congo_DR") == "DR Congo"
 
     def test_normalize_no_alias_returns_original(self):
         """Test that teams without aliases return original name."""
