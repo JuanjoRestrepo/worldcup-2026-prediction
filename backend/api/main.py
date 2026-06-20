@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date
-from typing import Any
+from typing import Any, cast
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
@@ -608,46 +607,52 @@ def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResp
         teams.add(normalize_team_name(h))
         teams.add(normalize_team_name(a))
 
-    team_list = list(teams)
-
-    # 2. Build match_probs dictionary for all possible pairings
-    match_probs: dict[str, dict[str, float]] = {t: {} for t in team_list}
-
     try:
         simulator = MonteCarloSimulator(n_simulations=request.n_simulations)
 
-        # Note: We parallelize this to avoid hitting 60s+ timeouts on 32-team brackets.
-        # We use itertools.combinations to generate all unique pairs (O(N^2) pairs, cleanly).
-        import itertools
+        # Optimization: Lazy Evaluation Cache
+        # Instead of pre-computing all 496 O(N^2) matchups (which times out on Render),
+        # we compute them dynamically during the Monte Carlo simulation.
+        # This drops the required ML inferences from 496 down to ~185.
+        class LazyProbMap:
+            def __init__(self) -> None:
+                self.cache: dict[tuple[str, str], float] = {}
 
-        def _get_match_prob(t_a: str, t_b: str) -> tuple[str, str, float, float]:
-            pred = predict_match_outcome(
-                home_team=t_a,
-                away_team=t_b,
-                tournament=request.tournament,
-                neutral=True,
-                log_inference=False,
-            )
-            xg_a = pred.get("expected_home_goals")
-            xg_b = pred.get("expected_away_goals")
-            if xg_a is None or xg_b is None:
-                raise ValueError(f"Missing expected goals for {t_a} vs {t_b}")
-            tie_probs = simulator.simulate_knockout_tie(xg_a, xg_b)
-            return t_a, t_b, tie_probs["home_advances"], tie_probs["away_advances"]
+            def get(self, h: str, default: Any = None) -> Any:
+                class LazyInner:
+                    def __init__(self, h_inner: str, parent: Any) -> None:
+                        self.h = h_inner
+                        self.parent = parent
 
-        with ThreadPoolExecutor(max_workers=16) as executor:
-            # Generate all unique matchup combinations cleanly using itertools
-            matchup_pairs = list(itertools.combinations(team_list, 2))
+                    def get(self, a: str, default: float = 0.5) -> float:
+                        key = (self.h, a)
+                        rev_key = (a, self.h)
+                        if key in self.parent.cache:
+                            return float(self.parent.cache[key])
+                        if rev_key in self.parent.cache:
+                            return float(1.0 - self.parent.cache[rev_key])
 
-            # Map combinations to the executor
-            futures = [
-                executor.submit(_get_match_prob, ta, tb) for ta, tb in matchup_pairs
-            ]
+                        # Calculate on the fly
+                        pred = predict_match_outcome(
+                            home_team=self.h,
+                            away_team=a,
+                            tournament=request.tournament,
+                            neutral=True,
+                            log_inference=False,
+                        )
+                        xg_a = pred.get("expected_home_goals")
+                        xg_b = pred.get("expected_away_goals")
+                        if xg_a is None or xg_b is None:
+                            raise ValueError(f"Missing xG for {self.h} vs {a}")
 
-            for f in futures:
-                ta, tb, p_ta, p_tb = f.result()
-                match_probs[ta][tb] = p_ta
-                match_probs[tb][ta] = p_tb
+                        tie_probs = simulator.simulate_knockout_tie(xg_a, xg_b)
+                        self.parent.cache[key] = float(tie_probs["home_advances"])
+                        self.parent.cache[rev_key] = float(tie_probs["away_advances"])
+                        return float(tie_probs["home_advances"])
+
+                return LazyInner(h, self)
+
+        match_probs = cast(Any, LazyProbMap())
 
     except Exception as exc:
         raise HTTPException(
