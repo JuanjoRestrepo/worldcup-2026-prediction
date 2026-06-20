@@ -465,96 +465,181 @@ st.markdown(
 )
 st.divider()
 
-# ── Match Setup ───────────────────────────────────────────────────────────────
-col1, col2, col3 = st.columns([5, 1, 5])
+# ── Mode tabs ─────────────────────────────────────────────────────────────────
+tab_predict, tab_bracket = st.tabs(["🔮 Match Predictor", "🏆 Bracket Simulation"])
 
-with col1:
-    home = st.selectbox(
-        "🏠 Home Team",
-        options=ALL_TEAMS,
-        index=ALL_TEAMS.index("Argentina"),
-        key="home_team",
-    )
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — Match Predictor
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_predict:
+    # ── Match Setup ───────────────────────────────────────────────────────────
+    col1, col2, col3 = st.columns([5, 1, 5])
 
-with col2:
-    st.markdown(
-        "<div class='vs-text'>VS</div>",
-        unsafe_allow_html=True,
-    )
+    with col1:
+        home = st.selectbox(
+            "🏠 Home Team",
+            options=ALL_TEAMS,
+            index=ALL_TEAMS.index("Argentina"),
+            key="home_team",
+        )
 
-with col3:
-    away = st.selectbox(
-        "✈️ Away Team",
-        options=ALL_TEAMS,
-        index=ALL_TEAMS.index("France"),
-        key="away_team",
-    )
-
-col_a, col_b = st.columns(2)
-with col_a:
-    tournament = st.selectbox(
-        "🏟️ Tournament",
-        options=[
-            "FIFA World Cup",
-            "FIFA World Cup Qualifier",
-            "UEFA Euro",
-            "Copa America",
-            "CONCACAF Gold Cup",
-            "Africa Cup of Nations",
-            "Friendly",
-            "Other",
-        ],
-        index=0,
-    )
-with col_b:
-    neutral_ground = st.checkbox(
-        "⚖️ Neutral Ground",
-        value=True,
-        help="World Cup matches are typically played on neutral ground.",
-    )
-
-st.markdown("")
-
-predict_btn = st.button(
-    "🔮 Predict Matchup",
-    use_container_width=True,
-    type="primary",
-    disabled=(home == away),
-)
-
-if home == away:
-    st.caption("⚠️ Select two different teams.")
-
-# ── Prediction ────────────────────────────────────────────────────────────────
-if predict_btn:
-    with st.spinner("Analyzing ELO, form & draw tendency…"):
-        result = get_prediction(home, away, tournament, neutral_ground)
-
-    if result:
-        outcome = result["predicted_outcome"]
-
-        outcome_display = {
-            "home_win": f"🏃 **{home} wins!**",
-            "away_win": f"✈️ **{away} wins!**",
-            "draw": "🤝 **Draw**",
-        }.get(outcome, outcome)
-
-        predicted_score = result.get("predicted_score")
-        if predicted_score:
-            outcome_display += (
-                f"<br><span style='font-size: 1.1rem; font-weight: 500; "
-                f"opacity: 0.85;'>Predicted Score: {predicted_score}</span>"
-            )
-
+    with col2:
         st.markdown(
-            f"<div class='prediction-banner'>🎯 {outcome_display}</div>",
+            "<div class='vs-text'>VS</div>",
             unsafe_allow_html=True,
         )
 
-    st.divider()
-    st.markdown("## 🏆 Bracket Simulation")
+    with col3:
+        away = st.selectbox(
+            "✈️ Away Team",
+            options=ALL_TEAMS,
+            index=ALL_TEAMS.index("France"),
+            key="away_team",
+        )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        tournament = st.selectbox(
+            "🏟️ Tournament",
+            options=[
+                "FIFA World Cup",
+                "FIFA World Cup Qualifier",
+                "UEFA Euro",
+                "Copa America",
+                "CONCACAF Gold Cup",
+                "Africa Cup of Nations",
+                "Friendly",
+                "Other",
+            ],
+            index=0,
+        )
+    with col_b:
+        neutral_ground = st.checkbox(
+            "⚖️ Neutral Ground",
+            value=True,
+            help="World Cup matches are typically played on neutral ground.",
+        )
+
+    st.markdown("")
+
+    predict_btn = st.button(
+        "🔮 Predict Matchup",
+        use_container_width=True,
+        type="primary",
+        disabled=(home == away),
+    )
+
+    if home == away:
+        st.caption("⚠️ Select two different teams.")
+
+    # ── Prediction result ──────────────────────────────────────────────────────
+    if predict_btn:
+        with st.spinner("Analyzing ELO, form & draw tendency…"):
+            result = get_prediction(home, away, tournament, neutral_ground)
+
+        if result:
+            outcome = result["predicted_outcome"]
+
+            outcome_display = {
+                "home_win": f"🏃 **{home} wins!**",
+                "away_win": f"✈️ **{away} wins!**",
+                "draw": "🤝 **Draw**",
+            }.get(outcome, outcome)
+
+            predicted_score = result.get("predicted_score")
+            if predicted_score:
+                outcome_display += (
+                    f"<br><span style='font-size: 1.1rem; font-weight: 500; "
+                    f"opacity: 0.85;'>Predicted Score: {predicted_score}</span>"
+                )
+
+            st.markdown(
+                f"<div class='prediction-banner'>🎯 {outcome_display}</div>",
+                unsafe_allow_html=True,
+            )
+
+            probs = result.get("class_probabilities", {})
+            win_home = probs.get("home_win", probs.get("Home Win", 0.0)) * 100
+            draw_pct = probs.get("draw", probs.get("Draw", 0.0)) * 100
+            win_away = probs.get("away_win", probs.get("Away Win", 0.0)) * 100
+
+            m1, m2, m3 = st.columns(3)
+            m1.metric(f"🏠 {home}", f"{win_home:.1f}%")
+            m2.metric("🤝 Draw", f"{draw_pct:.1f}%")
+            m3.metric(f"✈️ {away}", f"{win_away:.1f}%")
+
+            # ── Advanced Analytics (collapsible) ──────────────────────────────
+            with st.expander("📊 Advanced Analytics & Model Telemetry"):
+                st.markdown("#### 🔎 Model Explainability")
+                st.info(
+                    "💡 **Why did the model predict this?**\n\n"
+                    f"The **Segment-Aware Hybrid Ensemble** classified this as a "
+                    f"**{'World Cup' if 'World Cup' in tournament else tournament}** fixture. "
+                    "Inference was driven by:\n"
+                    "- 📈 **ELO differential** between teams (recent time-decay applied)\n"
+                    "- 🏃 **Form** (avg goals, conceded, win-rate over last 5)\n"
+                    "- 🤝 **Draw propensity** — if probabilities fall in the uncertainty zone, "
+                    "a dedicated Draw Specialist activates\n"
+                    "- 🏟️ **Home advantage effect** (set to 0 for neutral ground)\n"
+                    "- 💰 **Talent differential** (Transfermarkt squad values, log-scaled)"
+                )
+
+                st.markdown("#### 📡 Raw API Payload")
+                meta_cols = st.columns(2)
+                meta_cols[0].markdown(
+                    f"**Feature source:** `{result.get('feature_source', 'N/A')}`"
+                )
+                meta_cols[1].markdown(
+                    f"**Segment:** `{result.get('match_segment', 'N/A')}`"
+                )
+                meta_cols[0].markdown(
+                    f"**Specialist override:** `{result.get('is_override_triggered', False)}`"
+                )
+                meta_cols[1].markdown(
+                    f"**Model:** `{result.get('model_artifact_path', 'N/A').split(chr(92))[-1].split('/')[-1]}`"
+                )
+
+                if result.get("shadow_predicted_outcome"):
+                    st.markdown("#### 🕵️ Shadow Model Comparison")
+                    shadow_probs = result.get("shadow_class_probabilities", {})
+                    sh_home = (
+                        shadow_probs.get("home_win", shadow_probs.get("Home Win", 0.0))
+                        * 100
+                    )
+                    sh_draw = (
+                        shadow_probs.get("draw", shadow_probs.get("Draw", 0.0)) * 100
+                    )
+                    sh_away = (
+                        shadow_probs.get("away_win", shadow_probs.get("Away Win", 0.0))
+                        * 100
+                    )
+                    sh1, sh2, sh3 = st.columns(3)
+                    sh1.metric(
+                        f"🏠 {home}",
+                        f"{sh_home:.1f}%",
+                        delta=f"{sh_home - win_home:+.1f}%",
+                    )
+                    sh2.metric(
+                        "🤝 Draw",
+                        f"{sh_draw:.1f}%",
+                        delta=f"{sh_draw - draw_pct:+.1f}%",
+                    )
+                    sh3.metric(
+                        f"✈️ {away}",
+                        f"{sh_away:.1f}%",
+                        delta=f"{sh_away - win_away:+.1f}%",
+                    )
+
+                st.markdown("#### 🗄️ Full Response JSON")
+                st.json(result)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — Bracket Simulation
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_bracket:
     st.markdown(
-        "Calculate the probabilities of teams advancing through a knockout bracket using Monte Carlo simulations."
+        "Run **10,000 Monte Carlo simulations** of the entire knockout bracket "
+        "to calculate each team's probability of advancing to every stage."
     )
 
     # Plausible Round of 16 bracket using real teams from 2026 fixtures
@@ -569,20 +654,20 @@ if predict_btn:
         ["Spain", "Morocco"],
     ]
 
-    with st.expander("📝 View / Edit Round of 16 Bracket"):
+    with st.expander("📝 View / Edit Round of 16 Bracket", expanded=True):
         edited_bracket = []
         for i, match in enumerate(example_bracket):
             c1, c2 = st.columns(2)
             with c1:
                 t1 = st.selectbox(
-                    f"Match {i + 1} - Team 1",
+                    f"Match {i + 1} — Team 1",
                     options=ALL_TEAMS,
                     index=ALL_TEAMS.index(match[0]),
                     key=f"b_{i}_1",
                 )
             with c2:
                 t2 = st.selectbox(
-                    f"Match {i + 1} - Team 2",
+                    f"Match {i + 1} — Team 2",
                     options=ALL_TEAMS,
                     index=ALL_TEAMS.index(match[1]),
                     key=f"b_{i}_2",
@@ -590,11 +675,13 @@ if predict_btn:
             edited_bracket.append([t1, t2])
 
     bracket_btn = st.button(
-        "🏅 Simulate Knockout Bracket", use_container_width=True, type="primary"
+        "🏅 Simulate Knockout Bracket",
+        use_container_width=True,
+        type="primary",
     )
 
     if bracket_btn:
-        with st.spinner("Simulating the entire bracket 10,000 times..."):
+        with st.spinner("Simulating the entire bracket 10,000 times…"):
             try:
                 res = requests.post(
                     f"{API_URL}/simulate/bracket",
@@ -618,12 +705,12 @@ if predict_btn:
                     df_data.append(row)
 
                 df = pd.DataFrame(df_data)
-                # Sort by Winner probability descending
                 df["Winner_raw"] = [bracket_data[t]["Winner"] for t in df["Team"]]
                 df = df.sort_values("Winner_raw", ascending=False).drop(
                     columns=["Winner_raw"]
                 )
 
+                st.success(f"✅ Simulation complete — {len(df)} teams ranked!")
                 st.dataframe(df, use_container_width=True, hide_index=True)
 
             except Exception as e:
