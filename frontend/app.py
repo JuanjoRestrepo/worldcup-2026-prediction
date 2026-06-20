@@ -639,37 +639,83 @@ with tab_predict:
 with tab_bracket:
     st.markdown(
         "Run **10,000 Monte Carlo simulations** of the entire knockout bracket "
-        "to calculate each team's probability of advancing to every stage."
+        "to calculate each team's probability of advancing to every stage. "
+        "The default bracket below reflects the **real 2026 World Cup groups** — "
+        "edit any matchup with your own predictions!"
     )
 
-    # Plausible Round of 16 bracket using real teams from 2026 fixtures
+    # ── Real 2026 World Cup Round of 32 ──────────────────────────────────────
+    # Based on actual group compositions from data/raw/world-cup-2026-fixtures.json.
+    # Teams listed as model-compatible canonical names (matching the gold feature dataset).
+    # Format: [predicted_group_winner, predicted_group_runner_up] per group.
+    # The Round of 32 pairs: A2 vs B2, E1 vs (3rd), F1 vs C2, C1 vs F2,
+    # I1 vs (3rd), E2 vs I2, A1 vs (3rd), L1 vs (3rd), D1 vs (3rd),
+    # G1 vs (3rd), K2 vs L2, H1 vs J2, B1 vs (3rd), J1 vs H2,
+    # K1 vs (3rd), D2 vs G2
+    # For simplicity we use top 2 per group as the default predicted bracket.
+    # Group A: Mexico, South Korea  | B: Canada, Switzerland | C: Brazil, Morocco
+    # D: United States, Australia   | E: Germany, Ivory Coast | F: Netherlands, Japan
+    # G: Belgium, Iran              | H: Spain, Uruguay       | I: France, Senegal
+    # J: Argentina, Algeria         | K: Portugal, Colombia   | L: England, Croatia
     example_bracket = [
-        ["Argentina", "Canada"],
-        ["England", "Uzbekistan"],
-        ["France", "Ivory Coast"],
-        ["Brazil", "Paraguay"],
-        ["Portugal", "South Korea"],
-        ["Germany", "Haiti"],
-        ["Uruguay", "Bosnia and Herzegovina"],
-        ["Spain", "Morocco"],
+        # A runners-up vs B runners-up
+        ["South Korea", "Switzerland"],
+        # E winners vs wildcard (use C2 Morocco as placeholder)
+        ["Germany", "Morocco"],
+        # F winners vs C runners-up
+        ["Netherlands", "Morocco"],
+        # C winners vs F runners-up
+        ["Brazil", "Japan"],
+        # I winners vs wildcard
+        ["France", "Senegal"],
+        # E runners-up vs I runners-up
+        ["Ivory Coast", "Senegal"],
+        # A winners vs wildcard
+        ["Mexico", "Colombia"],
+        # L winners vs wildcard
+        ["England", "Iran"],
+        # D winners vs wildcard
+        ["United States", "Uzbekistan"],
+        # G winners vs wildcard
+        ["Belgium", "Algeria"],
+        # K runners-up vs L runners-up
+        ["Colombia", "Croatia"],
+        # H winners vs J runners-up
+        ["Spain", "Algeria"],
+        # B winners vs wildcard
+        ["Canada", "Australia"],
+        # J winners vs H runners-up
+        ["Argentina", "Uruguay"],
+        # K winners vs wildcard
+        ["Portugal", "Bosnia and Herzegovina"],
+        # D runners-up vs G runners-up
+        ["Australia", "Iran"],
     ]
 
-    with st.expander("📝 View / Edit Round of 16 Bracket", expanded=True):
+    with st.expander(
+        "📝 View / Edit Round of 32 Bracket (based on real 2026 groups)", expanded=True
+    ):
+        st.caption(
+            "Groups A–L from the real 2026 World Cup fixtures. "
+            "Adjust any matchup to reflect your own group-stage predictions."
+        )
         edited_bracket = []
         for i, match in enumerate(example_bracket):
             c1, c2 = st.columns(2)
             with c1:
+                idx1 = ALL_TEAMS.index(match[0]) if match[0] in ALL_TEAMS else 0
                 t1 = st.selectbox(
                     f"Match {i + 1} — Team 1",
                     options=ALL_TEAMS,
-                    index=ALL_TEAMS.index(match[0]),
+                    index=idx1,
                     key=f"b_{i}_1",
                 )
             with c2:
+                idx2 = ALL_TEAMS.index(match[1]) if match[1] in ALL_TEAMS else 1
                 t2 = st.selectbox(
                     f"Match {i + 1} — Team 2",
                     options=ALL_TEAMS,
-                    index=ALL_TEAMS.index(match[1]),
+                    index=idx2,
                     key=f"b_{i}_2",
                 )
             edited_bracket.append([t1, t2])
@@ -690,7 +736,7 @@ with tab_bracket:
                         "n_simulations": 10000,
                         "tournament": "FIFA World Cup",
                     },
-                    timeout=60,
+                    timeout=120,
                 )
                 res.raise_for_status()
                 bracket_data = res.json()["probabilities"]
@@ -705,12 +751,16 @@ with tab_bracket:
                     df_data.append(row)
 
                 df = pd.DataFrame(df_data)
-                df["Winner_raw"] = [bracket_data[t]["Winner"] for t in df["Team"]]
+                df["Winner_raw"] = [
+                    bracket_data[t].get("Winner", 0) for t in df["Team"]
+                ]
                 df = df.sort_values("Winner_raw", ascending=False).drop(
                     columns=["Winner_raw"]
                 )
 
-                st.success(f"✅ Simulation complete — {len(df)} teams ranked!")
+                st.success(
+                    f"✅ Simulation complete — {len(df)} teams ranked by championship probability!"
+                )
                 st.dataframe(df, use_container_width=True, hide_index=True)
 
             except Exception as e:
