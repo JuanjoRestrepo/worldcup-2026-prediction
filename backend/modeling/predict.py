@@ -173,6 +173,7 @@ def predict_match_outcome(
     artifact_path: Path | None = None,
     feature_data_path: Path | None = None,
     feature_source: str | None = None,
+    log_inference: bool = True,
 ) -> PredictionResult:
     """
     Predict the outcome of a fixture using the exported model artifact.
@@ -330,34 +331,35 @@ def predict_match_outcome(
         logger.warning("Shadow inference failed — continuing without shadow: %s", exc)
 
     # ── Inference logging ─────────────────────────────────────────────────────
-    try:
-        inference_logger = InferenceLogger()
-        inference_logger.log_prediction(
-            home_team=snapshot_dates["home_team"],
-            away_team=snapshot_dates["away_team"],
-            predicted_class=predicted_outcome_int,
-            predicted_outcome=predicted_outcome_label,
-            class_probabilities=class_probabilities,
-            neutral=bool(neutral),
-            tournament=tournament,
-            feature_snapshot_dates={
-                "home_team": snapshot_dates["home_snapshot_date"],
-                "away_team": snapshot_dates["away_snapshot_date"],
-            },
-            feature_source=active_feature_source,
-            model_artifact_path=str(
-                Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
-            ),
-            requested_match_date=match_date,
-            match_segment=match_segment,
-            is_override_triggered=is_override_triggered,
-            shadow_predicted_outcome=shadow_predicted_outcome,
-            shadow_class_probabilities=shadow_class_probabilities,
-            shadow_model_name=shadow_model_name,
-            shadow_is_override_triggered=shadow_is_override_triggered,
-        )
-    except Exception as exc:
-        logger.warning("Failed to log prediction to inference table: %s", exc)
+    if log_inference:
+        try:
+            inference_logger = InferenceLogger()
+            inference_logger.log_prediction(
+                home_team=snapshot_dates["home_team"],
+                away_team=snapshot_dates["away_team"],
+                predicted_class=predicted_outcome_int,
+                predicted_outcome=predicted_outcome_label,
+                class_probabilities=class_probabilities,
+                neutral=bool(neutral),
+                tournament=tournament,
+                feature_snapshot_dates={
+                    "home_team": snapshot_dates["home_snapshot_date"],
+                    "away_team": snapshot_dates["away_snapshot_date"],
+                },
+                feature_source=active_feature_source,
+                model_artifact_path=str(
+                    Path(artifact_path or settings.MODEL_ARTIFACT_PATH)
+                ),
+                requested_match_date=match_date,
+                match_segment=match_segment,
+                is_override_triggered=is_override_triggered,
+                shadow_predicted_outcome=shadow_predicted_outcome,
+                shadow_class_probabilities=shadow_class_probabilities,
+                shadow_model_name=shadow_model_name,
+                shadow_is_override_triggered=shadow_is_override_triggered,
+            )
+        except Exception as exc:
+            logger.warning("Failed to log prediction to inference table: %s", exc)
 
     # ── Return enriched prediction result ─────────────────────────────────────
     return {

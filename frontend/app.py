@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import plotly.graph_objects as go
 import requests
 import streamlit as st
 
@@ -547,283 +546,91 @@ st.markdown(
 )
 st.divider()
 
-tab_predict, tab_simulate = st.tabs(["🔮 Prediction Engine", "🎲 Simulation Mode"])
+# ── Match Setup ───────────────────────────────────────────────────────────────
+col1, col2, col3 = st.columns([5, 1, 5])
 
-with tab_predict:
-    # ── Match Setup ───────────────────────────────────────────────────────────────
-    col1, col2, col3 = st.columns([5, 1, 5])
-
-    with col1:
-        home = st.selectbox(
-            "🏠 Home Team",
-            options=ALL_TEAMS,
-            index=ALL_TEAMS.index("Argentina"),
-            key="home_team",
-        )
-
-    with col2:
-        st.markdown(
-            "<div class='vs-text'>VS</div>",
-            unsafe_allow_html=True,
-        )
-
-    with col3:
-        away = st.selectbox(
-            "✈️ Away Team",
-            options=ALL_TEAMS,
-            index=ALL_TEAMS.index("France"),
-            key="away_team",
-        )
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        tournament = st.selectbox(
-            "🏟️ Tournament",
-            options=[
-                "FIFA World Cup",
-                "FIFA World Cup Qualifier",
-                "UEFA Euro",
-                "Copa America",
-                "CONCACAF Gold Cup",
-                "Africa Cup of Nations",
-                "Friendly",
-                "Other",
-            ],
-            index=0,
-        )
-    with col_b:
-        neutral_ground = st.checkbox(
-            "⚖️ Neutral Ground",
-            value=True,
-            help="World Cup matches are typically played on neutral ground.",
-        )
-
-    st.markdown("")
-
-    predict_btn = st.button(
-        "🔮 Predict Matchup",
-        use_container_width=True,
-        type="primary",
-        disabled=(home == away),
+with col1:
+    home = st.selectbox(
+        "🏠 Home Team",
+        options=ALL_TEAMS,
+        index=ALL_TEAMS.index("Argentina"),
+        key="home_team",
     )
 
-    if home == away:
-        st.caption("⚠️ Select two different teams.")
+with col2:
+    st.markdown(
+        "<div class='vs-text'>VS</div>",
+        unsafe_allow_html=True,
+    )
 
-    # ── Prediction ────────────────────────────────────────────────────────────────
-    if predict_btn:
-        with st.spinner("Analyzing ELO, form & draw tendency…"):
-            result = get_prediction(home, away, tournament, neutral_ground)
+with col3:
+    away = st.selectbox(
+        "✈️ Away Team",
+        options=ALL_TEAMS,
+        index=ALL_TEAMS.index("France"),
+        key="away_team",
+    )
 
-        if result:
-            outcome = result["predicted_outcome"]
+col_a, col_b = st.columns(2)
+with col_a:
+    tournament = st.selectbox(
+        "🏟️ Tournament",
+        options=[
+            "FIFA World Cup",
+            "FIFA World Cup Qualifier",
+            "UEFA Euro",
+            "Copa America",
+            "CONCACAF Gold Cup",
+            "Africa Cup of Nations",
+            "Friendly",
+            "Other",
+        ],
+        index=0,
+    )
+with col_b:
+    neutral_ground = st.checkbox(
+        "⚖️ Neutral Ground",
+        value=True,
+        help="World Cup matches are typically played on neutral ground.",
+    )
 
-            outcome_display = {
-                "home_win": f"🏃 **{home} wins!**",
-                "away_win": f"✈️ **{away} wins!**",
-                "draw": "🤝 **Draw**",
-            }.get(outcome, outcome)
+st.markdown("")
 
-            predicted_score = result.get("predicted_score")
-            if predicted_score:
-                outcome_display += (
-                    f"<br><span style='font-size: 1.1rem; font-weight: 500; "
-                    f"opacity: 0.85;'>Predicted Score: {predicted_score}</span>"
-                )
+predict_btn = st.button(
+    "🔮 Predict Matchup",
+    use_container_width=True,
+    type="primary",
+    disabled=(home == away),
+)
 
-            st.markdown(
-                f"<div class='prediction-banner'>🎯 {outcome_display}</div>",
-                unsafe_allow_html=True,
+if home == away:
+    st.caption("⚠️ Select two different teams.")
+
+# ── Prediction ────────────────────────────────────────────────────────────────
+if predict_btn:
+    with st.spinner("Analyzing ELO, form & draw tendency…"):
+        result = get_prediction(home, away, tournament, neutral_ground)
+
+    if result:
+        outcome = result["predicted_outcome"]
+
+        outcome_display = {
+            "home_win": f"🏃 **{home} wins!**",
+            "away_win": f"✈️ **{away} wins!**",
+            "draw": "🤝 **Draw**",
+        }.get(outcome, outcome)
+
+        predicted_score = result.get("predicted_score")
+        if predicted_score:
+            outcome_display += (
+                f"<br><span style='font-size: 1.1rem; font-weight: 500; "
+                f"opacity: 0.85;'>Predicted Score: {predicted_score}</span>"
             )
 
-            probs = result.get("class_probabilities", {})
-            win_home = probs.get("home_win", probs.get("Home Win", 0.0)) * 100
-            draw_pct = probs.get("draw", probs.get("Draw", 0.0)) * 100
-            win_away = probs.get("away_win", probs.get("Away Win", 0.0)) * 100
-
-            m1, m2, m3 = st.columns(3)
-            m1.metric(f"🏠 {home}", f"{win_home:.1f}%")
-            m2.metric("🤝 Draw", f"{draw_pct:.1f}%")
-            m3.metric(f"✈️ {away}", f"{win_away:.1f}%")
-
-            # Horizontal stacked bar — colours adapt to current theme
-            if win_home + draw_pct + win_away > 0:
-                fig = go.Figure()
-                for label, value, color in [
-                    (home, win_home, P["win_color"]),
-                    ("Draw", draw_pct, P["draw_color"]),
-                    (away, win_away, P["loss_color"]),
-                ]:
-                    fig.add_trace(
-                        go.Bar(
-                            name=label,
-                            x=[value],
-                            y=[""],
-                            orientation="h",
-                            marker_color=color,
-                            text=f"{value:.1f}%",
-                            textposition="inside",
-                            insidetextanchor="middle",
-                            hovertemplate=f"{label}: {value:.1f}%<extra></extra>",
-                            width=0.5,
-                        )
-                    )
-                fig.update_layout(
-                    barmode="stack",
-                    height=100,
-                    margin={"l": 0, "r": 0, "t": 0, "b": 0},
-                    xaxis={"visible": False, "range": [0, 100]},
-                    yaxis={"visible": False},
-                    plot_bgcolor=P["bar_chart_bg"],
-                    paper_bgcolor=P["plotly_paper"],
-                    showlegend=False,
-                    bargap=0,
-                    font={"color": P["text_primary"]},
-                )
-                st.plotly_chart(
-                    fig, use_container_width=True, config={"displayModeBar": False}
-                )
-
-            # ── Advanced Analytics (collapsible) ──────────────────────────────
-            with st.expander("📊 Advanced Analytics & Model Telemetry"):
-                st.markdown("#### 🔎 Model Explainability")
-                st.info(
-                    "💡 **Why did the model predict this?**\n\n"
-                    f"The **Segment-Aware Hybrid Ensemble** classified this as a "
-                    f"**{'World Cup' if 'World Cup' in tournament else tournament}** fixture. "
-                    "Inference was driven by:\n"
-                    "- 📈 **ELO differential** between teams (recent time-decay applied)\n"
-                    "- 🏃 **Form** (avg goals, conceded, win-rate over last 5)\n"
-                    "- 🤝 **Draw propensity** — if probabilities fall in the uncertainty zone, "
-                    "a dedicated Draw Specialist activates\n"
-                    "- 🏟️ **Home advantage effect** (set to 0 for neutral ground)\n"
-                    "- 💰 **Talent differential** (Transfermarkt squad values, log-scaled)"
-                )
-
-                st.markdown("#### 📡 Raw API Payload")
-                meta_cols = st.columns(2)
-                meta_cols[0].markdown(
-                    f"**Feature source:** `{result.get('feature_source', 'N/A')}`"
-                )
-                meta_cols[1].markdown(
-                    f"**Segment:** `{result.get('match_segment', 'N/A')}`"
-                )
-                meta_cols[0].markdown(
-                    f"**Specialist override:** `{result.get('is_override_triggered', False)}`"
-                )
-                meta_cols[1].markdown(
-                    f"**Model:** `{result.get('model_artifact_path', 'N/A').split(chr(92))[-1].split('/')[-1]}`"
-                )
-
-                if result.get("shadow_predicted_outcome"):
-                    st.markdown("#### 🕵️ Shadow Model Comparison")
-                    shadow_probs = result.get("shadow_class_probabilities", {})
-                    sh_home = (
-                        shadow_probs.get("home_win", shadow_probs.get("Home Win", 0.0))
-                        * 100
-                    )
-                    sh_draw = (
-                        shadow_probs.get("draw", shadow_probs.get("Draw", 0.0)) * 100
-                    )
-                    sh_away = (
-                        shadow_probs.get("away_win", shadow_probs.get("Away Win", 0.0))
-                        * 100
-                    )
-                    sh1, sh2, sh3 = st.columns(3)
-                    sh1.metric(
-                        f"🏠 {home}",
-                        f"{sh_home:.1f}%",
-                        delta=f"{sh_home - win_home:+.1f}%",
-                    )
-                    sh2.metric(
-                        "🤝 Draw",
-                        f"{sh_draw:.1f}%",
-                        delta=f"{sh_draw - draw_pct:+.1f}%",
-                    )
-                    sh3.metric(
-                        f"✈️ {away}",
-                        f"{sh_away:.1f}%",
-                        delta=f"{sh_away - win_away:+.1f}%",
-                    )
-
-                st.markdown("#### 🗄️ Full Response JSON")
-                st.json(result)
-
-with tab_simulate:
-    st.markdown("## 🎲 Monte Carlo Match Simulation")
-    st.markdown(
-        "Simulate a match 10,000 times using a Poisson distribution with injected volatility (Red Cards, Penalties, and Form Noise)."
-    )
-
-    sim_c1, sim_c2 = st.columns(2)
-    with sim_c1:
-        sim_home = st.selectbox(
-            "🏠 Home Team",
-            options=ALL_TEAMS,
-            index=ALL_TEAMS.index("Argentina"),
-            key="sim_home_team",
+        st.markdown(
+            f"<div class='prediction-banner'>🎯 {outcome_display}</div>",
+            unsafe_allow_html=True,
         )
-    with sim_c2:
-        sim_away = st.selectbox(
-            "✈️ Away Team",
-            options=ALL_TEAMS,
-            index=ALL_TEAMS.index("France"),
-            key="sim_away_team",
-        )
-
-    sim_btn = st.button(
-        "🎲 Run 10,000 Simulations", use_container_width=True, type="primary"
-    )
-
-    if sim_btn:
-        with st.spinner("Running Monte Carlo simulation..."):
-            try:
-                res = requests.post(
-                    f"{API_URL}/simulate/match",
-                    json={
-                        "home_team": sim_home,
-                        "away_team": sim_away,
-                        "tournament": "FIFA World Cup",
-                        "neutral": True,
-                    },
-                    timeout=30,
-                )
-                res.raise_for_status()
-                sim_data = res.json()
-
-                sim_home_prob = sim_data["home_win_prob"] * 100
-                sim_draw_prob = sim_data["draw_prob"] * 100
-                sim_away_prob = sim_data["away_win_prob"] * 100
-
-                m1, m2, m3 = st.columns(3)
-                m1.metric(f"🏠 {sim_home}", f"{sim_home_prob:.1f}%")
-                m2.metric("🤝 Draw", f"{sim_draw_prob:.1f}%")
-                m3.metric(f"✈️ {sim_away}", f"{sim_away_prob:.1f}%")
-
-                # Display bar chart of scores
-                scores = sim_data["top_exact_scores"]
-                st.markdown("#### 📊 Most Likely Exact Scores")
-
-                fig = go.Figure(
-                    data=[
-                        go.Bar(
-                            x=list(scores.keys()),
-                            y=[v * 100 for v in scores.values()],
-                            marker_color=P["accent"],
-                        )
-                    ]
-                )
-                fig.update_layout(
-                    xaxis_title="Score (Home - Away)",
-                    yaxis_title="Probability (%)",
-                    plot_bgcolor=P["bar_chart_bg"],
-                    paper_bgcolor=P["plotly_paper"],
-                    font={"color": P["text_primary"]},
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-            except Exception as e:
-                st.error(f"Failed to run simulation: {e}")
 
     st.divider()
     st.markdown("## 🏆 Bracket Simulation")

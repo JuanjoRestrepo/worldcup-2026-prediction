@@ -626,6 +626,7 @@ def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResp
                     away_team=team_b,
                     tournament=request.tournament,
                     neutral=True,
+                    log_inference=False,
                 )
 
                 xg_a = pred.get("expected_home_goals")
