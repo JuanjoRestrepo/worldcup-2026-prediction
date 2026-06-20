@@ -12,6 +12,8 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
+from concurrent.futures import ThreadPoolExecutor
+
 from backend.config.settings import settings as settings
 from backend.config.team_aliases import normalize_team_name
 from backend.modeling.inference_logger import (
@@ -614,31 +616,34 @@ def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResp
 
     try:
         simulator = MonteCarloSimulator(n_simulations=request.n_simulations)
-        # Note: In a production system, batch predicting would be much faster.
-        # But since n_teams is small (e.g. 16 -> 120 matches), we can do it iteratively.
-        for i, team_a in enumerate(team_list):
-            for j in range(i + 1, len(team_list)):
-                team_b = team_list[j]
 
-                # Predict match outcome A vs B (neutral ground for tournament)
-                pred = predict_match_outcome(
-                    home_team=team_a,
-                    away_team=team_b,
-                    tournament=request.tournament,
-                    neutral=True,
-                    log_inference=False,
-                )
+        # Note: We parallelize this to avoid hitting 60s+ timeouts on 32-team brackets (496 calls).
+        def _get_match_prob(t_a: str, t_b: str) -> tuple[str, str, float, float]:
+            pred = predict_match_outcome(
+                home_team=t_a,
+                away_team=t_b,
+                tournament=request.tournament,
+                neutral=True,
+                log_inference=False,
+            )
+            xg_a = pred.get("expected_home_goals")
+            xg_b = pred.get("expected_away_goals")
+            if xg_a is None or xg_b is None:
+                raise ValueError(f"Missing expected goals for {t_a} vs {t_b}")
+            tie_probs = simulator.simulate_knockout_tie(xg_a, xg_b)
+            return t_a, t_b, tie_probs["home_advances"], tie_probs["away_advances"]
 
-                xg_a = pred.get("expected_home_goals")
-                xg_b = pred.get("expected_away_goals")
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            futures = []
+            for i, team_a in enumerate(team_list):
+                for j in range(i + 1, len(team_list)):
+                    team_b = team_list[j]
+                    futures.append(executor.submit(_get_match_prob, team_a, team_b))
 
-                if xg_a is None or xg_b is None:
-                    raise ValueError(f"Missing expected goals for {team_a} vs {team_b}")
-
-                tie_probs = simulator.simulate_knockout_tie(xg_a, xg_b)
-
-                match_probs[team_a][team_b] = tie_probs["home_advances"]
-                match_probs[team_b][team_a] = tie_probs["away_advances"]
+            for f in futures:
+                ta, tb, p_ta, p_tb = f.result()
+                match_probs[ta][tb] = p_ta
+                match_probs[tb][ta] = p_tb
 
     except Exception as exc:
         raise HTTPException(
