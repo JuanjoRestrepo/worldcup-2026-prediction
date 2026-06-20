@@ -617,7 +617,10 @@ def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResp
     try:
         simulator = MonteCarloSimulator(n_simulations=request.n_simulations)
 
-        # Note: We parallelize this to avoid hitting 60s+ timeouts on 32-team brackets (496 calls).
+        # Note: We parallelize this to avoid hitting 60s+ timeouts on 32-team brackets.
+        # We use itertools.combinations to generate all unique pairs (O(N^2) pairs, cleanly).
+        import itertools
+
         def _get_match_prob(t_a: str, t_b: str) -> tuple[str, str, float, float]:
             pred = predict_match_outcome(
                 home_team=t_a,
@@ -634,11 +637,13 @@ def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResp
             return t_a, t_b, tie_probs["home_advances"], tie_probs["away_advances"]
 
         with ThreadPoolExecutor(max_workers=16) as executor:
-            futures = []
-            for i, team_a in enumerate(team_list):
-                for j in range(i + 1, len(team_list)):
-                    team_b = team_list[j]
-                    futures.append(executor.submit(_get_match_prob, team_a, team_b))
+            # Generate all unique matchup combinations cleanly using itertools
+            matchup_pairs = list(itertools.combinations(team_list, 2))
+
+            # Map combinations to the executor
+            futures = [
+                executor.submit(_get_match_prob, ta, tb) for ta, tb in matchup_pairs
+            ]
 
             for f in futures:
                 ta, tb, p_ta, p_tb = f.result()
