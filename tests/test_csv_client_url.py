@@ -16,11 +16,11 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
+from backend.config.settings import settings
 from backend.ingestion.clients.csv_client import (
     EXPECTED_COLUMNS,
     load_historical_data,
 )
-from backend.config.settings import settings
 
 # ---------------------------------------------------------------------------
 # Fixtures

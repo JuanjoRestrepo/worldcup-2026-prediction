@@ -20,6 +20,7 @@ from backend.modeling.inference_logger import (
 )
 from backend.modeling.predict import predict_match_outcome, toggle_shadow_mode
 from backend.modeling.serving_store import load_latest_training_run_summary_with_source
+from backend.modeling.simulation import MonteCarloSimulator
 from backend.modeling.types import LatestTrainingRunSummary, PredictionResult
 
 logger = logging.getLogger(__name__)
@@ -219,6 +220,43 @@ class ToggleShadowResponse(BaseModel):
     status: str
     message: str
     shadow_as_primary: bool
+
+
+class MatchSimulationResponse(BaseModel):
+    """Result of a Monte Carlo match simulation."""
+
+    home_team: str
+    away_team: str
+    n_simulations: int
+    home_win_prob: float
+    draw_prob: float
+    away_win_prob: float
+    top_exact_scores: dict[str, float]
+    expected_home_goals: float
+    expected_away_goals: float
+
+
+class BracketSimulationRequest(BaseModel):
+    """Request body for simulating a tournament bracket."""
+
+    matchups: list[tuple[str, str]] = Field(
+        ...,
+        description="List of matchups, e.g., [['France', 'Germany'], ['Brazil', 'Argentina']]",
+    )
+    n_simulations: int = Field(
+        10000, description="Number of Monte Carlo simulations to run"
+    )
+    tournament: str = Field(
+        "World Cup", description="Tournament context for prediction"
+    )
+
+
+class BracketSimulationResponse(BaseModel):
+    """Result of a Monte Carlo bracket simulation."""
+
+    status: str
+    n_simulations: int
+    probabilities: dict[str, dict[str, float]]
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -511,6 +549,110 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             status_code=500,
             detail=f"Internal server error: {type(exc).__name__}: {str(exc)[:200]}",
         ) from exc
+
+
+@app.post("/simulate/match", response_model=MatchSimulationResponse)
+def simulate_match(
+    request: PredictionRequest, n_simulations: int = 10000
+) -> MatchSimulationResponse:
+    """
+    Run a Monte Carlo simulation of a match to generate probabilistic outcomes
+    and score distributions, injecting random variables (penalties, red cards, noise).
+    """
+    normalized_home = normalize_team_name(request.home_team)
+    normalized_away = normalize_team_name(request.away_team)
+
+    try:
+        prediction = predict_match_outcome(
+            home_team=normalized_home,
+            away_team=normalized_away,
+            tournament=request.tournament,
+            neutral=request.neutral,
+            match_date=request.match_date,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Failed to get base predictions: {exc}"
+        ) from exc
+
+    home_xg = prediction.get("expected_home_goals")
+    away_xg = prediction.get("expected_away_goals")
+
+    if home_xg is None or away_xg is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Expected goals model not available. Cannot run Monte Carlo simulation.",
+        )
+
+    simulator = MonteCarloSimulator(n_simulations=n_simulations)
+    stats = simulator.simulate_match(home_xg, away_xg)
+
+    return MatchSimulationResponse(
+        home_team=prediction["home_team"],
+        away_team=prediction["away_team"],
+        n_simulations=n_simulations,
+        **stats,
+    )
+
+
+@app.post("/simulate/bracket", response_model=BracketSimulationResponse)
+def simulate_bracket(request: BracketSimulationRequest) -> BracketSimulationResponse:
+    """
+    Simulate an entire tournament knockout bracket using Monte Carlo.
+    Returns the probabilities of each team advancing to each stage.
+    """
+    # 1. Flatten all unique teams
+    teams = set()
+    for h, a in request.matchups:
+        teams.add(normalize_team_name(h))
+        teams.add(normalize_team_name(a))
+
+    team_list = list(teams)
+
+    # 2. Build match_probs dictionary for all possible pairings
+    match_probs: dict[str, dict[str, float]] = {t: {} for t in team_list}
+
+    try:
+        simulator = MonteCarloSimulator(n_simulations=request.n_simulations)
+        # Note: In a production system, batch predicting would be much faster.
+        # But since n_teams is small (e.g. 16 -> 120 matches), we can do it iteratively.
+        for i, team_a in enumerate(team_list):
+            for j in range(i + 1, len(team_list)):
+                team_b = team_list[j]
+
+                # Predict match outcome A vs B (neutral ground for tournament)
+                pred = predict_match_outcome(
+                    home_team=team_a,
+                    away_team=team_b,
+                    tournament=request.tournament,
+                    neutral=True,
+                )
+
+                xg_a = pred.get("expected_home_goals")
+                xg_b = pred.get("expected_away_goals")
+
+                if xg_a is None or xg_b is None:
+                    raise ValueError(f"Missing expected goals for {team_a} vs {team_b}")
+
+                tie_probs = simulator.simulate_knockout_tie(xg_a, xg_b)
+
+                match_probs[team_a][team_b] = tie_probs["home_advances"]
+                match_probs[team_b][team_a] = tie_probs["away_advances"]
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate bracket probabilities: {exc}"
+        ) from exc
+
+    # 3. Simulate bracket paths
+    normalized_matchups = [
+        (normalize_team_name(h), normalize_team_name(a)) for h, a in request.matchups
+    ]
+    results = simulator.simulate_bracket(match_probs, normalized_matchups)
+
+    return BracketSimulationResponse(
+        status="success", n_simulations=request.n_simulations, probabilities=results
+    )
 
 
 @app.get("/monitoring/inference-stats", response_model=InferenceStatisticsResponse)

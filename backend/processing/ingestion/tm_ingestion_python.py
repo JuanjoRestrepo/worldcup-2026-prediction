@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from bs4 import BeautifulSoup
-from seleniumbase import Driver  # type: ignore
+from seleniumbase import Driver
 
 logger = logging.getLogger(__name__)
 

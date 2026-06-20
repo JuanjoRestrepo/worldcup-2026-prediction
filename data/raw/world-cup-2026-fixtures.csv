@@ -1,0 +1,105 @@
+match_number,date,kickoff_utc,stage,group,home_team,away_team,stadium,host_city,match_url
+1,2026-06-11,2026-06-11T19:00:00Z,group-stage,A,Mexico,South Africa,Estadio Azteca,mexico-city,https://www.thestatsapi.com/world-cup/matches/mexico-vs-south-africa-2026-06-11
+2,2026-06-11,2026-06-12T02:00:00Z,group-stage,A,Korea Republic,Czechia,Estadio Akron,guadalajara,https://www.thestatsapi.com/world-cup/matches/korea-republic-vs-czechia-2026-06-11
+3,2026-06-12,2026-06-12T19:00:00Z,group-stage,B,Canada,Bosnia and Herzegovina,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/canada-vs-bosnia-and-herzegovina-2026-06-12
+4,2026-06-12,2026-06-13T01:00:00Z,group-stage,D,United States,Paraguay,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/united-states-vs-paraguay-2026-06-12
+5,2026-06-13,2026-06-14T01:00:00Z,group-stage,C,Haiti,Scotland,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/haiti-vs-scotland-2026-06-13
+6,2026-06-13,2026-06-14T04:00:00Z,group-stage,D,Australia,Turkiye,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/australia-vs-turkiye-2026-06-13
+7,2026-06-13,2026-06-13T22:00:00Z,group-stage,C,Brazil,Morocco,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/brazil-vs-morocco-2026-06-13
+8,2026-06-13,2026-06-13T19:00:00Z,group-stage,B,Qatar,Switzerland,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/qatar-vs-switzerland-2026-06-13
+9,2026-06-14,2026-06-14T23:00:00Z,group-stage,E,Cote d'Ivoire,Ecuador,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/cote-divoire-vs-ecuador-2026-06-14
+10,2026-06-14,2026-06-14T17:00:00Z,group-stage,E,Germany,Curacao,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/germany-vs-curacao-2026-06-14
+11,2026-06-14,2026-06-14T20:00:00Z,group-stage,F,Netherlands,Japan,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/netherlands-vs-japan-2026-06-14
+12,2026-06-14,2026-06-15T02:00:00Z,group-stage,F,Sweden,Tunisia,Estadio BBVA,monterrey,https://www.thestatsapi.com/world-cup/matches/sweden-vs-tunisia-2026-06-14
+13,2026-06-15,2026-06-15T22:00:00Z,group-stage,H,Saudi Arabia,Uruguay,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/saudi-arabia-vs-uruguay-2026-06-15
+14,2026-06-15,2026-06-15T16:00:00Z,group-stage,H,Spain,Cabo Verde,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/spain-vs-cabo-verde-2026-06-15
+15,2026-06-15,2026-06-16T01:00:00Z,group-stage,G,IR Iran,New Zealand,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/ir-iran-vs-new-zealand-2026-06-15
+16,2026-06-15,2026-06-15T19:00:00Z,group-stage,G,Belgium,Egypt,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/belgium-vs-egypt-2026-06-15
+17,2026-06-16,2026-06-16T19:00:00Z,group-stage,I,France,Senegal,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/france-vs-senegal-2026-06-16
+18,2026-06-16,2026-06-16T22:00:00Z,group-stage,I,Iraq,Norway,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/iraq-vs-norway-2026-06-16
+19,2026-06-16,2026-06-17T01:00:00Z,group-stage,J,Argentina,Algeria,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/argentina-vs-algeria-2026-06-16
+20,2026-06-16,2026-06-17T04:00:00Z,group-stage,J,Austria,Jordan,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/austria-vs-jordan-2026-06-16
+21,2026-06-17,2026-06-17T23:00:00Z,group-stage,L,Ghana,Panama,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/ghana-vs-panama-2026-06-17
+22,2026-06-17,2026-06-17T20:00:00Z,group-stage,L,England,Croatia,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/england-vs-croatia-2026-06-17
+23,2026-06-17,2026-06-17T17:00:00Z,group-stage,K,Portugal,Congo DR,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/portugal-vs-congo-dr-2026-06-17
+24,2026-06-17,2026-06-18T02:00:00Z,group-stage,K,Uzbekistan,Colombia,Estadio Azteca,mexico-city,https://www.thestatsapi.com/world-cup/matches/uzbekistan-vs-colombia-2026-06-17
+25,2026-06-18,2026-06-18T16:00:00Z,group-stage,A,Czechia,South Africa,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/czechia-vs-south-africa-2026-06-18
+26,2026-06-18,2026-06-18T19:00:00Z,group-stage,B,Switzerland,Bosnia and Herzegovina,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/switzerland-vs-bosnia-and-herzegovina-2026-06-18
+27,2026-06-18,2026-06-18T22:00:00Z,group-stage,B,Canada,Qatar,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/canada-vs-qatar-2026-06-18
+28,2026-06-18,2026-06-19T01:00:00Z,group-stage,A,Mexico,Korea Republic,Estadio Akron,guadalajara,https://www.thestatsapi.com/world-cup/matches/mexico-vs-korea-republic-2026-06-18
+29,2026-06-19,2026-06-20T01:00:00Z,group-stage,C,Brazil,Haiti,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/brazil-vs-haiti-2026-06-19
+30,2026-06-19,2026-06-19T22:00:00Z,group-stage,C,Scotland,Morocco,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/scotland-vs-morocco-2026-06-19
+31,2026-06-19,2026-06-20T03:00:00Z,group-stage,D,Turkiye,Paraguay,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/turkiye-vs-paraguay-2026-06-19
+32,2026-06-19,2026-06-19T19:00:00Z,group-stage,D,United States,Australia,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/united-states-vs-australia-2026-06-19
+33,2026-06-20,2026-06-20T20:00:00Z,group-stage,E,Germany,Cote d'Ivoire,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/germany-vs-cote-divoire-2026-06-20
+34,2026-06-20,2026-06-21T00:00:00Z,group-stage,E,Ecuador,Curacao,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/ecuador-vs-curacao-2026-06-20
+35,2026-06-20,2026-06-20T17:00:00Z,group-stage,F,Netherlands,Sweden,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/netherlands-vs-sweden-2026-06-20
+36,2026-06-20,2026-06-21T04:00:00Z,group-stage,F,Tunisia,Japan,Estadio BBVA,monterrey,https://www.thestatsapi.com/world-cup/matches/tunisia-vs-japan-2026-06-20
+37,2026-06-21,2026-06-21T22:00:00Z,group-stage,H,Uruguay,Cabo Verde,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/uruguay-vs-cabo-verde-2026-06-21
+38,2026-06-21,2026-06-21T16:00:00Z,group-stage,H,Spain,Saudi Arabia,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/spain-vs-saudi-arabia-2026-06-21
+39,2026-06-21,2026-06-21T19:00:00Z,group-stage,G,Belgium,IR Iran,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/belgium-vs-ir-iran-2026-06-21
+40,2026-06-21,2026-06-22T01:00:00Z,group-stage,G,New Zealand,Egypt,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/new-zealand-vs-egypt-2026-06-21
+41,2026-06-22,2026-06-23T00:00:00Z,group-stage,I,Norway,Senegal,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/norway-vs-senegal-2026-06-22
+42,2026-06-22,2026-06-22T21:00:00Z,group-stage,I,France,Iraq,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/france-vs-iraq-2026-06-22
+43,2026-06-22,2026-06-22T17:00:00Z,group-stage,J,Argentina,Austria,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/argentina-vs-austria-2026-06-22
+44,2026-06-22,2026-06-23T03:00:00Z,group-stage,J,Jordan,Algeria,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/jordan-vs-algeria-2026-06-22
+45,2026-06-23,2026-06-23T20:00:00Z,group-stage,L,England,Ghana,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/england-vs-ghana-2026-06-23
+46,2026-06-23,2026-06-23T23:00:00Z,group-stage,L,Panama,Croatia,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/panama-vs-croatia-2026-06-23
+47,2026-06-23,2026-06-23T17:00:00Z,group-stage,K,Portugal,Uzbekistan,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/portugal-vs-uzbekistan-2026-06-23
+48,2026-06-23,2026-06-24T02:00:00Z,group-stage,K,Colombia,Congo DR,Estadio Akron,guadalajara,https://www.thestatsapi.com/world-cup/matches/colombia-vs-congo-dr-2026-06-23
+49,2026-06-24,2026-06-24T22:00:00Z,group-stage,C,Scotland,Brazil,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/scotland-vs-brazil-2026-06-24
+50,2026-06-24,2026-06-24T22:00:00Z,group-stage,C,Morocco,Haiti,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/morocco-vs-haiti-2026-06-24
+51,2026-06-24,2026-06-24T19:00:00Z,group-stage,B,Switzerland,Canada,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/switzerland-vs-canada-2026-06-24
+52,2026-06-24,2026-06-24T19:00:00Z,group-stage,B,Bosnia and Herzegovina,Qatar,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/bosnia-and-herzegovina-vs-qatar-2026-06-24
+53,2026-06-24,2026-06-25T01:00:00Z,group-stage,A,Czechia,Mexico,Estadio Azteca,mexico-city,https://www.thestatsapi.com/world-cup/matches/czechia-vs-mexico-2026-06-24
+54,2026-06-24,2026-06-25T01:00:00Z,group-stage,A,South Africa,Korea Republic,Estadio BBVA,monterrey,https://www.thestatsapi.com/world-cup/matches/south-africa-vs-korea-republic-2026-06-24
+55,2026-06-25,2026-06-25T20:00:00Z,group-stage,E,Curacao,Cote d'Ivoire,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/curacao-vs-cote-divoire-2026-06-25
+56,2026-06-25,2026-06-25T20:00:00Z,group-stage,E,Ecuador,Germany,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/ecuador-vs-germany-2026-06-25
+57,2026-06-25,2026-06-25T23:00:00Z,group-stage,F,Japan,Sweden,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/japan-vs-sweden-2026-06-25
+58,2026-06-25,2026-06-25T23:00:00Z,group-stage,F,Tunisia,Netherlands,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/tunisia-vs-netherlands-2026-06-25
+59,2026-06-25,2026-06-26T02:00:00Z,group-stage,D,Turkiye,United States,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/turkiye-vs-united-states-2026-06-25
+60,2026-06-25,2026-06-26T02:00:00Z,group-stage,D,Paraguay,Australia,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/paraguay-vs-australia-2026-06-25
+61,2026-06-26,2026-06-26T19:00:00Z,group-stage,I,Norway,France,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/norway-vs-france-2026-06-26
+62,2026-06-26,2026-06-26T19:00:00Z,group-stage,I,Senegal,Iraq,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/senegal-vs-iraq-2026-06-26
+63,2026-06-26,2026-06-27T03:00:00Z,group-stage,G,Egypt,IR Iran,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/egypt-vs-ir-iran-2026-06-26
+64,2026-06-26,2026-06-27T03:00:00Z,group-stage,G,New Zealand,Belgium,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/new-zealand-vs-belgium-2026-06-26
+65,2026-06-26,2026-06-27T00:00:00Z,group-stage,H,Cabo Verde,Saudi Arabia,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/cabo-verde-vs-saudi-arabia-2026-06-26
+66,2026-06-26,2026-06-27T00:00:00Z,group-stage,H,Uruguay,Spain,Estadio Akron,guadalajara,https://www.thestatsapi.com/world-cup/matches/uruguay-vs-spain-2026-06-26
+67,2026-06-27,2026-06-27T21:00:00Z,group-stage,L,Panama,England,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/panama-vs-england-2026-06-27
+68,2026-06-27,2026-06-27T21:00:00Z,group-stage,L,Croatia,Ghana,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/croatia-vs-ghana-2026-06-27
+69,2026-06-27,2026-06-28T02:00:00Z,group-stage,J,Algeria,Austria,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/algeria-vs-austria-2026-06-27
+70,2026-06-27,2026-06-28T02:00:00Z,group-stage,J,Jordan,Argentina,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/jordan-vs-argentina-2026-06-27
+71,2026-06-27,2026-06-27T23:30:00Z,group-stage,K,Colombia,Portugal,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/colombia-vs-portugal-2026-06-27
+72,2026-06-27,2026-06-27T23:30:00Z,group-stage,K,Congo DR,Uzbekistan,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/congo-dr-vs-uzbekistan-2026-06-27
+73,2026-06-28,2026-06-28T19:00:00Z,round-of-32,,Group A runners-up,Group B runners-up,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/group-a-runners-up-vs-group-b-runners-up-2026-06-28
+74,2026-06-29,2026-06-29T20:30:00Z,round-of-32,,Group E winners,Group A/B/C/D/F third place,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/group-e-winners-vs-group-a-b-c-d-f-third-place-2026-06-29
+75,2026-06-29,2026-06-30T01:00:00Z,round-of-32,,Group F winners,Group C runners-up,Estadio BBVA,monterrey,https://www.thestatsapi.com/world-cup/matches/group-f-winners-vs-group-c-runners-up-2026-06-29
+76,2026-06-29,2026-06-29T17:00:00Z,round-of-32,,Group C winners,Group F runners-up,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/group-c-winners-vs-group-f-runners-up-2026-06-29
+77,2026-06-30,2026-06-30T21:00:00Z,round-of-32,,Group I winners,Group C/D/F/G/H third place,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/group-i-winners-vs-group-c-d-f-g-h-third-place-2026-06-30
+78,2026-06-30,2026-06-30T17:00:00Z,round-of-32,,Group E runners-up,Group I runners-up,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/group-e-runners-up-vs-group-i-runners-up-2026-06-30
+79,2026-06-30,2026-07-01T01:00:00Z,round-of-32,,Group A winners,Group C/E/F/H/I third place,Estadio Azteca,mexico-city,https://www.thestatsapi.com/world-cup/matches/group-a-winners-vs-group-c-e-f-h-i-third-place-2026-06-30
+80,2026-07-01,2026-07-01T16:00:00Z,round-of-32,,Group L winners,Group E/H/I/J/K third place,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/group-l-winners-vs-group-e-h-i-j-k-third-place-2026-07-01
+81,2026-07-01,2026-07-02T00:00:00Z,round-of-32,,Group D winners,Group B/E/F/I/J third place,Levi's Stadium,san-francisco,https://www.thestatsapi.com/world-cup/matches/group-d-winners-vs-group-b-e-f-i-j-third-place-2026-07-01
+82,2026-07-01,2026-07-01T20:00:00Z,round-of-32,,Group G winners,Group A/E/H/I/J third place,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/group-g-winners-vs-group-a-e-h-i-j-third-place-2026-07-01
+83,2026-07-02,2026-07-02T23:00:00Z,round-of-32,,Group K runners-up,Group L runners-up,BMO Field,toronto,https://www.thestatsapi.com/world-cup/matches/group-k-runners-up-vs-group-l-runners-up-2026-07-02
+84,2026-07-02,2026-07-02T19:00:00Z,round-of-32,,Group H winners,Group J runners-up,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/group-h-winners-vs-group-j-runners-up-2026-07-02
+85,2026-07-02,2026-07-03T03:00:00Z,round-of-32,,Group B winners,Group E/F/G/I/J third place,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/group-b-winners-vs-group-e-f-g-i-j-third-place-2026-07-02
+86,2026-07-03,2026-07-03T22:00:00Z,round-of-32,,Group J winners,Group H runners-up,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/group-j-winners-vs-group-h-runners-up-2026-07-03
+87,2026-07-03,2026-07-04T01:30:00Z,round-of-32,,Group K winners,Group D/E/I/J/L third place,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/group-k-winners-vs-group-d-e-i-j-l-third-place-2026-07-03
+88,2026-07-03,2026-07-03T18:00:00Z,round-of-32,,Group D runners-up,Group G runners-up,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/group-d-runners-up-vs-group-g-runners-up-2026-07-03
+89,2026-07-04,2026-07-04T21:00:00Z,round-of-16,,Winner Match 74,Winner Match 77,Lincoln Financial Field,philadelphia,https://www.thestatsapi.com/world-cup/matches/winner-match-74-vs-winner-match-77-2026-07-04
+90,2026-07-04,2026-07-04T17:00:00Z,round-of-16,,Winner Match 73,Winner Match 75,NRG Stadium,houston,https://www.thestatsapi.com/world-cup/matches/winner-match-73-vs-winner-match-75-2026-07-04
+91,2026-07-05,2026-07-05T20:00:00Z,round-of-16,,Winner Match 76,Winner Match 78,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/winner-match-76-vs-winner-match-78-2026-07-05
+92,2026-07-05,2026-07-06T00:00:00Z,round-of-16,,Winner Match 79,Winner Match 80,Estadio Azteca,mexico-city,https://www.thestatsapi.com/world-cup/matches/winner-match-79-vs-winner-match-80-2026-07-05
+93,2026-07-06,2026-07-06T19:00:00Z,round-of-16,,Winner Match 83,Winner Match 84,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/winner-match-83-vs-winner-match-84-2026-07-06
+94,2026-07-06,2026-07-07T00:00:00Z,round-of-16,,Winner Match 81,Winner Match 82,Lumen Field,seattle,https://www.thestatsapi.com/world-cup/matches/winner-match-81-vs-winner-match-82-2026-07-06
+95,2026-07-07,2026-07-07T16:00:00Z,round-of-16,,Winner Match 86,Winner Match 88,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/winner-match-86-vs-winner-match-88-2026-07-07
+96,2026-07-07,2026-07-07T20:00:00Z,round-of-16,,Winner Match 85,Winner Match 87,BC Place,vancouver,https://www.thestatsapi.com/world-cup/matches/winner-match-85-vs-winner-match-87-2026-07-07
+97,2026-07-09,2026-07-09T20:00:00Z,quarter-finals,,Winner Match 89,Winner Match 90,Gillette Stadium,boston,https://www.thestatsapi.com/world-cup/matches/winner-match-89-vs-winner-match-90-2026-07-09
+98,2026-07-10,2026-07-10T19:00:00Z,quarter-finals,,Winner Match 93,Winner Match 94,SoFi Stadium,los-angeles,https://www.thestatsapi.com/world-cup/matches/winner-match-93-vs-winner-match-94-2026-07-10
+99,2026-07-11,2026-07-11T21:00:00Z,quarter-finals,,Winner Match 91,Winner Match 92,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/winner-match-91-vs-winner-match-92-2026-07-11
+100,2026-07-11,2026-07-12T01:00:00Z,quarter-finals,,Winner Match 95,Winner Match 96,Arrowhead Stadium,kansas-city,https://www.thestatsapi.com/world-cup/matches/winner-match-95-vs-winner-match-96-2026-07-11
+101,2026-07-14,2026-07-14T19:00:00Z,semi-finals,,Winner Match 97,Winner Match 98,AT&T Stadium,dallas,https://www.thestatsapi.com/world-cup/matches/winner-match-97-vs-winner-match-98-2026-07-14
+102,2026-07-15,2026-07-15T19:00:00Z,semi-finals,,Winner Match 99,Winner Match 100,Mercedes-Benz Stadium,atlanta,https://www.thestatsapi.com/world-cup/matches/winner-match-99-vs-winner-match-100-2026-07-15
+103,2026-07-18,2026-07-18T21:00:00Z,third-place,,Loser Match 101,Loser Match 102,Hard Rock Stadium,miami,https://www.thestatsapi.com/world-cup/matches/loser-match-101-vs-loser-match-102-2026-07-18
+104,2026-07-19,2026-07-19T19:00:00Z,final,,Winner Match 101,Winner Match 102,MetLife Stadium,new-york,https://www.thestatsapi.com/world-cup/matches/winner-match-101-vs-winner-match-102-2026-07-19
