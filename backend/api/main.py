@@ -5,14 +5,13 @@ from __future__ import annotations
 import logging
 import os
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
-
-from concurrent.futures import ThreadPoolExecutor
 
 from backend.config.settings import settings as settings
 from backend.config.team_aliases import normalize_team_name
