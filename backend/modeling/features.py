@@ -156,9 +156,27 @@ def select_model_feature_columns(df: pd.DataFrame) -> list[str]:
     ]
 
 
-def build_tournament_flags(tournament: str | None) -> dict[str, int]:
-    """Create the same tournament flags used during feature engineering."""
+def build_tournament_flags(
+    tournament: str | None,
+    is_knockout: bool = False,
+) -> dict[str, int]:
+    """Create the same tournament flags used during feature engineering.
+
+    Args:
+        tournament: Tournament name string (or None).
+        is_knockout: Explicit knockout flag. Set to True for elimination-round
+            matches where draws are impossible. Overrides the keyword heuristic
+            when the caller has authoritative stage information.
+    """
+    import re
+
     tournament_name = (tournament or "").strip().lower()
+    # Mirror the keyword regex from _create_tournament_features
+    _KNOCKOUT_PATTERN = re.compile(
+        r"round of|quarter.?final|semi.?final|final|knockout|play.?off",
+        re.IGNORECASE,
+    )
+    keyword_knockout = bool(_KNOCKOUT_PATTERN.search(tournament_name))
     return {
         "is_friendly": int("friendly" in tournament_name),
         "is_world_cup": int(
@@ -194,6 +212,9 @@ def build_tournament_flags(tournament: str | None) -> dict[str, int]:
                 )
             )
         ),
+        # Structural knockout flag — suppresses draw probability at model level.
+        # Caller-supplied `is_knockout=True` takes precedence over keyword heuristic.
+        "is_knockout": int(is_knockout or keyword_knockout),
     }
 
 
@@ -285,6 +306,7 @@ def build_match_feature_frame(
     feature_columns: list[str],
     feature_history_df: pd.DataFrame | None = None,
     match_date: date | None = None,
+    is_knockout: bool = False,
 ) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
     """
     Build a model-ready feature row for an upcoming match.
@@ -293,6 +315,20 @@ def build_match_feature_frame(
     - role-specific features from the team's latest match in that role
     - global features from the team's latest match overall
     - match-level interaction features recomputed for the requested fixture
+
+    Args:
+        home_team: Home team name.
+        away_team: Away team name.
+        tournament: Tournament name (used to derive tournament flags).
+        neutral: Whether the match is played at a neutral venue.
+        feature_columns: Ordered list of feature columns the model expects.
+        feature_history_df: Optional pre-loaded feature dataset; loaded from
+            disk when None.
+        match_date: Optional match date; restricts the feature lookup to
+            records on or before this date (for backtesting).
+        is_knockout: Set to True for elimination-round matches (quarter-finals,
+            semi-finals, final). This sets `is_knockout=1` which structurally
+            suppresses draw probability — draws cannot decide knockout games.
     """
     if home_team.strip().casefold() == away_team.strip().casefold():
         raise ValueError("Home team and away team must be different teams.")
@@ -318,7 +354,7 @@ def build_match_feature_frame(
     away_away_row = away_context["away"]
     home_elo = float(home_context["elo"])
     away_elo = float(away_context["elo"])
-    flags = build_tournament_flags(tournament)
+    flags = build_tournament_flags(tournament, is_knockout=is_knockout)
 
     home_win_rate = _coalesce(
         _safe_value(home_home_row, "home_win_rate_last5"),
@@ -467,8 +503,19 @@ def build_match_feature_frame_from_team_snapshots(
     neutral: bool,
     feature_columns: list[str],
     team_snapshots_df: pd.DataFrame,
+    is_knockout: bool = False,
 ) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
-    """Build a feature row from a dbt-curated team snapshot serving model."""
+    """Build a feature row from a dbt-curated team snapshot serving model.
+
+    Args:
+        home_team: Home team name.
+        away_team: Away team name.
+        tournament: Tournament name string.
+        neutral: Whether the match is at a neutral venue.
+        feature_columns: Ordered list of feature columns the model expects.
+        team_snapshots_df: Pre-loaded team snapshot DataFrame from dbt serving model.
+        is_knockout: Set to True for elimination-round matches to suppress draw probability.
+    """
     if home_team.strip().casefold() == away_team.strip().casefold():
         raise ValueError("Home team and away team must be different teams.")
 
@@ -503,7 +550,7 @@ def build_match_feature_frame_from_team_snapshots(
 
     home_elo = _safe_value(home_overall_row, "elo")
     away_elo = _safe_value(away_overall_row, "elo")
-    flags = build_tournament_flags(tournament)
+    flags = build_tournament_flags(tournament, is_knockout=is_knockout)
 
     home_win_rate = _coalesce(
         _safe_value(home_home_row, "win_rate_last5"),
@@ -643,6 +690,7 @@ def build_match_feature_frame_from_latest_snapshots(
     neutral: bool,
     feature_columns: list[str],
     latest_team_snapshots_df: pd.DataFrame,
+    is_knockout: bool = False,
 ) -> tuple[pd.DataFrame, TeamSnapshotMetadata]:
     """Backward-compatible wrapper for latest-snapshot serving."""
     return build_match_feature_frame_from_team_snapshots(
@@ -652,4 +700,5 @@ def build_match_feature_frame_from_latest_snapshots(
         neutral=neutral,
         feature_columns=feature_columns,
         team_snapshots_df=latest_team_snapshots_df,
+        is_knockout=is_knockout,
     )

@@ -26,11 +26,13 @@ def _create_tournament_features(df: pd.DataFrame) -> pd.DataFrame:
     Create tournament-based dummy variables.
 
     Args:
-        df: DataFrame with 'tournament' column
+        df: DataFrame with 'tournament' and optionally 'date' columns
 
     Returns:
-        DataFrame with added tournament features
+        DataFrame with added tournament features including is_knockout
     """
+    import numpy as np
+
     # Identify tournament types
     df["is_friendly"] = (
         df["tournament"].str.contains("Friendly", case=False, na=False).astype(int)
@@ -56,6 +58,36 @@ def _create_tournament_features(df: pd.DataFrame) -> pd.DataFrame:
         )
         .astype(int)
     )
+
+    # ── Knockout stage flag ───────────────────────────────────────────────────
+    # Draws cannot occur in knockout football (extra time / penalties decide).
+    # This is the single strongest structural signal for suppressing draw probability.
+    #
+    # Two complementary heuristics:
+    #   1. Keyword match: tournament name contains explicit round labels
+    #      ("Round of", "Quarter", "Semi", "Final", "Knockout", "Play-off").
+    #      Covers most historical confederation tournaments where stage is embedded
+    #      in the tournament string.
+    #   2. Date heuristic: FIFA World Cup matches on/after 2026-07-02.
+    #      The 2026 WC data has tournament = "FIFA World Cup" throughout, so the
+    #      keyword rule alone cannot distinguish group from knockout games.
+    #      The group stage ended 2026-07-01; round-of-32 started 2026-07-02.
+    keyword_knockout = df["tournament"].str.contains(
+        r"Round of|Quarter.?final|Semi.?final|Final|Knockout|Play.?off",
+        case=False,
+        na=False,
+        regex=True,
+    )
+
+    wc2026_knockout = np.zeros(len(df), dtype=bool)
+    if "date" in df.columns:
+        wc2026_cutoff = pd.Timestamp("2026-07-02")
+        wc2026_knockout = (
+            (df["is_world_cup"] == 1)
+            & (pd.to_datetime(df["date"]) >= wc2026_cutoff)
+        ).to_numpy()
+
+    df["is_knockout"] = (keyword_knockout | wc2026_knockout).astype(int)
 
     return df
 
@@ -259,7 +291,8 @@ def run_processing_pipeline(
     df = _create_tournament_features(df)
     df = _create_elo_form_features(df, window=5)
     logger.info(
-        "✅ Tournament features: is_friendly, is_world_cup, is_qualifier, is_continental"
+        "✅ Tournament features: "
+        "is_friendly, is_world_cup, is_qualifier, is_continental, is_knockout"
     )
     logger.info("✅ ELO form features: home_elo_form, away_elo_form")
 

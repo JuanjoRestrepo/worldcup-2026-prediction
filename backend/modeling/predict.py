@@ -174,6 +174,7 @@ def predict_match_outcome(
     feature_data_path: Path | None = None,
     feature_source: str | None = None,
     log_inference: bool = True,
+    is_knockout: bool = False,
 ) -> PredictionResult:
     """
     Predict the outcome of a fixture using the exported model artifact.
@@ -187,6 +188,9 @@ def predict_match_outcome(
         artifact_path: Optional alternate model artifact path.
         feature_data_path: Optional alternate gold dataset path for snapshots.
         feature_source: Optional feature source override: auto, dbt, postgres, or csv.
+        is_knockout: Set to True for elimination-round matches. Signals to the
+            model that a draw is impossible (games decided by extra time /
+            penalties), which structurally suppresses the draw class probability.
 
     Returns:
         PredictionResult dict with prediction, probabilities, and snapshot metadata.
@@ -230,6 +234,7 @@ def predict_match_outcome(
                     neutral=neutral,
                     feature_columns=feature_columns,
                     team_snapshots_df=team_snapshots,
+                    is_knockout=is_knockout,
                 )
             )
         except Exception as exc:
@@ -250,6 +255,7 @@ def predict_match_outcome(
                 feature_columns=feature_columns,
                 feature_history_df=feature_history,
                 match_date=match_date,
+                is_knockout=is_knockout,
             )
     else:
         feature_history, active_feature_source = load_feature_dataset_with_source(
@@ -264,6 +270,7 @@ def predict_match_outcome(
             feature_columns=feature_columns,
             feature_history_df=feature_history,
             match_date=match_date,
+            is_knockout=is_knockout,
         )
 
     # ── Primary model inference ───────────────────────────────────────────────
@@ -273,7 +280,7 @@ def predict_match_outcome(
     predicted_encoded_raw = int(model.predict(feature_frame)[0])
     predicted_outcome_int = int(encoded_to_outcome[predicted_encoded_raw])
 
-    # ── Expected Goals inference ──────────────────────────────────────────────
+    # ── Expected Goals & Dixon-Coles inference ───────────────────────────────
     expected_home_goals: float | None = None
     expected_away_goals: float | None = None
     predicted_score: str | None = None
@@ -286,6 +293,94 @@ def predict_match_outcome(
             predicted_score = _calculate_most_probable_score(
                 expected_home_goals, expected_away_goals, predicted_outcome_label
             )
+
+            # Compute Dixon-Coles score matrix probabilities
+            from backend.modeling.dixon_coles import (  # noqa: PLC0415
+                calculate_outcome_probs_from_score_matrix,
+                calculate_score_matrix,
+            )
+
+            dc_matrix = calculate_score_matrix(
+                expected_home_goals, expected_away_goals, rho=-0.05, max_goals=10
+            )
+            dc_away_p, dc_draw_p, dc_home_p = calculate_outcome_probs_from_score_matrix(
+                dc_matrix, is_knockout=is_knockout
+            )
+
+            if neutral:
+                # Perform double-inversion query for neutral ground balance
+                try:
+                    inv_frame, _ = build_match_feature_frame(
+                        home_team=away_team,
+                        away_team=home_team,
+                        tournament=tournament,
+                        neutral=neutral,
+                        feature_columns=feature_columns,
+                        feature_history_df=feature_history,
+                        match_date=match_date,
+                        is_knockout=is_knockout,
+                    )
+                    inv_probs, _ = _decode_probabilities(
+                        model, inv_frame, encoded_to_outcome, outcome_labels
+                    )
+                    inv_hg = float(home_goals_model.predict(inv_frame)[0])
+                    inv_ag = float(away_goals_model.predict(inv_frame)[0])
+
+                    inv_dc_matrix = calculate_score_matrix(
+                        inv_hg, inv_ag, rho=-0.05, max_goals=10
+                    )
+                    inv_away_p, inv_draw_p, inv_home_p = (
+                        calculate_outcome_probs_from_score_matrix(
+                            inv_dc_matrix, is_knockout=is_knockout
+                        )
+                    )
+
+                    # Symmetrize Dixon-Coles probabilities
+                    dc_home_p = (dc_home_p + inv_away_p) / 2.0
+                    dc_away_p = (dc_away_p + inv_home_p) / 2.0
+                    dc_draw_p = (dc_draw_p + inv_draw_p) / 2.0
+
+                    # Symmetrize Tree model probabilities
+                    class_probabilities["home_win"] = (
+                        class_probabilities["home_win"] + inv_probs["away_win"]
+                    ) / 2.0
+                    class_probabilities["away_win"] = (
+                        class_probabilities["away_win"] + inv_probs["home_win"]
+                    ) / 2.0
+                    class_probabilities["draw"] = (
+                        class_probabilities["draw"] + inv_probs["draw"]
+                    ) / 2.0
+                except Exception as exc:
+                    logger.warning("Neutral symmetrization fallback: %s", exc)
+
+            # Blend Dixon-Coles goals probabilities (70%) with Base model (30%)
+            w_dc = 0.70
+            final_p_home = w_dc * dc_home_p + (1.0 - w_dc) * class_probabilities["home_win"]
+            final_p_away = w_dc * dc_away_p + (1.0 - w_dc) * class_probabilities["away_win"]
+            final_p_draw = w_dc * dc_draw_p + (1.0 - w_dc) * class_probabilities["draw"]
+
+            tot_p = final_p_home + final_p_away + final_p_draw
+            if tot_p > 0:
+                final_p_home /= tot_p
+                final_p_away /= tot_p
+                final_p_draw /= tot_p
+
+            class_probabilities = {
+                "home_win": final_p_home,
+                "draw": final_p_draw,
+                "away_win": final_p_away,
+            }
+
+            if final_p_home >= final_p_draw and final_p_home >= final_p_away:
+                predicted_outcome_label = "home_win"
+                predicted_outcome_int = 1
+            elif final_p_away >= final_p_draw and final_p_away >= final_p_home:
+                predicted_outcome_label = "away_win"
+                predicted_outcome_int = -1
+            else:
+                predicted_outcome_label = "draw"
+                predicted_outcome_int = 0
+
         except Exception as exc:
             logger.warning("Expected goals inference failed: %s", exc)
 

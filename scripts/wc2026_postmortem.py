@@ -104,12 +104,22 @@ def predict_all(bundle: dict, wc: pd.DataFrame) -> pd.DataFrame:
     results = []
     skipped = 0
 
+    # Knockout rounds started 2026-07-02 (Round of 32 onward)
+    KNOCKOUT_CUTOFF = pd.Timestamp("2026-07-02")
+
+    # ── Pre-tournament snapshot cap ────────────────────────────────────────────
+    # CRITICAL: We must use feature snapshots from BEFORE the tournament started.
+    # If we use the actual match date, later knockout rounds will see ELO/form
+    # features inflated by earlier WC results — causing 100% home-win confidence.
+    # The WC group stage began 2026-06-12, so we cap at 2026-06-11 for all matches.
+    PRE_WC_SNAPSHOT_DATE = pd.Timestamp("2026-06-11").date()
+
     for _, row in wc.iterrows():
         home_team = row["home_team"]
         away_team = row["away_team"]
-        match_date = row["date"].date()
         neutral = bool(row["neutral"])
         tournament = str(row["tournament"])
+        is_knockout = bool(row["date"] >= KNOCKOUT_CUTOFF)
 
         try:
             res = predict_match_outcome(
@@ -117,8 +127,10 @@ def predict_all(bundle: dict, wc: pd.DataFrame) -> pd.DataFrame:
                 away_team=away_team,
                 tournament=tournament,
                 neutral=neutral,
-                match_date=match_date,
+                # Use pre-tournament snapshot for all WC matches to prevent leakage
+                match_date=PRE_WC_SNAPSHOT_DATE,
                 log_inference=False,
+                is_knockout=is_knockout,
             )
             prob_dict = res["class_probabilities"]
 
@@ -132,6 +144,7 @@ def predict_all(bundle: dict, wc: pd.DataFrame) -> pd.DataFrame:
                     "away_team": away_team,
                     "date": row["date"],
                     "stage": row["stage"],
+                    "is_knockout": is_knockout,
                     "actual_outcome": row["actual_outcome"],
                     "predicted_outcome": pred_outcome,
                     "p_home_win": prob_dict.get("home_win", 0.0),
@@ -148,6 +161,7 @@ def predict_all(bundle: dict, wc: pd.DataFrame) -> pd.DataFrame:
                     "away_team": away_team,
                     "date": row["date"],
                     "stage": row["stage"],
+                    "is_knockout": is_knockout,
                     "actual_outcome": row["actual_outcome"],
                     "predicted_outcome": None,
                     "p_home_win": None,

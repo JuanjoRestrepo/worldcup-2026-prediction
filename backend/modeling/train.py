@@ -319,6 +319,26 @@ def _build_candidate_specs(
             notes="Gradient boosting search with lightweight draw emphasis",
         )
 
+    from backend.modeling.dixon_coles import DixonColesMatchPredictor
+
+    dixon_coles_name = "dixon_coles_poisson"
+    candidate_specs[dixon_coles_name] = CandidateSpec(
+        name=dixon_coles_name,
+        pipeline=cast(
+            ProbabilisticEstimator,
+            DixonColesMatchPredictor(
+                rho=-0.05,
+                n_estimators=200,
+                learning_rate=0.05,
+                max_depth=4,
+            ),
+        ),
+        sample_weight_builder=_make_sample_weight_builder(1.0),
+        family="dixon_coles",
+        hyperparameters={"rho": -0.05, "n_estimators": 200},
+        notes="Dixon-Coles bivariate Poisson score model for match outcome probabilities.",
+    )
+
     two_stage_variants: list[dict[str, float]] = [
         {
             "stage1_c": 2.0,
@@ -790,6 +810,69 @@ class TemperatureScaledEnsemble:
         return self.base_estimator.predict(X).astype(np.int64)
 
 
+class IsotonicScaledEnsemble:
+    """Post-hoc multi-class isotonic regression calibration.
+
+    Fits 3 per-class IsotonicRegression models on calibration set predictions,
+    dampening draw over-allocation and correcting probability distortion.
+    """
+
+    def __init__(self, base_estimator: ProbabilisticEstimator) -> None:
+        self.base_estimator = base_estimator
+        self.calibrators_: list[object] = []
+        self._classes: NDArray[np.int64] = np.array([0, 1, 2], dtype=np.int64)
+
+    @property
+    def classes_(self) -> NDArray[np.int64]:
+        return self._classes
+
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> IsotonicScaledEnsemble:
+        from sklearn.isotonic import IsotonicRegression  # noqa: PLC0415
+
+        raw_probs = predict_proba_aligned(self.base_estimator, X)
+        raw_classes = getattr(self.base_estimator, "classes_", None)
+        if raw_classes is not None:
+            self._classes = np.asarray(raw_classes, dtype=np.int64)
+
+        y_arr = y.to_numpy(dtype=np.int64)
+        self.calibrators_ = []
+
+        for c in range(3):
+            iso = IsotonicRegression(out_of_bounds="clip", y_min=1e-6, y_max=1.0 - 1e-6)
+            y_binary = (y_arr == c).astype(np.float64)
+            iso.fit(raw_probs[:, c], y_binary)
+            self.calibrators_.append(iso)
+
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> NDArray[np.float64]:
+        raw_probs = predict_proba_aligned(self.base_estimator, X)
+        calibrated = np.zeros_like(raw_probs)
+        for c in range(3):
+            iso_model = self.calibrators_[c]
+            calibrated[:, c] = getattr(iso_model, "predict")(raw_probs[:, c])
+
+        sums = calibrated.sum(axis=1, keepdims=True)
+        sums = np.where(sums > 0, sums, 1.0)
+        return calibrated / sums
+
+    def predict(self, X: pd.DataFrame) -> NDArray[np.int64]:
+        probs = self.predict_proba(X)
+        return cast(NDArray[np.int64], np.argmax(probs, axis=1).astype(np.int64))
+
+
+def _fit_isotonic_scaled_variant(
+    fitted_estimator: ProbabilisticEstimator,
+    *,
+    X_calibration: pd.DataFrame,
+    y_calibration_encoded: pd.Series,
+) -> IsotonicScaledEnsemble:
+    """Fit and return an IsotonicScaledEnsemble on the calibration holdout."""
+    wrapper = IsotonicScaledEnsemble(base_estimator=fitted_estimator)
+    wrapper.fit(X_calibration, y_calibration_encoded)
+    return wrapper
+
+
 def _fit_temperature_scaled_variant(
     fitted_estimator: ProbabilisticEstimator,
     *,
@@ -1039,11 +1122,8 @@ def train_and_export_model(
     }
 
     if is_custom_ensemble:
-        # Post-hoc temperature scaling: calibrates probabilities while
-        # preserving all draw-override threshold logic in the base model.
-        # This resolves the ECE gap without disrupting decision boundaries.
         logger.info(
-            "Custom ensemble detected (%s): applying temperature scaling for calibration.",
+            "Custom ensemble detected (%s): applying temperature scaling for calibration & evaluating isotonic variant.",
             selected_candidate_spec.family,
         )
         temp_scaled = _fit_temperature_scaled_variant(
@@ -1053,6 +1133,16 @@ def train_and_export_model(
         )
         calibration_selection_metrics["temperature"] = _evaluate_pipeline(
             cast(ProbabilisticEstimator, temp_scaled),
+            X=X_calibration_selection,
+            y=y_calibration_selection,
+        )
+        iso_scaled = _fit_isotonic_scaled_variant(
+            selected_pipeline_for_calibration,
+            X_calibration=X_calibration_fit,
+            y_calibration_encoded=y_calibration_fit,
+        )
+        calibration_selection_metrics["isotonic"] = _evaluate_pipeline(
+            cast(ProbabilisticEstimator, iso_scaled),
             X=X_calibration_selection,
             y=y_calibration_selection,
         )
@@ -1087,7 +1177,7 @@ def train_and_export_model(
 
     final_deployed_model: ProbabilisticEstimator = final_uncalibrated_model
     calibration_method = "none"
-    if deployed_model_variant in {"sigmoid", "isotonic"}:
+    if deployed_model_variant in {"sigmoid", "isotonic"} and not is_custom_ensemble:
         base_rows = pd.concat([train_df, calibration_fit_df], ignore_index=True)
         X_base = base_rows[feature_columns].copy()
         y_base = base_rows[TARGET_COLUMN].map(OUTCOME_TO_ENCODED)
@@ -1106,6 +1196,27 @@ def train_and_export_model(
             method=deployed_model_variant,
         )
         calibration_method = deployed_model_variant
+    elif deployed_model_variant == "isotonic" and is_custom_ensemble:
+        base_rows = pd.concat([train_df, calibration_fit_df], ignore_index=True)
+        X_base = base_rows[feature_columns].copy()
+        y_base = base_rows[TARGET_COLUMN].map(OUTCOME_TO_ENCODED)
+        base_pipeline = _fit_pipeline(
+            selected_candidate_pipeline,
+            X=X_base,
+            y_encoded=y_base,
+            sample_weight_builder=selected_candidate_spec.sample_weight_builder,
+        )
+        final_deployed_model = cast(
+            ProbabilisticEstimator,
+            _fit_isotonic_scaled_variant(
+                base_pipeline,
+                X_calibration=X_calibration_selection,
+                y_calibration_encoded=calibration_selection_df[TARGET_COLUMN].map(
+                    OUTCOME_TO_ENCODED
+                ),
+            ),
+        )
+        calibration_method = "isotonic"
     elif deployed_model_variant == "temperature":
         # Temperature scaling for custom ensembles
         base_rows = pd.concat([train_df, calibration_fit_df], ignore_index=True)

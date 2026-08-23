@@ -201,9 +201,13 @@ def compute_rolling_features(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
     df["away_global_win_rate_last5"] = away_global_wr["global_win_rate"].values
 
     # ============================================================================
-    # HOME ADVANTAGE EFFECT
+    # HOME ADVANTAGE EFFECT (Zeroed for neutral venue fixtures)
     # ============================================================================
-    df["home_advantage_effect"] = df["home_win_rate_last5"] - df["away_win_rate_last5"]
+    raw_adv = df["home_win_rate_last5"] - df["away_win_rate_last5"]
+    if "neutral" in df.columns:
+        df["home_advantage_effect"] = np.where(df["neutral"], 0.0, raw_adv)
+    else:
+        df["home_advantage_effect"] = raw_adv
 
     # ============================================================================
     # DRAW RATE: POSITION-SPECIFIC (explicit signal for draw specialist)
