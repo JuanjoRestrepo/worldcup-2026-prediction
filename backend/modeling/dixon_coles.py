@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from scipy.stats import poisson
-from sklearn.base import BaseEstimator, ClassifierMixin
 from xgboost import XGBRegressor
 
 logger = logging.getLogger(__name__)
