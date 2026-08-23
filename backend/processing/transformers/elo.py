@@ -40,14 +40,20 @@ def get_tournament_k_factor(tournament: str | None, is_knockout: bool = False) -
 
     t_lower = tournament.strip().lower()
 
-    if any(token in t_lower for token in ("qualification", "qualifier", "wcq", "ecq", "nations league")):
+    if any(
+        token in t_lower
+        for token in ("qualification", "qualifier", "wcq", "ecq", "nations league")
+    ):
         return 30.0
 
     is_wc = any(token in t_lower for token in ("world cup", "wc", "fifa"))
     if is_wc:
         return 60.0 if is_knockout else 50.0
 
-    if any(token in t_lower for token in ("euro", "copa america", "africa cup", "asian cup", "championship")):
+    if any(
+        token in t_lower
+        for token in ("euro", "copa america", "africa cup", "asian cup", "championship")
+    ):
         return 40.0
 
     if "friendly" in t_lower:
@@ -213,4 +219,3 @@ def compute_elo(df: pd.DataFrame, apply_decay: bool = True) -> pd.DataFrame:
         )
 
     return df
-

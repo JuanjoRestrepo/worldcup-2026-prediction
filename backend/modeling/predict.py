@@ -355,8 +355,12 @@ def predict_match_outcome(
 
             # Blend Dixon-Coles goals probabilities (70%) with Base model (30%)
             w_dc = 0.70
-            final_p_home = w_dc * dc_home_p + (1.0 - w_dc) * class_probabilities["home_win"]
-            final_p_away = w_dc * dc_away_p + (1.0 - w_dc) * class_probabilities["away_win"]
+            final_p_home = (
+                w_dc * dc_home_p + (1.0 - w_dc) * class_probabilities["home_win"]
+            )
+            final_p_away = (
+                w_dc * dc_away_p + (1.0 - w_dc) * class_probabilities["away_win"]
+            )
             final_p_draw = w_dc * dc_draw_p + (1.0 - w_dc) * class_probabilities["draw"]
 
             tot_p = final_p_home + final_p_away + final_p_draw

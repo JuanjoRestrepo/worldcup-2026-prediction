@@ -83,8 +83,7 @@ def _create_tournament_features(df: pd.DataFrame) -> pd.DataFrame:
     if "date" in df.columns:
         wc2026_cutoff = pd.Timestamp("2026-07-02")
         wc2026_knockout = (
-            (df["is_world_cup"] == 1)
-            & (pd.to_datetime(df["date"]) >= wc2026_cutoff)
+            (df["is_world_cup"] == 1) & (pd.to_datetime(df["date"]) >= wc2026_cutoff)
         ).to_numpy()
 
     df["is_knockout"] = (keyword_knockout | wc2026_knockout).astype(int)

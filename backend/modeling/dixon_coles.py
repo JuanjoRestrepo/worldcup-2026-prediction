@@ -199,7 +199,11 @@ class DixonColesMatchPredictor:
             ag = X["awayGoals"]
 
         feature_cols = [c for c in X.columns if c not in ("homeGoals", "awayGoals")]
-        X_fit = X[feature_cols] if ("homeGoals" in X.columns or "awayGoals" in X.columns) else X
+        X_fit = (
+            X[feature_cols]
+            if ("homeGoals" in X.columns or "awayGoals" in X.columns)
+            else X
+        )
 
         if hg is not None and ag is not None:
             self.home_goals_model_.fit(X_fit, hg, sample_weight=sample_weight)
@@ -225,7 +229,11 @@ class DixonColesMatchPredictor:
         Predict 3-class probabilities [p_away_win, p_draw, p_home_win] using Dixon-Coles score matrix.
         """
         feature_cols = [c for c in X.columns if c not in ("homeGoals", "awayGoals")]
-        X_eval = X[feature_cols] if ("homeGoals" in X.columns or "awayGoals" in X.columns) else X
+        X_eval = (
+            X[feature_cols]
+            if ("homeGoals" in X.columns or "awayGoals" in X.columns)
+            else X
+        )
 
         pred_hg = self.home_goals_model_.predict(X_eval)
         pred_ag = self.away_goals_model_.predict(X_eval)
